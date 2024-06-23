@@ -1,0 +1,241 @@
+%! suppress = MissingLabel
+%! suppress = DocumentclassNotInRoot
+%! suppress = DiscouragedUseOfDef
+
+% * Make friends tikz & colors
+%   https://en.wikibooks.org/wiki/LaTeX/Colors
+% * To enable vertical top alignment globally
+%   https://tex.stackexchange.com/questions/9889/positioning-content-at-the-top-of-a-beamer-slide-by-default
+% * Set handout from CLI
+%   https://tex.stackexchange.com/a/1501
+\ifhandout
+\documentclass[usenames, dvipsnames, handout]{beamer} % https://tex.stackexchange.com/questions/224091/beamer-how-to-disable-pause-temporarily
+\else
+\documentclass[usenames, dvipsnames]{beamer}
+\fi
+% ------------------------------------------------
+
+% Graphics
+\usepackage{color}
+\usepackage{tabularx}
+\usepackage{tikz}
+% https://tikz.dev/tikz-graphs
+\usetikzlibrary{positioning, shapes.geometric, arrows, automata, graphs}
+\tikzset{
+    expr/.style={ellipse, draw=gray!60, fill=gray!5, very thick, minimum size=7mm, yshift=0.7cm},
+    hexpr/.style={ellipse, draw=gray!60, fill=blue!15, very thick, minimum size=7mm, yshift=0.7cm},
+    stmt/.style={rectangle, draw=gray!60, fill=gray!5, very thick, minimum size=5mm, yshift=0.7cm},
+    decl/.style={rectangle, draw=blue!60, fill=gray!5, very thick, minimum size=5mm, yshift=0.7cm},
+    hdecl/.style={rectangle, draw=blue!60, fill=blue!15, very thick, minimum size=5mm, yshift=0.7cm},
+    subtree/.style={shape border rotate=90, isosceles triangle, draw=gray!60, fill=gray!5, very thick, minimum size=5mm, yshift=0.0cm},
+}
+\usepackage{blkarray}
+\usepackage{graphicx}
+\usepackage{forest} % https://tex.stackexchange.com/questions/198405/how-to-change-the-color-of-subtrees-in-tikz-qtree
+% ------------------------------------------------
+
+% Math
+\usepackage{amsmath, amsfonts}
+\usepackage{amssymb}
+\usepackage{proof}
+\usepackage{mathrsfs}
+% Crossed-out symbols
+% https://tex.stackexchange.com/questions/75525/how-to-write-crossed-out-math-in-latex
+\usepackage[makeroom]{cancel}
+\usepackage{mathtools}
+% ------------------------------------------------
+
+% Additional font sizes
+% https://www.overleaf.com/learn/latex/Questions/How_do_I_adjust_the_font_size%3F
+\usepackage{moresize}
+% Additional colors
+% https://www.overleaf.com/learn/latex/Using_colours_in_LaTeX
+\usepackage{xcolor}
+% Textual math symbols
+\usepackage{textcomp}
+% ------------------------------------------------
+
+% Language
+\usepackage[utf8] {inputenc}
+\usepackage[T2A] {fontenc}
+\usepackage[english, russian] {babel}
+\usepackage{indentfirst, verbatim}
+\usetikzlibrary{cd, babel}
+% ------------------------------------------------
+
+% Fonts: https://sites.math.washington.edu/~reu/docs/latex_symbols.pdf
+\usepackage{stmaryrd}
+\usepackage{cmbright}
+\usepackage{wasysym}
+\usepackage[weather]{ifsym} % https://tex.stackexchange.com/questions/100424/how-to-use-the-ifsym-package
+% https://tex.stackexchange.com/questions/615300/pdflatex-builtin-glyph-names-is-empty
+\pdfmapline{=dictsym DictSym <dictsym.pfb}
+\pdfmapline{=pigpen <pigpen.pfa}
+\usepackage{dictsym}
+% ------------------------------------------------
+
+% Code
+% * Needs -shell-escape build flag
+%   https://tex.stackexchange.com/questions/99475/how-to-invoke-latex-with-the-shell-escape-flag-in-texstudio-former-texmakerx
+% * Set build directory
+%   https://tex.stackexchange.com/questions/339931/latex-minted-package-using-custom-output-directory-build
+\usepackage{minted}
+\setminted{xleftmargin=\parindent, autogobble, escapeinside=\#\#}
+% ------------------------------------------------
+
+% Template
+\usetheme{CambridgeUS}
+\usecolortheme{dolphin}
+% https://tex.stackexchange.com/questions/231439/beamer-how-to-make-font-larger-for-page-numbers
+\setbeamerfont{headline}{size=\scriptsize}
+\setbeamerfont{footline}{size=\scriptsize}
+% Remove heddline
+% https://tex.stackexchange.com/questions/33146/how-could-i-remove-a-header-in-a-beamer-presentation
+%\setbeamertemplate{headline}{}
+% Slide sizes
+% https://tex.stackexchange.com/questions/56768/how-to-set-a-small-default-font-size-with-beamer
+%\geometry{paperwidth=140mm,paperheight=105mm} % 4:3
+\geometry{paperwidth=168mm,paperheight=105mm} % 16:10
+% Remove navigation bar
+% https://stackoverflow.com/questions/3210205/how-to-get-rid-of-navigation-bars-in-beamer
+\beamertemplatenavigationsymbolsempty
+% ------------------------------------------------
+
+% Bullets
+% https://9to5science.com/change-bullet-style-formatting-in-beamer
+% https://tex.stackexchange.com/questions/185742/i-need-to-change-color-of-beamer-itemize-and-subitem-separately
+\setbeamertemplate{itemize item}{\scriptsize\raise1.25pt\hbox{\donotcoloroutermaths$\blacktriangleright$}}
+\setbeamertemplate{itemize subitem}{\scriptsize\raise1.5pt\hbox{\donotcoloroutermaths$\blacktriangleright$}}
+\setbeamertemplate{itemize subsubitem}{\tiny\raise1.5pt\hbox{\donotcoloroutermaths$\blacktriangleright$}}
+\setbeamertemplate{enumerate item}{\insertenumlabel.}
+\setbeamertemplate{enumerate subitem}{\insertenumlabel.\insertsubenumlabel}
+\setbeamertemplate{enumerate subsubitem}{\insertenumlabel.\insertsubenumlabel.\insertsubsubenumlabel}
+% ------------------------------------------------
+
+% Table of contents format
+% https://tex.stackexchange.com/questions/642927/format-table-of-contents-in-beamer
+\setbeamertemplate{section in toc}{%
+        {\color{blue}\inserttocsectionnumber.}
+    \inserttocsection\par%
+}
+\setbeamertemplate{subsection in toc}{%
+        {\color{blue}\hspace{1em}\scriptsize\raise1.25pt\hbox{\donotcoloroutermaths$\blacktriangleright$}}
+    \inserttocsubsection\par%
+}
+\setbeamertemplate{subsubsection in toc}{%
+        {\color{blue}\hspace{2em}\tiny\raise1.25pt\hbox{\donotcoloroutermaths$\blacktriangleright$}}
+    \inserttocsubsubsection\par%
+}
+% ------------------------------------------------
+
+% Misc
+\usepackage{multicol}
+\usepackage{hyperref}
+\usepackage{soul} % https://tex.stackexchange.com/questions/23711/strikethrough-text
+% ------------------------------------------------
+
+% Fix \pause for amsmath package envs (black black magic)
+% https://tex.stackexchange.com/questions/16186/equation-numbering-problems-in-amsmath-environments-with-pause/75550#75550
+% https://tex.stackexchange.com/questions/6348/problem-with-beamers-pause-in-alignments
+%! suppress = Makeatletter
+\makeatletter
+\let\save@measuring@true\measuring@true
+\def\measuring@true{%
+    \save@measuring@true
+    \def\beamer@sortzero##1{\beamer@ifnextcharospec{\beamer@sortzeroread{##1}}{}}%
+    \def\beamer@sortzeroread##1<##2>{}%
+    \def\beamer@finalnospec{}%
+}
+%! suppress = Makeatletter
+\makeatother
+% ------------------------------------------------
+
+% Sections
+\newcommand{\sectionplan}[1]{\section{#1}%
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents[currentsection]
+    \end{frame}
+}
+\newcommand{\subsectionplan}[1]{\subsection{#1}%
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents[currentsubsection]
+    \end{frame}
+}
+% ------------------------------------------------
+
+% Footnotes
+\renewcommand{\thefootnote}{\arabic{footnote}}
+\renewcommand{\thempfootnote}{\arabic{mpfootnote}}
+% https://tex.stackexchange.com/questions/28465/multiple-footnotes-at-one-point
+\usepackage{fnpct}
+% ------------------------------------------------
+
+% Links
+% Colors also links on slide foot.
+%\hypersetup{
+%    colorlinks=true,
+%    citecolor=blue,
+%    linkcolor=blue,
+%    urlcolor=blue
+%}
+% ------------------------------------------------
+
+% Appendix
+% Slide numbers
+% https://tex.stackexchange.com/questions/70448/dont-count-backup-slides
+\usepackage{appendixnumberbeamer}
+\newcommand{\backupbegin}{
+    \newcounter{framenumbervorappendix}
+    \setcounter{framenumbervorappendix}{\value{framenumber}}
+}
+\newcommand{\backupend}{
+    \addtocounter{framenumbervorappendix}{-\value{framenumber}}
+    \addtocounter{framenumber}{\value{framenumbervorappendix}}
+}
+% ------------------------------------------------
+
+% Custom commands
+% New topic on "in previous series"
+\newcommand{\newtopic}[0]{$+$}
+
+
+\newcommand{\err}[0]{\textcolor{red}{ошибка}} % compilation error
+\newcommand{\comb}[1]{\mathbf{#1}} % combinator
+\newcommand{\step}{\rightsquigarrow} % reduction step
+\newcommand{\term}[1]{\mathbf{#1}} % predefined lambda-term reference
+\newcommand{\ap}{~} % lambda-term application
+\newcommand{\termdef}{\coloneqq} % lamda term binding
+\newcommand{\subst}[3]{\left[#2 \mapsto #3 \right] #1} % substitution
+\newcommand{\eqbeta}{=_\beta} % beta equality
+\newcommand{\eqeta}{=_\eta} % eta-equality
+\newcommand{\eqt}{=} % tree-equality of terms
+\newcommand{\tlist}[1]{\term{[}#1\term{]}} % list-term
+\newcommand{\pop}[0]{\SunCloud} %item:  general eduation
+\newcommand{\popslide}[0]{(\pop)}
+\newcommand{\advanced}[0]{$\varhexstar$} % item: advanced science
+\newcommand{\advancedslide}[0]{(\advanced)}
+\newcommand{\practical}[0]{\dstechnical} % item: practical programming notions
+\newcommand{\practicalslide}[0]{(\practical)}
+\newcommand{\todo}[0]{todo} % item: question
+\newcommand{\answer}[0]{\Lightning} % item: answer to the previous question
+\newcommand{\eg}[0]{e.g.} % item: example
+\newcommand{\then}{$\Rightarrow$} % item: consequences
+\newcommand{\defi}[0]{$\Delta$} % item: definition on smth
+\newcommand{\textdefi}[1]{\textbf{#1}}
+\newcommand{\positive}{$+$} % item: pros
+\newcommand{\negative}{{\color{red} $-$}} % item: cons
+\newcommand{\adding}{$+$} % item: something new
+\renewcommand{\emph}[1]{{\color{blue} \textit{#1}}}
+\newcommand{\vocab}[1]{\textbf{#1}} % item: important new word
+\newcommand%! suppress = EscapeHashOutsideCommand
+\NB[1][0.3]{N\kern-#1em{B}} % default kern amount: -0.3em
+% ------------------------------------------------
+
+% Speaker notes
+% https://tex.stackexchange.com/questions/114219/add-notes-to-latex-beamer
+% https://tex.stackexchange.com/questions/35444/split-beamer-notes-across-multiple-notes-pages/35496#35496
+%\setbeameroption{show notes on second screen=right} % enable speaker notes
+%--------------------------------------
+
+\author[]{Андрей Стоян, Илья Колегов, Дмитрий Халанский}
+\institute[]{}
