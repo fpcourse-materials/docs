@@ -5,8 +5,8 @@ course="$1" # course, 1 or 2
 name="$2"   # slides name, e.g. 01
 mod="$3"    # handout or pause
 
-source_file_name="fp$course-$name.tex"
-target_file_name="mse2024-fp$course-$name-$mod.tex"
+source_file_name="fp$course-slides-$name.tex"
+target_file_name="mse2024-fp$course-slides-$name-$mod.tex"
 echo "Compiling $source_file_name as $target_file_name"
 cp "$source_file_name" "$target_file_name"
 if [ "$mod" = "handout" ]

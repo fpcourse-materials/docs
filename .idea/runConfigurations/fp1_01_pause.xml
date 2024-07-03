@@ -9,7 +9,7 @@
       <compiler-arguments>-shell-escape</compiler-arguments>
       <envs />
       <before-run-command />
-      <main-file>$PROJECT_DIR$/fp1-01.tex</main-file>
+      <main-file>$PROJECT_DIR$/fp1-slides-01.tex</main-file>
       <output-path>{projectDir}</output-path>
       <auxil-path>{projectDir}/auxil</auxil-path>
       <compile-twice>false</compile-twice>

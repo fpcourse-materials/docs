@@ -1,0 +1,458 @@
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+
+\title[Программирование в $\lambda$-исчислении]{Практика 1. Программирование в $\lambda$-исчислении}
+\date{осень 2024}
+
+\begin{document}
+
+    \setcounter{framenumber}{-1}
+    \maketitle
+
+    \begin{frame}{В предыдущих сериях}
+        \begin{itemize}
+            \item[\newtopic] Синтаксис лямбда-исчисления
+            \item[\newtopic] Свободные и связанные переменные
+            \item[\newtopic] Классические комбинаторы
+            \item[\newtopic] Бета-редукция
+            \item[\newtopic] $\alpha, \beta,\eta$-эквивалентности
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \sectionplan{Метаинформация о курсе}
+
+    \begin{frame}{Отчётность} % TODO
+        \begin{itemize}
+            \item Оценка за курс --- оценка за экзамен (успеваемость по практике тоже учитывается)
+            \item Допуск на экзамен --- зачёт по всем домашкам, кроме, может быть, одной
+            \item Правила зачёта по домашкам расписаны в самих домашках
+            \item Отчётность будет вестись в гугл-табличке, правила пользования:
+            \begin{itemize}
+                \item Не сравниваем свою успеваемость с другими и не переживаем
+                \item Смотрим, к кому можно обратиться за помощью
+                \item Перфекционизм --- зло
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Домашки}
+        \begin{itemize}
+            \item Выдаются на каждую неделю
+            \item В конце семестра будет достаточно возможностей добрать баллов
+            \item В начале каждой пары будет разбор
+            \item За частичные решения тоже даются баллы
+            \item После пары старайтесь как можно скорее начать делать задания
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Коммуникация online}
+        \begin{itemize}
+            \item Личка преподавателей в телеграме
+            \item Общий чат в телеграме\footnote{Все ссылки на wiki.}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Коммуникация offline}
+        \begin{itemize}
+            \item Лучше спросить сразу: ``потом'' не будет времени, и сил не прибавится
+            \item Спрашивать --- ответственность и работа студентов
+            \item Распределять время и оценивать уместность --- ответственность и работа преподавателя
+            \item Если совсем трудно, пишите в чат/личку во время пары или подходите после пары
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Туториал по прохождению}
+        \begin{itemize}
+            \item Работайте с эмоциями и держитесь рациональных решений
+            \item Старайтесь спокойно относиться к неудачам и работать с их причинами
+            \begin{itemize}
+                \item Тайм-менеджмент
+                \item Садитесь за домашки не в последний момент
+                \item Старайтесь понять, а не ``натыкать'' задание
+            \end{itemize}
+            \item Не стесняйтесь просить помощи у преподавателей и одногруппников
+            \begin{itemize}
+                \item Иногда можно организовывать дополнительную встречу, если с темой у многих проблемы
+            \end{itemize}
+            \item Повторяйте материал перед парами
+            \begin{itemize}
+                \item Времени требуется не много, но толку --- куча!
+                \item Для практик более-менее достаточно повторить последнюю лекцию
+            \end{itemize}
+            \item Спите! Иначе всё более-менее без толку
+            \item Отдыхайте! Иначе на дистанции вы будете сильно терять в производительности
+        \end{itemize}
+
+        \vspace{1em}
+        Полезная \href{https://compscicenter.notion.site/compscicenter/b6dddf00bc7d497298179a3bdbdda375}{\color{blue} памятка} от кураторов Computer Science Center.
+    \end{frame}
+
+    \begin{frame}{Зачем изучать ФП/теорию языков программирования}
+        \vspace{-0.5em}
+        \begin{block}{Для самоопределения}
+            \begin{itemize}
+                \item ФП~--- лакмусовая бумажка: понравился курс $\Rightarrow$ скорее всего понравится профессионально заниматься языками, в науке или промышленности
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Чтобы быть более хорошими программистами}
+            \begin{itemize}
+                \item Узнать, что вообще в принципе идейно бывает в языках
+                \begin{enumerate}
+                    \item Проще изучать новые языки
+                    \item Придумываем решение в пространстве возможного
+                    \item[\then] А потом аппроксимируем в терминах конкретного языка
+                \end{enumerate}
+                \item Дисциплинирует ум и учит выбирать более лаконичные и композируемые абстракции
+                \item Прививает хорошие практики программирования и аккуратное отношение к эффектам
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Чтобы иметь базу для дальшейшего погружения в науку}
+            \begin{itemize}
+                \item ФП на пересечении многих областей (вычислимость, доказательства, категории\ldots)
+                \item ФП --- основа академической традиции теории языков программирования
+                \item Proof engineering и машинно-проверяемые доказательства --- всё тут
+            \end{itemize}
+        \end{block}
+    \end{frame}
+
+    \sectionplan{$\lambda$-исчисление}
+
+    \subsection{Синтаксис $\lambda$-исчисления}
+
+    \begin{frame}{Синтаксис лямбда-исчисления}
+        Множество программ (термов) --- $\Lambda$, множество допустимых переменных --- $V$.
+
+        Синтаксис задаётся индуктивным определением:
+        \begin{description}
+            \item[Переменные] $x \in \Lambda$, если $x \in V$ \hspace{2em}
+            \begin{tikzpicture}
+                \node [expr] (x) {x};
+            \end{tikzpicture}
+            \pause
+            \item[Абстракция] $(\lambda x\ldotp M) \in \Lambda$, если $x \in V, M \in \Lambda$ \hspace{2em}
+            \begin{tikzpicture}
+                \node [expr] (lam) {$\lambda$};
+                \node [decl] (x) [below right = of lam] {$x$};
+                \node [subtree] (m) [below = of lam] {$M$};
+                \draw[->] (m.north) -- (lam);
+                \draw[->] (x) -- (lam);
+            \end{tikzpicture}
+            \pause
+            \item[Аппликация] $(M~N) \in \Lambda$, если $M \in \Lambda, N \in \Lambda$ \hspace{2em}
+            \begin{tikzpicture}
+                \node [expr] (dog) {$@$};
+                \node [subtree] (m) [below left= of lam] {$M$};
+                \node [subtree] (n) [below right= of lam] {$N$};
+                \draw[->] (m.north) -- (lam);
+                \draw[->] (n.north) -- (lam);
+            \end{tikzpicture}
+        \end{description}
+    \end{frame}
+
+    \begin{frame}[fragile]{Пример программы в лямбда-исчислении}
+        \begin{columns}[onlytextwidth]
+            \begin{column}{0.55\textwidth}
+                \[\lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)\]
+                \begin{itemize}
+                    \item[\todo] Какие скобочки пропущены в этой записи?
+                    \item[\todo] Можно ли опустить имеющиеся?
+                    \item[\todo] Как выглядит дерево синтаксиса, соответствующее этому терму?
+                \end{itemize}
+            \end{column}\hfill%
+            \pause%
+            \begin{column}{0.45\textwidth}
+                \begin{center}
+                    \begin{tikzpicture}
+                        \node [expr] (lamf) {$\lambda$};
+                        \node [decl] (f) [below right=of lamf] {$f$};
+                        \node [expr] (lamg) [below  =of lamf] {$\lambda$};
+                        \node [decl] (g) [below right= of lamg] {$g$};
+                        \node [expr] (lamx) [below  =of lamg] {$\lambda$};
+                        \node [decl] (x) [below right= of lamx] {$x$};
+                        \node [expr] (apf) [below  =of lamx] {$@$};
+                        \node [expr] (vf) [below left= of apf] {$f$};
+                        \node [expr] (apg) [below right=of apf] {$@$};
+                        \node [expr] (vg) [below left= of apg] {$g$};
+                        \node [expr] (vx) [below right= of apg] {$x$};
+                        \draw[->] (lamg) -- (lamf);
+                        \draw[->] (lamx) -- (lamg);
+                        \draw[->] (f) -- (lamf);
+                        \draw[->] (g) -- (lamg);
+                        \draw[->] (x) -- (lamx);
+                        \draw[->] (apf) -- (lamx);
+                        \draw[->] (apg) -- (apf);
+                        \draw[->] (vf) -- (apf);
+                        \draw[->] (vg) -- (apg);
+                        \draw[->] (vx) -- (apg);
+                    \end{tikzpicture}
+                \end{center}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}[fragile]{Свободные и связанные переменные}
+        \begin{columns}[onlytextwidth]
+            \begin{column}{0.55\textwidth}
+                \[\lambda x\ldotp (\lambda x~y\ldotp x)\ap (x \ap y)\]
+                \begin{itemize}
+                    \item[\todo] Какие переменные свободные в этом терме?
+                    \item[\todo] Какими связывателями связаны остальные?
+                \end{itemize}
+            \end{column}\hfill%
+            \pause%
+            \begin{column}{0.45\textwidth}
+                \begin{tikzpicture}
+                    \node [expr] (lamx) {$\lambda$};
+                    \node [decl] (x) [below right= of lamx] {$x$};
+                    \draw[->] (x) -- (lamx);
+                    \node [expr] (ap) [below= of lamx] {$@$};
+                    \draw[->] (ap) -- (lamx);
+                    % left
+                    \node [expr] (lamxx) [below left= of ap, xshift=-0.5cm] {$\lambda$};
+                    \draw[->] (lamxx) -- (ap);
+                    \node [decl] (xx) [below right= of lamxx] {$x$};
+                    \draw[->] (xx) -- (lamxx);
+                    \node [expr] (lamy) [below= of lamxx] {$\lambda$};
+                    \draw[->] (lamy) -- (lamxx);
+                    \node [decl] (y) [below right= of lamy] {$y$};
+                    \draw[->] (y) -- (lamy);
+                    \node [expr] (vxx) [below= of lamy] {$x$};
+                    \draw[->] (vxx) -- (lamy);
+                    % right
+                    \node [expr] (apl) [below right=of ap, xshift=0.5cm] {$@$};
+                    \draw[->] (apl) -- (ap);
+                    \node [expr] (vx) [below left=of apl] {$x$};
+                    \node [expr] (vy) [below right=of apl] {$y$};
+                    \draw[->] (vx) -- (apl);
+                    \draw[->] (vy) -- (apl);
+                \end{tikzpicture}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}{Синтаксические договорённости}
+        Снизим синтаксическую зашумлённость с помощью следующих договорённостей:
+        \pause
+        \begin{block}{Договорённость о введении синонимичных имён}
+            \[
+                \term{B} \termdef \lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)
+            \]
+            \pause
+            Введём специальную $\delta$-редукцию для синтаксической подстановки определений:
+            \[
+                \term{B} \step_{\delta} \lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)
+            \]
+        \end{block}
+        \pause
+        \begin{block}{Договорённость об аргументах: ``комбинаторный'' синтаксис}
+            Следующую запись определения будем считать эквивалентной предыдущей:
+            \[
+                \term{B} \ap f \ap g \termdef \lambda x\ldotp f~(g~x)
+            \]
+        \end{block}
+    \end{frame}
+
+    \subsection{Семантика $\lambda$-исчисления}
+
+    % todo
+
+    \begin{frame}[fragile]{\subsecname}
+        \begin{itemize}
+            \item
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{$\beta$-редукция}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                Находим редекс:
+                \begin{center}
+                    \begin{tikzpicture}
+                        \node [subtree] (top) {$K$};
+                        \node [hexpr] (ap) [below = of top] {$@$};
+                        \node [hexpr] (lam) [below left = of ap] {$\lambda$};
+                        \node [decl] (x) [below right = of lam] {$x$};
+                        \node [subtree] (l) [below = of lam] {$M$};
+                        \node [subtree] (r) [below right = of ap] {$N$};
+                        \draw[->] (ap) -- (top);
+                        \draw[->] (lam) -- (ap);
+                        \draw[->] (l) -- (lam);
+                        \draw[->] (r.north) -- (ap);
+                        \draw[->] (x) -- (lam);
+                    \end{tikzpicture}
+                \end{center}
+            \end{column}\hfill
+            \pause%
+            \begin{column}[t]{0.485\textwidth}
+                Сокращаем редекс:
+                \begin{center}
+                    \begin{tikzpicture}
+                        \node [subtree] (top) {$K$};
+                        \node [subtree] (bot) [below = of top] {$\subst{M}{x}{N}$};
+                        \draw[->] (bot) -- (top);
+                    \end{tikzpicture}
+                \end{center}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \subsection{Сопутствующие концепции}
+
+    \begin{frame}[fragile]{Каррирование}
+        \vspace{-0.5em}
+        Эквивалентен ли код?
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \vspace{0.2 em}
+                \[\textbf{K}^* \termdef \lambda x~y\ldotp y\]
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{python}
+                    def k_star(x, y):
+                        return y
+                \end{minted}
+            \end{column}
+        \end{columns}
+        \pause
+        Нет:
+        \vspace{-2em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \vspace{0.5em}
+                \[\comb{K}^* \ap q \step_\delta (\lambda x~y\ldotp y) \ap q \step_\beta \lambda y\ldotp y \]
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{python}
+                    > k_star(q)
+                    TypeError: k_star() missing 1 required
+                        positional argument: 'y'
+                \end{minted}
+            \end{column}
+        \end{columns}
+        \pause
+        \vspace{0.3em}
+        Правильная трактовка: ``$\comb{K}^*$ --- функция, которая игнорирует свой аргумент и возвращает
+        функцию, которая возвращает свой аргумент'':
+        \vspace{-1.5em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \vspace{0.5em}
+                \[\lambda x~y\ldotp y \equiv \lambda x\ldotp \lambda y\ldotp y\]
+            \end{column}\hfill
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{python}
+                    def k_star(x):
+                        def helper(y):
+                            return y
+                        return helper
+                \end{minted}
+            \end{column}
+        \end{columns}
+        \pause
+        \vspace{-0.5em}
+        \begin{block}{Каррирование}
+            Преобразование функции многих аргументов в набор вложенных функций, каждая из которых принимает часть аргументов исходной\footnote{В ООП методы класса каррированные --- часть их ``аргументов'' передаётся через конструктор.}.
+        \end{block}
+    \end{frame}
+
+    \begin{frame}[fragile]{Замыкания}
+        Что если закодировать не $\comb{K}^*$, а $\comb{K}$:
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \vspace{0.5em}
+                \[\comb{K} \termdef \lambda x\ldotp \lambda y\ldotp x\]
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}[escapeinside=??]{python}
+                    def k(x):
+                        def helper(y):
+                            return ?\framebox{x}?
+                        return helper
+                \end{minted}
+            \end{column}
+        \end{columns}
+        \pause
+        \begin{block}{Замыкание (closure)}
+            Пара из функции и окружения (состояния, к которому код функции имеет доступ).
+        \end{block}
+        \pause
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{block}{Ещё пример на Python}
+                    \begin{minted}[escapeinside=??]{python}
+                        screen = Screen(...)
+                        def handler():
+                            ?\framebox{screen}?.textField = ""
+                        clearButton.onClick(handler)
+                    \end{minted}
+                \end{block}
+            \end{column}\hfill
+            \pause%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{block}{Ещё пример на C++}
+                    \begin{minted}[escapeinside=??]{c++}
+                        auto screen = new Screen(...);
+                        clearButton.onClick([&screen]() {
+                            ?\framebox{screen}?.textField = "";
+                        });
+                    \end{minted}
+                \end{block}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}[fragile]{Функции высших порядков}
+        \begin{block}{Функция высших порядков (high-order functions, HOF)}
+            Принимает другие функции в качестве аргументов.
+        \end{block}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{block}{Пример на $\lambda$-исчислении}
+                    \[\comb{B} \termdef \lambda \framebox{f} \ldotp \lambda \framebox{g} \ldotp \lambda x\ldotp f~(g~x)\]
+                \end{block}
+                \pause
+                \begin{block}{Пример на Python}
+                    На практике не всегда каррирование по всем аргументам оправдано:
+                    \begin{minted}[escapeinside=??]{python}
+                        def compose(?\framebox{f}?, ?\framebox{g}?):
+                            def helper(x):
+                                return f(g(x))
+                            return helper
+                    \end{minted}
+                \end{block}
+            \end{column}\hfill
+            \pause%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{block}{Пример на C++}
+                    \begin{minted}[escapeinside=??]{c++}
+                        function<int(int)> compose(
+                            ?\framebox{function<int(int)> f}?,
+                            ?\framebox{function<int(int)> g}?
+                        ) {
+                            return [f, g](int x) {
+                                return f(g(x))
+                            }
+                        }
+                    \end{minted}
+                \end{block}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+\end{document}
