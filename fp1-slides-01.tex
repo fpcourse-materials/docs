@@ -17,7 +17,7 @@
 
     \begin{frame}{В предыдущих сериях}
         \begin{itemize}
-            \item[\newtopic] Синтаксис лямбда-исчисления
+            \item[\newtopic] Синтаксис $\lambda$-исчисления
             \item[\newtopic] Свободные и связанные переменные
             \item[\newtopic] Классические комбинаторы
             \item[\newtopic] Бета-редукция
@@ -131,7 +131,7 @@
 
     \subsection{Синтаксис $\lambda$-исчисления}
 
-    \begin{frame}{Синтаксис лямбда-исчисления}
+    \begin{frame}{Синтаксис $\lambda$-исчисления}
         Множество программ (термов) --- $\Lambda$, множество допустимых переменных --- $V$.
 
         Синтаксис задаётся индуктивным определением:
@@ -161,7 +161,7 @@
         \end{description}
     \end{frame}
 
-    \begin{frame}[fragile]{Пример программы в лямбда-исчислении}
+    \begin{frame}[fragile]{Пример программы в $\lambda$-исчислении}
         \begin{columns}[onlytextwidth]
             \begin{column}{0.55\textwidth}
                 \[\lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)\]
@@ -309,7 +309,40 @@
         \end{columns}
     \end{frame}
 
-    % todo утащить задания из листочков
+    \begin{frame}[fragile]{Подстановка}
+        \begin{block}{Определение}
+            \begin{equation}
+                \nonumber
+                \begin{cases}
+                [x \mapsto N]
+                    ~ x \equiv N \\
+                    [x \mapsto N] ~ y \equiv y \\
+                    [x \mapsto N] ~ P ~ Q \equiv ([x \mapsto N] P) ([x \mapsto N] Q) \\
+                    [x \mapsto N] ~ \lambda x. ~ P \equiv \lambda x. ~ P \\
+                    [x \mapsto N] ~ \lambda y. ~ P \equiv \lambda y. ~ [x \mapsto N] ~ P, & y \not\in FV(N) \\
+                    [x \mapsto N] ~ \lambda y. ~ P \equiv \lambda y'. ~ [x \mapsto N] ~ ([y \mapsto y'] P), & y \in FV(N)
+                \end{cases}
+            \end{equation}
+        \end{block}
+        \begin{itemize}
+            \item[\todo] $[x \mapsto y] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause y ~ (\lambda y. ~ y ~ z)$
+            \item[\todo] $[x \mapsto y ~ z] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause y ~ z ~ (\lambda y. ~ y ~ z)$
+            \item[\todo] $[y \mapsto x] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause x ~ (\lambda y. ~ y ~ z)$
+            \item[\todo] $[z \mapsto x] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause x ~ (\lambda y. ~ y ~ x)$
+            \item[\todo] $[z \mapsto x ~ y] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause x ~ (\lambda y'. ~ y' ~ (x ~ y))$
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Эквивалентности}
+        Эквивалентны ли следующие термы?
+        \begin{itemize}
+            \item[\todo] $x \stackrel{?}{\equiv} x$ --- \pause синтаксическое равенство
+            \item[\todo] $x \stackrel{?}{\equiv} y$ --- \pause нет
+            \item[\todo] $\lambda x. ~ x \stackrel{?}{\equiv} \lambda y. ~ y$ --- \pause $\alpha$-эквивалентность
+            \item[\todo] $\lambda x. ~ x \stackrel{?}{\equiv} (\lambda y. ~ y) (\lambda x. ~ x)$ --- \pause $\beta$-эквивалентность
+            \item[\todo] $\lambda x ~ y. ~ x ~ y \stackrel{?}{\equiv} \lambda x. ~ x$ --- \pause $\eta$-эквивалентность
+        \end{itemize}
+    \end{frame}
 
     \subsectionplan{Сопутствующие концепции}
 
@@ -459,7 +492,7 @@
     \end{frame}
 
 
-    \sectionplan{Кодирование данных в лямбда-исчислении}
+    \sectionplan{Кодирование данных в $\lambda$-исчислении}
 
     \subsection{Значения-записи (records, tuples)}
 
@@ -497,8 +530,8 @@
             \end{minted}
         \end{block}
         \pause
-        \begin{block}{Элиминаторы (селекторы)}
-            Получают информацию из структуры данных:
+        \begin{block}{Элиминаторы (свёртки)}
+            Получают (используют) информацию из структуры данных:
             \begin{minted}{python}
                 barsik.murlicity
             \end{minted}
@@ -518,108 +551,57 @@
         \end{block}
     \end{frame}
 
-    \begin{frame}[fragile]{Законы конструкторов и элиминаторов для значений-записей}
-        Как убедиться, что конструкторы и элиминаторы работают правильно?
-        \pause
-        \begin{enumerate}
-            \item \mintinline{python}|forall n m. Cat(name = n, murlicity = m).name == n|
-            \item \mintinline{python}|forall n m. Cat(name = n, murlicity = m).murlicity == m|
-        \end{enumerate}
-        \pause
-        \vspace{1em}
-        Таким образом, в лямбда-исчислении мы хотим \pause термы $\term{cat}$, $\term{name}$ и $\term{murlicity}$:
-        \begin{enumerate}
-            \item $\forall N~M\ldotp \term{name}~(\term{cat}~N~M) \equiv_\beta N$
-            \item $\forall N~M\ldotp \term{murlicity}~(\term{cat}~N~M) \equiv_\beta M$
-        \end{enumerate}
-        \pause
-        \vspace{1em}
-        Таким образом, получаем абстракцию по данным:
+    \begin{frame}[fragile]{Моделируем котиков (algebra driven design)}
         \begin{itemize}
+            \item[\todo] Какое API будет у котиков?
+            \item[\answer] \pause Термы $\term{cat}$, $\term{name}$ и $\term{murlicity}$
+            \item[\todo] Какие законы будут гарантировать корректность?
+            \item[\answer] \pause
+            \begin{enumerate}
+                \item $\forall N~M\ldotp \term{name}~(\term{cat}~N~M) \equiv_\beta N$
+                \item $\forall N~M\ldotp \term{murlicity}~(\term{cat}~N~M) \equiv_\beta M$
+            \end{enumerate}
+        \end{itemize}
+        \vspace{1em}
+        \pause
+        Получили абстракцию по данным:
+        \begin{itemize}
+            \item Не два значения, а доменная сущность
             \item Можем выбрать произвольную реализацию, удовлетворяющую законам
             \item Можем забыть, как устроена реализация и разгрузить голову
             \item Можем в произвольный момент подменить реализацию на другую (например, на более эффективную), и пользовательский код не сломается
         \end{itemize}
     \end{frame}
 
-    \begin{frame}[fragile]{Реализация котиков}
-        Для реализации можем воспользоваться концепцией \pause замыканий!
-        \pause
-        \vspace{-1em}
-        \begin{columns}[onlytextwidth]
-            \begin{column}[t]{0.375\textwidth}
-                \begin{block}{Котики в языке с числами}
-                    \begin{minted}[escapeinside=??]{python}
-                        def cat(?\pause?name, murlicity): ?\pause?
-                            def dispatch(i): ?\pause?
-                                if i == 0: ?\pause?
-                                    return name ?\pause?
-                                elif i == 1: ?\pause?
-                                    return murlicity
-                            return dispatch
-                        ?\pause?
-                        def name(c): ?\pause?
-                            return c(0)
-                        ?\pause?
-                        def murlicity(c):
-                            return c(1)
-                    \end{minted}
-                \end{block}
-            \end{column}\hfill
-            \pause%
-            \begin{column}[t]{0.595\textwidth}
-                \begin{block}{Котики в языке без чисел}
-                    \begin{minted}[escapeinside=??]{python}
-                        def cat(name, murlicity):
-                            def dispatch(?\pause?selector): ?\pause?
-                                return selector(name, murlicity) ?\pause?
-                            return dispatch
-                        ?\pause?
-                        def name(c): ?\pause?
-                            return c(lambda name, murlicity: name)
-                        ?\pause?
-                        def murlicity(c):
-                            return c(lambda name, murlicity: murlicity)
-                    \end{minted}
-                \end{block}
-            \end{column}
-        \end{columns}
+    \begin{frame}[fragile]{Кодирование наоборот\footnote{``Наоборот'' также известно как tagless final, \href{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}{\color{blue} church-boehm-barracudi encoding}, CPS transformation.}}
+        \begin{itemize}
+            \item Пусть функции не возвращают результат, а принимают способ его сразу обработать
+            \item[\then] Функции не продают, но показывают
+            \item[\then] ``Штуку я не дам, скажи, зачем она тебе, я всё сделаю''
+            \item Вместо \texttt{(X) -> R} теперь \texttt{(X, (R) -> a) -> a}
+        \end{itemize}
     \end{frame}
 
-    \begin{frame}{Котики в лямбда-исчислении}
-        \vspace{-0.5em}
-        \begin{block}{Закон котиков}
+    \begin{frame}[fragile]{Котики в $\lambda$-исчислении}
+        \begin{block}{Законы котиков}
             \begin{enumerate}
                 \item $\forall N~M\ldotp \term{name}~(\term{cat}~N~M) \equiv_\beta N$
                 \item $\forall N~M\ldotp \term{murlicity}~(\term{cat}~N~M) \equiv_\beta M$
             \end{enumerate}
         \end{block}
         \begin{itemize}
-            \item[\todo] Закодируйте котиков в лямбда-исчислении
+            \item[\todo] \pause Закодируйте конструктор котиков $\term{cat}$ с помощью идеи ``наоборот''
+            \item[\answer] \pause $\term{cat} \termdef \pause \lambda x~y\ldotp \lambda f \ldotp f \ap x \ap y$
+            \item Благодаря каррированности, термы вида $\lambda f\ldotp f \ap n \ap m$ можно считать котиками
+            \item[\todo] Реализуйте $\term{name}$ и $\term{murlicity}$
+            \item[\answer] \pause $\term{name} \termdef \pause \lambda c \ldotp c \ap \term{K}$, $\term{murlicity} \termdef \pause \lambda c \ldotp c \ap \term{K}^*$
+            \item Аналогично можно задать интерфейс пар: $\term{pair}$, $\term{fst}$ и $\term{snd}$
         \end{itemize}
-        \vspace{-1em}
-        \begin{columns}[onlytextwidth]
-            \begin{column}[t]{0.485\textwidth}
-                \begin{itemize}
-                    \item$\term{cat} \termdef \pause \lambda x~y\ldotp \lambda f \ldotp f \ap x \ap y$
-                    \item $\term{name} \termdef \pause \lambda c \ldotp c \ap \term{K}$
-                    \item $\term{murlicity} \termdef \pause \lambda c \ldotp c \ap \term{K}^*$
-                \end{itemize}
-            \end{column}\hfill
-            \pause%
-            \begin{column}[t]{0.485\textwidth}
-                \begin{itemize}
-                    \item $\term{pair} \termdef \lambda x~y\ldotp \lambda f \ldotp f \ap x \ap y$
-                    \item $\term{fst} \termdef \lambda p \ldotp p \ap \term{K}$
-                    \item $\term{snd} \termdef \lambda p \ldotp p \ap \term{K}^*$
-                \end{itemize}
-            \end{column}
-        \end{columns}
     \end{frame}
 
     \begin{frame}[fragile]{Проверка законов пар}
         \begin{itemize}
-            \item[\todo] Проверьте, что реализация удовлетворяет законам
+            \item[\todo] Проверьте, что реализация пар удовлетворяет законам
             \item[\answer] \pause
             \begin{align*}
                 \term{fst} \ap &(\term{pair} \ap \framebox{N} \ap M)
@@ -641,7 +623,7 @@
         \end{itemize}
     \end{frame}
 
-    \begin{frame}{Каррирование}
+    \begin{frame}{Каррирование и раскаррирование}
         \begin{itemize}
             \item[\todo] Как выразить функцию многих аргументов?
             \item[\answer] \pause Пусть принимает кортеж аргументов!
@@ -677,20 +659,16 @@
     \begin{frame}{Логические величины}
         \begin{block}{Конструкторы логической величины}
             \pause
-            Две константы: \texttt{True} и \texttt{False}
+            Две константы: $\term{true}$, $\term{false}$
         \end{block}
         \pause
         \begin{block}{Элиминатор логической величины}
             Вся информация --- это ложь или истина.
-            Элиминатор: \pause \texttt{if}.
-        \end{block} \pause
+            Элиминатор: \pause $\term{if}$.
+        \end{block}
+        \pause
         \begin{block}{Законы для логической величины}
-            \begin{enumerate}
-                \item \pause \mintinline{python}|forall t e. if True: t else: e == t|
-                \item \mintinline{python}|forall t e. if False: t else: e == e|
-            \end{enumerate}
             \pause
-            Или в случае лямбда-исчисления нам нужны термы \pause $\term{true}$, $\term{false}$ и $\term{if}$:
             \begin{enumerate}
                 \item $\term{if} \ap \term{true} \ap T \ap E \eqbeta T$
                 \item $\term{if} \ap \term{false} \ap T \ap E \eqbeta E$
@@ -707,11 +685,10 @@
         \end{block}
         \pause
         \begin{itemize}
-            \item Единственный способ различить термы --- апплицировать к чему-нибудь и посмотреть, к чему аппликация редуцируется
-            \item[\then] То есть $\term{if} \termdef \pause \lambda b~t~e \ldotp b \ap \ldots$
-            \item \pause А $\term{true}$ и $\term{false}$ --- какие-то термы с разным аппликативным поведением
-            \item[\then] Возьмём $\term{true} \termdef \pause \term{K}$ и $\term{false} \termdef \term{K}^*$
-            \item[\then] \pause $\term{if} \termdef \pause \lambda b~t~e\ldotp b \ap t \ap e \eqeta \pause \lambda x\ldotp x$
+            \item[\todo] Закодируйте конструкторы с помощью ``наоборот''
+            \item[\answer] \pause $\term{true} \termdef \pause \term{K}$ и $\term{false} \termdef \term{K}^*$
+            \item[\todo] Закодируйте $\term{if}$
+            \item[\answer] \pause $\term{if} \termdef \pause \lambda b~t~e\ldotp b \ap t \ap e \eqeta \pause \lambda x\ldotp x$
         \end{itemize}
     \end{frame}
 
@@ -760,7 +737,7 @@
             \end{column}\hfill
             \pause%
             \begin{column}[t]{0.485\textwidth}
-                \begin{block}{На лямбда-исчислении}
+                \begin{block}{На $\lambda$-исчислении}
                     \[
                         \term{not}~\pause b\termdef \term{if} \ap b \ap \term{false} \ap \term{true}
                     \]
@@ -795,7 +772,7 @@
             \end{column}\hfill
             \pause%
             \begin{column}[t]{0.485\textwidth}
-                \begin{block}{На лямбда-исчислении}
+                \begin{block}{На $\lambda$-исчислении}
                     \[
                         \term{and} ~x~y \termdef \pause \term{if} \ap x \ap y \ap \term{false}
                     \]
