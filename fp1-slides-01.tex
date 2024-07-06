@@ -132,6 +132,7 @@
     \subsection{Синтаксис $\lambda$-исчисления}
 
     \begin{frame}{Синтаксис $\lambda$-исчисления}
+        \pause
         Множество программ (термов) --- $\Lambda$, множество допустимых переменных --- $V$.
 
         Синтаксис задаётся индуктивным определением:
@@ -551,29 +552,46 @@
         \end{block}
     \end{frame}
 
-    \begin{frame}[fragile]{Моделируем котиков (algebra driven design)}
-        \begin{itemize}
-            \item[\todo] Какое API будет у котиков?
-            \item[\answer] \pause Термы $\term{cat}$, $\term{name}$ и $\term{murlicity}$
-            \item[\todo] Какие законы будут гарантировать корректность?
-            \item[\answer] \pause
+    \begin{frame}[fragile]{Моделируем котиков}
+        \pause
+        \begin{block}{API котиков}
+            \begin{itemize}
+                \item Терм-конструктор $\term{cat}$
+                \item Элиминаторы $\term{name}$ и $\term{murlicity}$
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Законы котиков}
             \begin{enumerate}
                 \item $\forall N~M\ldotp \term{name}~(\term{cat}~N~M) \equiv_\beta N$
                 \item $\forall N~M\ldotp \term{murlicity}~(\term{cat}~N~M) \equiv_\beta M$
             \end{enumerate}
-        \end{itemize}
-        \vspace{1em}
-        \pause
+        \end{block}
+        Аналогично можно задать интерфейс пар: $\term{pair}$, $\term{fst}$ и $\term{snd}$.
+    \end{frame}
+
+    \begin{frame}[fragile]{Законы и algebra driven design\footnote{Sandy Maguire, ``Algebra driven design''} \popslide}
         Получили абстракцию по данным:
         \begin{itemize}
             \item Не два значения, а доменная сущность
             \item Можем выбрать произвольную реализацию, удовлетворяющую законам
             \item Можем забыть, как устроена реализация и разгрузить голову
             \item Можем в произвольный момент подменить реализацию на другую (например, на более эффективную), и пользовательский код не сломается
+            \item Можем автоматически тестировать реализации на соответствие законам\footnote{\href{https://youtu.be/G0NUOst-53U?si=yrFoPQ-kSSPF1Xtb}{\color{blue} John Hughes - Keynote: How to specify it! (...) - Lambda Days 2020}}
         \end{itemize}
     \end{frame}
 
-    \begin{frame}[fragile]{Кодирование наоборот\footnote{``Наоборот'' также известно как tagless final, \href{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}{\color{blue} church-boehm-barracudi encoding}, CPS transformation.}}
+    \begin{frame}[fragile]{Кодируем котиков}
+        \pause
+        \begin{center}
+            Эм. Как??
+            \vspace{1em}
+
+            \includegraphics[width=0.4\textwidth]{figs/wat}
+        \end{center}
+    \end{frame}
+
+    \begin{frame}[fragile]{Кодирование наоборот\footnote{``Наоборот'' также известно как tagless final, \href{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}{\color{blue} church-boehm-berarducci encoding}, CPS transformation.}}
         \begin{itemize}
             \item Пусть функции не возвращают результат, а принимают способ его сразу обработать
             \item[\then] Функции не продают, но показывают
@@ -589,14 +607,23 @@
                 \item $\forall N~M\ldotp \term{murlicity}~(\term{cat}~N~M) \equiv_\beta M$
             \end{enumerate}
         \end{block}
-        \begin{itemize}
-            \item[\todo] \pause Закодируйте конструктор котиков $\term{cat}$ с помощью идеи ``наоборот''
-            \item[\answer] \pause $\term{cat} \termdef \pause \lambda x~y\ldotp \lambda f \ldotp f \ap x \ap y$
-            \item Благодаря каррированности, термы вида $\lambda f\ldotp f \ap n \ap m$ можно считать котиками
-            \item[\todo] Реализуйте $\term{name}$ и $\term{murlicity}$
-            \item[\answer] \pause $\term{name} \termdef \pause \lambda c \ldotp c \ap \term{K}$, $\term{murlicity} \termdef \pause \lambda c \ldotp c \ap \term{K}^*$
-            \item Аналогично можно задать интерфейс пар: $\term{pair}$, $\term{fst}$ и $\term{snd}$
-        \end{itemize}
+        \pause
+        \begin{block}{Конструктор}
+            \begin{itemize}
+                \item Принимает аргументы
+                \item Принимает функцию действующую на всей информации пары
+                \item $\term{cat} \termdef \pause \lambda x~y\ldotp \lambda f \ldotp f \ap x \ap y$
+                \item Благодаря каррированности, термы вида $\lambda f\ldotp f \ap n \ap m$ можно считать котиками
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Элиминаторы}
+            \begin{itemize}
+                \item $\term{name} \termdef \pause \lambda c \ldotp c \ap \term{K}$
+                \item $\term{murlicity} \termdef \pause \lambda c \ldotp c \ap \term{K}^*$
+            \end{itemize}
+        \end{block}
+        Пары определяются аналогично.
     \end{frame}
 
     \begin{frame}[fragile]{Проверка законов пар}
@@ -656,15 +683,13 @@
 
     \subsection{Логические величины}
 
-    \begin{frame}{Логические величины}
-        \begin{block}{Конструкторы логической величины}
-            \pause
-            Две константы: $\term{true}$, $\term{false}$
-        \end{block}
+    \begin{frame}{Моделируем логические величины}
         \pause
-        \begin{block}{Элиминатор логической величины}
-            Вся информация --- это ложь или истина.
-            Элиминатор: \pause $\term{if}$.
+        \begin{block}{API логических величин}
+            \begin{itemize}
+                \item Конструкторы: две константы $\term{true}$ и $\term{false}$
+                \item Элиминатор: $\term{if}$
+            \end{itemize}
         \end{block}
         \pause
         \begin{block}{Законы для логической величины}
@@ -684,18 +709,28 @@
             \end{enumerate}
         \end{block}
         \pause
-        \begin{itemize}
-            \item[\todo] Закодируйте конструкторы с помощью ``наоборот''
-            \item[\answer] \pause $\term{true} \termdef \pause \term{K}$ и $\term{false} \termdef \term{K}^*$
-            \item[\todo] Закодируйте $\term{if}$
-            \item[\answer] \pause $\term{if} \termdef \pause \lambda b~t~e\ldotp b \ap t \ap e \eqeta \pause \lambda x\ldotp x$
-        \end{itemize}
+        \begin{block}{Конструкторы}
+            \begin{itemize}
+                \item Принимают ноль аргументов
+                \item Принимают два потенциальных результата, из которых выбирает подходящий
+                \item $\term{true} \termdef \pause \lambda t~e \ldotp t$ (или $\term{K}$)
+                \item $\term{false} \termdef \pause \lambda t~e \ldotp e$ (или $\term{K}^*$)
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Элиминатор}
+            \begin{itemize}
+                \item Вся логика уже в значениях, осталось применить
+                \item $\term{if} \termdef \pause \lambda b~t~e\ldotp b \ap t \ap e$
+                \item Или даже $\term{if} \termdef \lambda x \ldotp x$
+            \end{itemize}
+        \end{block}
     \end{frame}
 
     \begin{frame}[fragile]{Проверка законов логических величин}
         \begin{itemize}
             \item[\todo] Проверьте выполнение законов
-            \item[\answer] \pause Для $\term{false}$ аналогично
+            \item[\answer] \pause
             \begin{align*}
                 \term{if} \ap &\term{true} \ap \framebox{T} \ap E
                 \step_{\beta} \pause \\
@@ -739,7 +774,7 @@
             \begin{column}[t]{0.485\textwidth}
                 \begin{block}{На $\lambda$-исчислении}
                     \[
-                        \term{not}~\pause b\termdef \term{if} \ap b \ap \term{false} \ap \term{true}
+                        \term{not}~ b\termdef \pause \term{if} \ap b \ap \term{false} \ap \term{true}
                     \]
                     \vspace{-1em}
                 \end{block}
@@ -989,6 +1024,7 @@
             \item \href{https://youtu.be/oiUO1L4TOLI}{\color{blue} Функциональное программирование как предмет и метод теоретической информатики.}
             \item \href{https://youtu.be/YWelsG4mbik}{\color{blue} Podlodka \#279 --- Тьюринг-полнота | Виталий Брагилевский.}
             \item \href{https://elizarov.medium.com/immutability-we-can-afford-10c0dcb8351d}{\color{blue} Blogpost: Roman Elizarov: Immutability we can afford.}
+            \item \href{https://youtu.be/sWEtnq0ReZA?si=98-MR2DbAc_LFWV1}{\color{blue} Олег Нижников --- Современное ФП с Tagless Final}
         \end{itemize}
     \end{frame}
 
@@ -997,6 +1033,7 @@
             \item \href{https://www.youtube.com/playlist?list=PL-_cKNuVAYAVX_q9XOKoFm95234G6YfOj}{\color{blue} Записи лекций Дениса Николаевича на МКН}
             \item \href{https://compscicenter.notion.site/compscicenter/b6dddf00bc7d497298179a3bdbdda375}{\color{blue}Памятка с полезностями от Computer Science Center}
             \item Книга: Ламбда-исчисление, Барендрегт
+            \item \href{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}{\color{blue} Beyond Church encoding: Boehm-Berarducci isomorphism of algebraic data types and polymorphic lambda-terms}
         \end{itemize}
     \end{frame}
 
