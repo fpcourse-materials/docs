@@ -711,8 +711,8 @@
         \pause
         \begin{block}{Конструкторы}
             \begin{itemize}
-                \item Принимают ноль аргументов
-                \item Принимают два потенциальных результата, из которых выбирает подходящий
+                \item Принимают ноль аргументов (константы)
+                \item Принимают два потенциальных результата, из которых выбирают нужный
                 \item $\term{true} \termdef \pause \lambda t~e \ldotp t$ (или $\term{K}$)
                 \item $\term{false} \termdef \pause \lambda t~e \ldotp e$ (или $\term{K}^*$)
             \end{itemize}
@@ -722,7 +722,7 @@
             \begin{itemize}
                 \item Вся логика уже в значениях, осталось применить
                 \item $\term{if} \termdef \pause \lambda b~t~e\ldotp b \ap t \ap e$
-                \item Или даже $\term{if} \termdef \lambda x \ldotp x$
+                \item Или даже $\term{if} \termdef \lambda x \ldotp x$ (или $\term{if} \termdef \term{id}$)
             \end{itemize}
         \end{block}
     \end{frame}
@@ -823,115 +823,111 @@
     \subsection{Натуральные числа}
 
     \begin{frame}[fragile]{Натуральные числа $\mathbb{N} \coloneqq \{0, 1, 2, 3, \cdots\}$}
-        \vspace{-0.5em}
-        \begin{block}{Конструкторы}
-            \pause
+        \pause
+        \begin{block}{API логических величин}
             \begin{description}
                 \item[Первая аксиома Пеано:] ноль является натуральным числом ($\term{0}$)
                 \item[Вторая аксиома Пеано:] число, следующее за натуральным, тоже
                 натуральное ($\term{suc} \ap n$)
+                \item[Элиминатор] Воспользоваться натуральным числом --- что-то сделать $n$ раз: $\term{elimNat}$
             \end{description}
         \end{block}
         \pause
-        \vspace{-0.5em}
-        \begin{block}{Элиминаторы}
-            Воспользоваться натуральным числом --- \pause что-то сделать $n$ раз:
-            \vspace{-1em}
-            \begin{columns}[onlytextwidth]
-                \begin{column}[t]{0.475\textwidth}
-                    \begin{minted}[escapeinside=??]{python}
-                        def natElim(?\pause?n, f, ini): ?\pause?
-                            def iterate(i):
-                                if i == 0:
-                                    return ini
-                                else:
-                                    return f(iterate(i - 1))
-                            return iterate(n)
-                    \end{minted}
-                \end{column}\hfill
-                \pause%
-                \begin{column}[t]{0.495\textwidth}
-                    \begin{minted}[escapeinside=??]{python}
-                        natElim(3, lambda x: 's' + x, 'z')
-                        ?$\step$\pause? iterate(3)
-                        ?$\step$\pause? f(iterate(2))
-                        ?$\step$\pause? f(f(iterate(1))
-                        ?$\step$\pause? f(f(f(iterate(0)))
-                        ?$\step$\pause? f(f(f(ini)))
-                        ?$\step$\pause? 's' + ('s' + ('s' + 'z'))
-                        ?$\step$\pause? 'sssz'
-                    \end{minted}
-                \end{column}
-            \end{columns}
-        \end{block}
-        \pause
-        \vspace{-0.5em}
         \begin{block}{Законы для натуральных чисел}
-            \vspace{-0.7em}
-            \begin{columns}[onlytextwidth]
-                \begin{column}{0.375\textwidth}
-                    \begin{enumerate}
-                        \item \pause $\forall f~ini\ldotp \term{natElim} \ap \term{0} \ap f \ap ini \eqbeta ini$
-                    \end{enumerate}
-                \end{column}\hfill%
-                \begin{column}{0.595\textwidth}
-                    \begin{enumerate}
-                        \setcounter{enumi}{1}
-                        \item \pause $\forall n~f~ini\ldotp \term{natElim} \ap (\term{suc} \ap n) \ap f \ap ini \eqbeta f \ap (\term{natElim} \ap n \ap f \ap ini)$
-                    \end{enumerate}
-                \end{column}
-            \end{columns}
+            \begin{enumerate}
+                \item $\forall f~ini\ldotp \term{natElim} \ap \term{0} \ap f \ap ini \eqbeta ini$
+                \item $\forall n~f~ini\ldotp \term{natElim} \ap (\term{suc} \ap n) \ap f \ap ini \eqbeta f \ap (\term{natElim} \ap n \ap f \ap ini)$
+            \end{enumerate}
         \end{block}
     \end{frame}
 
-    \begin{frame}{Числа Чёрча}
-        \vspace{-0.5em}
+    \begin{frame}[fragile]{Элиминация натуральных чисел на питоне}
+        \vspace{-1em}
         \begin{columns}[onlytextwidth]
-            \begin{column}{0.385\textwidth}
-                \begin{block}{Форма чисел Чёрча}
-                    Снова закодируем элиминацию в самой структуре.
-                    \[
-                        \begin{array}{l l}
-                            \term{0}            & \termdef \pause \lambda s~z\ldotp z                                                  \\ \pause
-                            \term{1}            & \termdef \pause \lambda s~z\ldotp s~z                                                \\ \pause
-                            \term{2}            & \termdef \pause \lambda s~z\ldotp s~(s~z)                                            \\ \pause
-                            \vdots \\
-                            \forall k, \term{k} & \termdef \lambda s~z\ldotp\underbrace{s~(s~( \cdots s~(}_k z\underbrace{))\cdots)}_k \\
-                        \end{array}
-                    \]
-                \end{block}
+            \begin{column}[t]{0.475\textwidth}
+                \begin{minted}[escapeinside=??]{python}
+                    def natElim(?\pause?n, f, ini): ?\pause?
+                        def iterate(i):
+                            if i == 0:
+                                return ini
+                            else:
+                                return f(iterate(i - 1))
+                        return iterate(n)
+                \end{minted}
             \end{column}\hfill
             \pause%
-            \begin{column}{0.585\textwidth}
-                \begin{block}{Конструирование чисел Чёрча}
-                    \vspace{-1em}
-                    \[
-                        \begin{array}{l l}
-                            \term{0} & \termdef \pause \lambda s~z\ldotp z                                                             \\
-                            \term{suc} \ap n
-                            & = \pause \lambda s~z\ldotp \underbrace{s~(s~(\cdots (s~(}_{n+1} z\underbrace{)\cdots ))}_{n+1}  \\
-                            & = \pause \lambda s~z\ldotp s~(\underbrace{s~(\cdots (s~(}_n z\underbrace{)\cdots )}_n)
-                            = \pause \lambda s~z\ldotp s~(n~s~z) \\ \pause
-                            \term{suc} \ap n
-                            & = \pause \lambda s~z\ldotp \underbrace{s~(s~(\cdots (s~(}_{n+1} z\underbrace{))\cdots ))}_{n+1} \\
-                            & = \pause \lambda s~z\ldotp \underbrace{s~(\cdots~(s~(}_n s~z\underbrace{)\cdots )}_n)
-                            = \pause  \lambda s~z\ldotp n~s~(s~z)
-                        \end{array}
-                    \]
-                \end{block}
-                \pause
-                \begin{block}{Элиминирование чисел Чёрча}
-                    \[
-                        \begin{array}{l l l}
-                            & \term{natElim} \pause \ap n \ap f \ap ini & \termdef n \ap f \ap ini
-                            \\ \pause
-                            \text{или} & \term{natElim} \pause & \termdef \term{id}
-                        \end{array}
-                    \]
-                    \vspace{-1em}
-                \end{block}
+            \begin{column}[t]{0.495\textwidth}
+                \begin{minted}[escapeinside=??]{python}
+                    natElim(3, lambda x: 's' + x, 'z')
+                    ?$\step$\pause? iterate(3)
+                    ?$\step$\pause? f(iterate(2))
+                    ?$\step$\pause? f(f(iterate(1))
+                    ?$\step$\pause? f(f(f(iterate(0)))
+                    ?$\step$\pause? f(f(f(ini)))
+                    ?$\step$\pause? 's' + ('s' + ('s' + 'z'))
+                    ?$\step$\pause? 'sssz'
+                \end{minted}
             \end{column}
         \end{columns}
+    \end{frame}
+
+    \begin{frame}[fragile]{Конструирование чисел Чёрча}
+        \pause
+        \vspace{-0.5em}
+        \begin{block}{Конструктор $\term{0}$}
+            \begin{itemize}
+                \item Принимает ноль аргументов (константа)
+                \item Принимает действие, начальный элемент и возвращает начальный элемент
+                \item $\term{0} \termdef \lambda s~z\ldotp z$
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Конструктор $\term{suc}$}
+            \begin{itemize}
+                \item Принимает один аргумент
+                \item Принимает действие и начальный элемент, возвращает применение нужное число раз
+            \end{itemize}
+            \[
+                \begin{array}{l l}
+                    \term{suc} \ap n
+                    & = \lambda s~z\ldotp \underbrace{s~(s~(\cdots (s~(}_{n+1} z\underbrace{)\cdots ))}_{n+1}  \\
+                    & = \lambda s~z\ldotp s~(\underbrace{s~(\cdots (s~(}_n z\underbrace{)\cdots )}_n)
+                    = \lambda s~z\ldotp s~(n~s~z) \\
+                    \term{suc} \ap n
+                    & = \lambda s~z\ldotp \underbrace{s~(s~(\cdots (s~(}_{n+1} z\underbrace{))\cdots ))}_{n+1} \\
+                    & = \lambda s~z\ldotp \underbrace{s~(\cdots~(s~(}_n s~z\underbrace{)\cdots )}_n)
+                    = \lambda s~z\ldotp n~s~(s~z)
+                \end{array}
+            \]
+        \end{block}
+    \end{frame}
+
+    \begin{frame}[fragile]{Элиминация чисел Чёрча}
+        \pause
+        \begin{block}{Форма чисел Чёрча}
+            Снова элиминация закодирована с самих значениях:
+            \[
+                \begin{array}{l l}
+                    \term{0}            & \termdef \pause \lambda s~z\ldotp z                                                  \\ \pause
+                    \term{1}            & \termdef \pause \lambda s~z\ldotp s~z                                                \\ \pause
+                    \term{2}            & \termdef \pause \lambda s~z\ldotp s~(s~z)                                            \\ \pause
+                    \vdots \\
+                    \forall k, \term{k} & \termdef \lambda s~z\ldotp\underbrace{s~(s~( \cdots s~(}_k z\underbrace{))\cdots)}_k \\
+                \end{array}
+            \]
+        \end{block}
+        \pause
+        \begin{block}{Элиминирование чисел Чёрча}
+            Просто применить значение к аргументам:
+            \[
+                \begin{array}{l l l}
+                    & \term{natElim} \ap n \ap f \ap ini & \termdef n \ap f \ap ini
+                    \\
+                    \text{или} & \term{natElim} & \termdef \term{id}
+                \end{array}
+            \]
+            \vspace{-1em}
+        \end{block}
     \end{frame}
 
     \begin{frame}{Операции над числами Чёрча: сложение}
@@ -948,13 +944,13 @@
     \begin{frame}{Операции над числами Чёрча: проверка чётности числа (1)}
         \begin{block}{Методология}
             \begin{enumerate}
-                \item \pause Смотрим, как терм ведёт себя в базовых случаях
+                \item Смотрим, как терм ведёт себя в базовых случаях
                 \vspace{-1em}
                 \begin{columns}[onlytextwidth]
                     \begin{column}[t]{0.46\textwidth}
                         \vspace{-0.5em}
                         \begin{align*}
-                            \term{isEven}~\term{0}& \step_\beta \pause \term{true} \\ \pause
+                            \term{isEven}~\term{0}& \step_\beta \term{true} \\
                             \term{isEven}~\term{1}& \step_\beta \term{false} \\
                             \term{isEven}~\term{2}& \step_\beta \term{true} \\
                             \ldots
@@ -962,26 +958,24 @@
                     \end{column}\hfill%
                     \begin{column}[t]{0.51\textwidth}
                         \begin{itemize}
-                            \item \pause Функция принимает два значения
-                            \item \pause Первый раз --- $\term{true}$
-                            \item \pause Далее значения чередуются
+                            \item Функция принимает два значения
+                            \item Первый раз --- $\term{true}$
+                            \item Далее значения чередуются
                         \end{itemize}
                     \end{column}
                 \end{columns}
-                \item \pause Вспоминаем, как воспользоваться числом: \pause
+                \item Вспоминаем, как воспользоваться числом:
                 \begin{columns}[onlytextwidth]
                     \begin{column}{0.46\textwidth}
                         \[
-                            \term{natElim} \ap \term{3} \ap f \ap ini \step_{\beta} \pause f \ap (f \ap (f \ap ini))
+                            \term{natElim} \ap \term{3} \ap f \ap ini \step_{\beta} f \ap (f \ap (f \ap ini))
                         \]
                     \end{column}\hfill%
                     \begin{column}{0.51\textwidth}
-                        \vspace{-2em}
                         \begin{itemize}
-                            \item \pause Требуется сконструировать подходящие $f$ и $ini$
+                            \item Требуется сконструировать подходящие $f$ и $ini$
                         \end{itemize}
                     \end{column}
-                    \vspace{-1em}
                 \end{columns}
             \end{enumerate}
         \end{block}
@@ -991,27 +985,28 @@
         \vspace{-0.7em}
         \begin{block}{Решение 1}
             \begin{itemize}
-                \item \pause В качестве состояния \pause будем поддерживать пару значений
-                \item \pause Начальное состояние: $\term{start} \termdef \pause \term{pair} \ap \term{true} \ap \term{false}$
-                \item \pause Переход: \pause $\term{swap} \pause \ap (\term{pair} \ap x \ap y) \termdef \term{pair} \ap y \ap x$
+                \item В качестве состояния будем поддерживать пару значений
+                \item Начальное состояние: $\term{start} \termdef \term{pair} \ap \term{true} \ap \term{false}$
+                \item Переход:  $\term{swap}  \ap (\term{pair} \ap x \ap y) \termdef \term{pair} \ap y \ap x$
                 \begin{itemize}
-                    \item \pause Или то же самое $\term{swap} \termdef \lambda p\ldotp \term{pair} \ap (\term{snd} \ap p) \ap (\term{fst} \ap p)$
+                    \item  Или то же самое $\term{swap} \termdef \lambda p\ldotp \term{pair} \ap (\term{snd} \ap p) \ap (\term{fst} \ap p)$
                 \end{itemize}
-                \item \pause Всё вместе: \pause $\term{isEven} \ap n \termdef \pause \term{fst} \ap (\term{natElim} \ap n \ap \term{swap} \ap \term{start})$
+                \item  Всё вместе:  $\term{isEven} \ap n \termdef  \term{fst} \ap (\term{natElim} \ap n \ap \term{swap} \ap \term{start})$
             \end{itemize}
             \pause
             Проверка:
             \begin{itemize}
-                \item \pause $\term{isEven} \ap \term{0} \step_\beta \pause \term{fst} \ap \term{start} \step_\beta \pause \term{true}$
-                \item \pause $\term{isEven} \ap \term{3} \step_\beta \pause \term{fst} \ap (\term{swap} \ap (\term{swap} \ap (\term{swap} \ap \term{start}))) \step_\beta \pause \term{fst} \ap (\term{swap} \ap (\term{swap} \ap (\term{pair} \ap \term{false} \ap \term{true}))) \step_\beta \pause \term{fst} \ap (\term{pair} \ap \term{false} \ap \term{true}) \step_\beta \pause \term{false}$
+                \item $\term{isEven} \ap \term{0} \step_\beta  \term{fst} \ap \term{start} \step_\beta \term{true}$
+                \item  $\term{isEven} \ap \term{3} \step_\beta  \term{fst} \ap (\term{swap} \ap (\term{swap} \ap (\term{swap} \ap \term{start}))) \step_\beta   \term{fst} \ap (\term{swap} \ap (\term{swap} \ap (\term{pair} \ap \term{false} \ap \term{true}))) \step_\beta  \term{fst} \ap (\term{pair} \ap \term{false} \ap \term{true}) \step_\beta  \term{false}$
             \end{itemize}
         \end{block}
         \vspace{-0.5em}
+        \pause
         \begin{block}{Решение 2}
             \begin{itemize}
-                \item \pause Состояние: булево значение
-                \item \pause Начальное значение: \pause $\term{true}$; \pause переход: \pause $\term{not}$
-                \item \pause Всё вместе: \pause $\term{isEven} \ap n \termdef \pause \term{natElim} \ap n \ap \term{not} \ap \term{true}$
+                \item Состояние: булево значение
+                \item Начальное значение: $\term{true}$; переход: $\term{not}$
+                \item Всё вместе: $\term{isEven} \ap n \termdef \term{natElim} \ap n \ap \term{not} \ap \term{true}$
             \end{itemize}
         \end{block}
     \end{frame}
