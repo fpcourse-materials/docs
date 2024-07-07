@@ -34,7 +34,7 @@
     \begin{frame}{Отчётность} % TODO
         \begin{itemize}
             \item Оценка за курс --- оценка за экзамен (успеваемость по практике тоже учитывается)
-            \item Допуск на экзамен --- зачёт по всем домашкам, кроме, может быть, одной
+            \item Допуск на экзамен --- зачёт по всем домашкам и летучкам, кроме, может быть, двух
             \item Правила зачёта по домашкам расписаны в самих домашках
             \item Отчётность будет вестись в гугл-табличке, правила пользования:
             \begin{itemize}
@@ -250,7 +250,6 @@
             \[
                 \term{B} \termdef \lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)
             \]
-            \pause
             Введём специальную $\delta$-редукцию для синтаксической подстановки определений:
             \[
                 \term{B} \step_{\delta} \lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)
@@ -276,7 +275,7 @@
         \end{itemize}
     \end{frame}
 
-    \begin{frame}{$\beta$-редукция}
+    \begin{frame}{$\beta$-редукция --- применение функций}
         \begin{columns}[onlytextwidth]
             \begin{column}[t]{0.485\textwidth}
                 Находим редекс:
@@ -591,13 +590,54 @@
         \end{center}
     \end{frame}
 
-    \begin{frame}[fragile]{Кодирование наоборот\footnote{``Наоборот'' также известно как tagless final, \href{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}{\color{blue} church-boehm-berarducci encoding}, CPS transformation.}}
+    \begin{frame}[fragile]{``Кодирование наоборот''\footnote{``Наоборот'' также известно как tagless final, \href{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}{\color{blue} church-boehm-berarducci encoding}, CPS transformation.}}
         \begin{itemize}
             \item Пусть функции не возвращают результат, а принимают способ его сразу обработать
             \item[\then] Функции не продают, но показывают
             \item[\then] ``Штуку я не дам, скажи, зачем она тебе, я всё сделаю''
             \item Вместо \texttt{(X) -> R} теперь \texttt{(X, (R) -> a) -> a}
         \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Кодирование наоборот как оптимизация \popslide}
+        \begin{itemize}
+            \item Это общий способ избавления от аллокаций и структур данных
+            \item Пример с HFT\footnote{High frequency trading --- очень быстро торгуют на бирже и зарабатывают деньги.} доклада --- оптимальный десериализатор:
+            \begin{itemize}
+                \item Есть два вида сообщений
+                \item Десериализатор по-хорошему должен аллоцировать \texttt{std::variant}, но
+            \end{itemize}
+        \end{itemize}
+        \begin{columns}[onlytextwidth]
+            \begin{column}{0.485\textwidth}
+                \begin{block}{С аллокацией}
+                    \begin{minted}{cpp}
+                        std::variant<Msg1, Msg2>
+                            deserialize(bytes bs) {
+                            if (...) {
+                                return std::variant{Msg1(...)};
+                            else {
+                                return std::variant{Msg2(...)};
+                            }
+                        }
+                    \end{minted}
+                \end{block}
+            \end{column}\hfill%
+            \begin{column}{0.485\textwidth}
+                \begin{block}{Без аллокации}
+                    \begin{minted}{cpp}
+                        template<class Impl>
+                        auto deserialize(bytes bs) {
+                            if (...) {
+                                return Impl.processMsg1(...);
+                            else {
+                                return Impl.processMsg2(...);
+                            }
+                        }
+                    \end{minted}
+                \end{block}
+            \end{column}
+        \end{columns}
     \end{frame}
 
     \begin{frame}[fragile]{Котики в $\lambda$-исчислении}
@@ -623,7 +663,7 @@
                 \item $\term{murlicity} \termdef \pause \lambda c \ldotp c \ap \term{K}^*$
             \end{itemize}
         \end{block}
-        Пары определяются аналогично.
+        Пары определяются аналогично: $\term{pair}, \term{fst}, \term{snd}$.
     \end{frame}
 
     \begin{frame}[fragile]{Проверка законов пар}
@@ -658,8 +698,8 @@
             \item[\answer] \pause
             \[
                 \begin{array}{l l}
-                    \term{curry}   & \termdef \lambda f\ldotp \pause \lambda a~b\ldotp \pause f~ \pause (\term{pair}~a~b) \pause \\
-                    \term{uncurry} & \termdef \lambda f\ldotp \pause \lambda p\ldotp f~ \pause (\term{fst}~p)~(\term{snd}~p)
+                    \term{curry}   & \termdef \lambda f\ldotp \lambda a~b\ldotp f~ (\term{pair}~a~b)           \\
+                    \term{uncurry} & \termdef \lambda f\ldotp \lambda p\ldotp f~ (\term{fst}~p)~(\term{snd}~p)
                 \end{array}
             \]
         \end{itemize}
@@ -667,7 +707,7 @@
         \begin{block}{Соглашение о распаковке}
             \[
                 \begin{array}{l l}
-                    \term{curry}~f~a~b                 & \termdef f~(\term{pair}~a~b) \\ \pause
+                    \term{curry}~f~a~b                 & \termdef f~(\term{pair}~a~b) \\
                     \term{uncurry}~f~(\term{pair}~a~b) & \termdef f~a~b
                 \end{array}
             \]
@@ -693,7 +733,6 @@
         \end{block}
         \pause
         \begin{block}{Законы для логической величины}
-            \pause
             \begin{enumerate}
                 \item $\term{if} \ap \term{true} \ap T \ap E \eqbeta T$
                 \item $\term{if} \ap \term{false} \ap T \ap E \eqbeta E$
@@ -892,7 +931,7 @@
                     \term{suc} \ap n
                     & = \lambda s~z\ldotp \underbrace{s~(s~(\cdots (s~(}_{n+1} z\underbrace{)\cdots ))}_{n+1}  \\
                     & = \lambda s~z\ldotp s~(\underbrace{s~(\cdots (s~(}_n z\underbrace{)\cdots )}_n)
-                    = \lambda s~z\ldotp s~(n~s~z) \\
+                    = \lambda s~z\ldotp s~(n~s~z) \\ \pause
                     \term{suc} \ap n
                     & = \lambda s~z\ldotp \underbrace{s~(s~(\cdots (s~(}_{n+1} z\underbrace{))\cdots ))}_{n+1} \\
                     & = \lambda s~z\ldotp \underbrace{s~(\cdots~(s~(}_n s~z\underbrace{)\cdots )}_n)

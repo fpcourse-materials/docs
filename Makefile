@@ -14,7 +14,7 @@ clean-slides:
 	rm -ri --force _minted*
 	rm -i --force *.synctex* *-pause.tex
 
-clean-all: clean
+clean-all: clean-slides
 	rm -i --force *.pdf
 
 sem-all: sem1
