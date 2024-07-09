@@ -1,0 +1,186 @@
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+
+\title[Рекурсия в $\lambda$-исчислении]{Практика 2. Рекурсия в $\lambda$-исчислении}
+\date{осень 2024}
+
+\begin{document}
+
+    \setcounter{framenumber}{-1}
+    \maketitle
+
+    \begin{frame}{В предыдущих сериях}
+        \begin{itemize}
+            \item Синтаксис и семантика $\lambda$-исчисления
+            \item Абстракция по данным в $\lambda$-исчислении: кортежи, натуральные числа, логические величины
+            \item[\newtopic] Нормальные формы
+            \item[\newtopic] Стратегии редукции
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+
+    \sectionplan{Примитивная рекурсия}
+
+    \begin{frame}[fragile]{Цикл по заданному интервалу}
+        \begin{minted}{Python}
+            def rec(f, ini, n):
+                acc = ini
+                for i in range(0, n):
+                    acc = f(i, acc)
+                return acc
+        \end{minted}
+        \begin{itemize}
+            \item[\todo] Перепишите рекурсивно
+            \item[\answer] \pause
+        \end{itemize}
+        \begin{minted}{Python}
+            def rec(f, ini, n): #\pause#
+                if n == 0: #\pause#
+                    return ini
+                else: #\pause#
+                    return f(n - 1, rec(f, ini, n - 1))
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Идея трансляции в $\lambda$-исчисление}
+        \begin{itemize}
+            \item Пример вычисления:
+            \begin{minted}[escapeinside=??]{python}
+                      rec(f, ini, 3)
+                ?$\step_\beta$??\pause? f(2,   rec(f, ini, 2))
+                ?$\step_\beta$??\pause? f(2, f(1,   rec(f, ini, 1)))
+                ?$\step_\beta$??\pause? f(2, f(1, f(0, rec(f, ini, 0))))
+                ?$\step_\beta$??\pause? ?\framebox{f(2, f(1, f(0, ini)))}?
+            \end{minted}
+            \item[\todo] Какая будет идея трансляции?
+            \item[\answer] \pause Похоже на числа Чёрча
+            \item[\answer] Последовательно преобразуется пара из индекса и предыдущего результата
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Примитивная рекурсия в $\lambda$-исчислении}
+        \begin{columns}[onlytextwidth]
+            \begin{column}{0.385\textwidth}
+                \vspace{-1em}
+                \begin{minted}{Python}
+                    def rec(f, ini, n):
+                        if n == 0:
+                            return ini
+                        else:
+                            res = rec(f, ini, n - 1)
+                            return f(n - 1, res)
+                \end{minted}
+                \vspace{0.5em}
+                Вычисляется в
+                \begin{minted}{python}
+                    f(2, f(1, f(0, ini)))
+                \end{minted}
+                \vspace{0.5em}
+                Нужно выразить в виде
+                $s \ap (s \ap (s \ap z))$.
+            \end{column}\hfill%
+            \pause
+            \begin{column}{0.585\textwidth}
+                \begin{itemize}
+                    \item Из итерации в итерацию передаём пару из номера итерации и результата предыдущей
+                    \item Начальное состояние --- $\term{start} \ap ini \termdef \pause \term{pair} \ap \term{0} \ap ini$
+                    \item Одна итерация:
+                    \[
+                        \term{step} \pause \ap f \ap (\term{pair} \ap i \ap res)
+                        \termdef
+                        \term{pair} \ap (\term{suc} \ap i) \ap (f \ap i \ap res)
+                    \] \vspace{-1em}
+                    \item Итерирование
+                    \[
+                        \term{iter} \ap f \ap ini \ap n
+                        \termdef
+                        \pause \term{natElim} \ap n \ap (\term{step} \ap f) \ap (\term{start} \ap ini)
+                    \] \vspace{-1em}
+                    \item И наконец
+                    \[
+                        \term{rec} \ap f \ap ini \ap n
+                        \termdef
+                        \pause \term{snd} \ap (\term{iter} \ap f \ap ini \ap n)
+                    \] \vspace{-1em}
+                \end{itemize}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}[fragile]{Примеры применения примитивной рекурсии}
+        \begin{block}{Свойство примитивной рекурсии}
+            \vspace{-0.5em}
+
+            \[\term{rec}~f~ini~n \eqbeta \pause f~(n-1)~(f~(n-2)~(\cdots~(f~1~(f~0~ini))\cdots))\]
+
+            \vspace{-1.5em}
+        \end{block}
+        \vspace{1em}
+        \begin{itemize}
+            \item[\todo] Реализуйте функцию суммирования чисел от $1$ до $n$
+            \item[\todo] Реализуйте факториал
+            \item[\todo] Реализуйте $\term{pred}$
+            \item[\answer] \pause $\term{sum} \ap n \termdef \term{rec} \ap (\lambda i \ap res \ldotp \term{plus} \ap (\term{suc} \ap i) \ap res) \ap \term{0} \ap n$
+            \item[\answer] \pause $\term{fac} \ap n
+            \termdef
+            \term{rec}
+            \ap (\lambda \pause i \ap res \ldotp \term{mult} \ap (\term{suc} \ap i) \ap res)
+            \ap \term{1} \ap n$
+            \item[\answer] $\term{pred} \termdef \pause \term{rec}~\term{K}~\term{0}$
+            \item Во всех случаях можно сделать $\eta$-редукцию
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Проверка факториала}
+        \pause
+        \begin{itemize}
+            \item $
+            \term{fac}~\term{2} \step_{\beta}
+            \term{snd}~(\term{2}~(\term{step}~(\lambda i~r\ldotp \term{mult}~(\term{suc}~i)~r))~(\term{pair}~\term{0}~\term{1})) \step_{\beta}
+            \term{snd}~(\term{step}~(\lambda i~r\ldotp \term{mult}~(\term{suc}~i)~r)~((\term{step}~(\lambda i~r\ldotp \term{mult}~(\term{suc}~i)~r))~(\term{pair}~\term{0}~\term{1}))) \step_{\beta}
+            \term{snd}~(\term{step}~(\lambda i~r\ldotp \term{mult}~(\term{suc}~i)~r)~(\term{pair}~(\term{suc}~\term{0})~((\lambda i~r\ldotp \term{mult}~(\term{suc}~i)~r)~\term{0}~\term{1}))) \step_{\beta}
+            \term{snd}~(\term{step}~(\lambda i~r\ldotp \term{mult}~(\term{suc}~i)~r)~(\term{pair}~\term{1}~(\term{mult}~(\term{suc}~\term{0})~\term{1}))) \step_{\beta}
+            \term{snd}~(\term{step}~(\lambda i~r\ldotp \term{mult}~(\term{suc}~i)~r)~(\term{pair}~\term{1}~\term{1})) \step_{\beta}
+            \term{snd}~(\term{pair}~(\term{suc}~\term{1})~((\lambda i~r\ldotp \term{mult}~(\term{suc}~i)~r)~\term{1}~\term{1})) \step_{\beta}
+            (\lambda i~r\ldotp \term{mult}~(\term{suc}~i)~r)~\term{1}~\term{1} \step_{\beta}
+            \term{mult}~(\term{suc}~\term{1})~\term{1} \step_{\beta}
+            \term{2}
+            $
+            \item \pause Да ну серьёзно??
+            \item \pause Через свойство примитивной рекурсии сильно проще
+            \begin{align*}
+                \term{fac} \ap \term{3}
+                &\step_{\beta} \pause
+                f~\term{2}~(
+                f~\term{1}~(
+                f~\term{0}~\term{1}))
+                \\ &\step_{\delta} \pause
+                (\lambda i \ap res\ldotp \term{mult}~(\term{suc}~i) \ap res)~\term{2}~(
+                f~\term{1}~(
+                f~\term{0}~\term{1}))
+                \\ &\step_{\beta} \pause
+                \term{mult}~(\term{suc}~\term{2})~(
+                f~\term{1}~(
+                f~\term{0}~\term{1}))
+                \\ &\step_{\beta} \pause
+                \term{mult}~\term{3}~(
+                \term{mult}~\term{2}~(
+                \term{mult}~\term{1}~\term{1}))
+                \step_{\beta} \pause
+                \term{6}
+            \end{align*}
+            \item Важно грамотно выбирать уровень абстракции
+        \end{itemize}
+    \end{frame}
+
+\end{document}
