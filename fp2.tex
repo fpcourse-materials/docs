@@ -1,0 +1,225 @@
+%! suppress = Makeatletter
+%! suppress = TooLargeSection
+%! suppress = MissingLabel
+\documentclass{article}
+
+% Fields
+\usepackage{geometry}
+\geometry{top=25mm}
+\geometry{bottom=35mm}
+\geometry{left=20mm}
+\geometry{right=20mm}
+% ------------------------------------------------
+
+% Graphics
+\usepackage{color}
+\usepackage{tabularx}
+\usepackage{tikz}
+% https://tikz.dev/tikz-graphs
+\usetikzlibrary{positioning, shapes.geometric, arrows, automata, graphs}
+\tikzset{
+    expr/.style={ellipse, draw=gray!60, fill=gray!5, very thick, minimum size=7mm, yshift=0.7cm},
+    hexpr/.style={ellipse, draw=gray!60, fill=blue!15, very thick, minimum size=7mm, yshift=0.7cm},
+    stmt/.style={rectangle, draw=gray!60, fill=gray!5, very thick, minimum size=5mm, yshift=0.7cm},
+    decl/.style={rectangle, draw=blue!60, fill=gray!5, very thick, minimum size=5mm, yshift=0.7cm},
+    hdecl/.style={rectangle, draw=blue!60, fill=blue!15, very thick, minimum size=5mm, yshift=0.7cm},
+    subtree/.style={shape border rotate=90, isosceles triangle, draw=gray!60, fill=gray!5, very thick, minimum size=5mm, yshift=0.0cm},
+}
+\usepackage{blkarray}
+\usepackage{graphicx}
+\usepackage{forest} % https://tex.stackexchange.com/questions/198405/how-to-change-the-color-of-subtrees-in-tikz-qtree
+% ------------------------------------------------
+
+% Math
+\usepackage{amsmath, amsfonts}
+\usepackage{amssymb}
+\usepackage{proof}
+\usepackage{mathrsfs}
+% Crossed-out symbols
+% https://tex.stackexchange.com/questions/75525/how-to-write-crossed-out-math-in-latex
+\usepackage[makeroom]{cancel}
+\usepackage{mathtools}
+% ------------------------------------------------
+
+% Additional font sizes
+% https://www.overleaf.com/learn/latex/Questions/How_do_I_adjust_the_font_size%3F
+\usepackage{moresize}
+% Additional colors
+% https://www.overleaf.com/learn/latex/Using_colours_in_LaTeX
+\usepackage{xcolor}
+% \texttimes
+\usepackage{textcomp}
+% ------------------------------------------------
+
+% Language
+\usepackage[utf8] {inputenc}
+\usepackage[T2A] {fontenc}
+\usepackage[english, russian] {babel}
+\usepackage{indentfirst, verbatim}
+\usetikzlibrary{cd, babel}
+% ------------------------------------------------
+
+% Fonts
+\usepackage{stmaryrd}
+\usepackage{cmbright}
+\usepackage{wasysym}
+% ------------------------------------------------
+
+% Code
+% https://tex.stackexchange.com/questions/99475/how-to-invoke-latex-with-the-shell-escape-flag-in-texstudio-former-texmakerx
+% Colored, requires --shell-escape compiling option
+% \usepackage{minted}
+% \setminted{xleftmargin=\parindent, autogobble, escapeinside=\#\#}
+\usepackage{listings}
+% ------------------------------------------------
+
+% Custom commands
+\newcommand{\comb}[1]{\mathbf{#1}}
+\newcommand{\step}{\rightsquigarrow}
+\newcommand{\term}[1]{\mathbf{#1}}
+\newcommand{\ap}{~}
+\newcommand{\termdef}{\coloneqq}
+\newcommand{\subst}[3]{\left[#2 \mapsto #3 \right] #1}
+\newcommand{\eqbeta}{=_\beta}
+\newcommand{\eqeta}{=_\eta}
+% ------------------------------------------------
+
+% Head
+\usepackage{fancybox,fancyhdr}
+\usepackage{hyperref}
+%\pagestyle{fancy}
+% ------------------------------------------------
+
+\begin{document}
+    \begin{center}
+    {\LARGE ФП 2.0}
+        \\
+        осень 2024
+    \end{center}
+
+    \tableofcontents
+
+    \section*{Введение}
+
+    В функциональном программировании и языковом дизайне в частности существует некоторый набор знаний, считающихся общеизвестным фольклором.
+    Сложность в том, что эти знания рассеяны по книгам, статьям и ``культовым'' блог-постам, и требуется довольно много времени и сил для восстановления целостной картины.
+
+    Цель этого курса ---
+
+    курс о том, что интересно мне.
+
+    %todo
+
+
+    \section{Параметрический полиморфизм}
+
+    \subsection{Напоминание про типы}
+
+    Программное обеспечение --- это сложно.
+    Поэтому постоянно и неизбежно в программах возникают ошибки.
+    Их можно искать, в том числе, статически, то есть без запуска программы.
+    Одним из видов статического анализа является анализ типов.
+
+    Как известно, выражение можно представить в виде дерева.
+    Для примера рассмотрим $(\lambda y\ldotp x \div (y + 2)) \ap 3$:
+    \\
+    \begin{tikzpicture}
+        \node [expr] (ap) {$@$};
+        \node [expr] (three) [below right = of ap]{$3$};
+        \node [hexpr] (lam) [below left =of ap] {$\lambda$};
+        \node [hdecl] (y) [below right =of lam] {$y$};
+        \node [expr] (div) [below=of lam] {$\div$};
+        \node [expr] (x) [below left=of div] {$x$};
+        \node [expr] (plus) [below right = of div] {$+$};
+        \node [hexpr] (param) [below left=of plus] {$y$};
+        \node [expr] (two) [below right = of plus] {$2$};
+        \draw[->] (three) -- (ap);
+        \draw[->] (lam) -- (ap);
+        \draw[->] (div) -- (lam);
+        \draw[->] (plus) -- (div);
+        \draw[->] (x) -- (div);
+        \draw[->] (two) -- (plus);
+        \draw[->] (param) -- (plus);
+        \draw[->] (y) -- (lam);
+    \end{tikzpicture}
+
+    Идея анализа типов состоит в том, что мы каждой вершине дерева программы пытаемся присвоить некоторую синтаксическую метку по определённым правилам.
+    Если каждой вершине метку присвоить можно, то мы считаем, что программа проходит проверку типов, и она ``хорошая''.
+
+    Пример выше проходит проверку типов в некоторой разумной системе типов:
+
+    \begin{tikzpicture}
+        \node [expr] (ap) {$@ : int$};
+        \node [expr] (three) [below right = of ap]{$3 : int$};
+        \node [hexpr] (lam) [below left=of ap] {$\lambda : int \to int$};
+        \node [decl] (y) [below right = of lam] {$y {\color{red}~: int}$};
+        \node [expr] (div) [below=of lam] {$\div : int$};
+        \node [expr] (x) [below left=of div] {$x : int$};
+        \node [expr] (plus) [below right = of div] {$+ : int$};
+        \node [hexpr] (param) [below left=of plus] {$y : int$};
+        \node [expr] (two) [below right = of plus] {$2 : int$};
+        \draw[->] (lam) -- (ap);
+        \draw[->] (three) -- (ap);
+        \draw[->] (div) -- (lam);
+        \draw[->] (plus) -- (div);
+        \draw[->] (x) -- (div);
+        \draw[->] (two) -- (plus);
+        \draw[->] (param) -- (plus);
+        \draw[->] (y) -- (lam);
+    \end{tikzpicture}
+
+    Система типов определяет синтаксис типовых меток и правила, по которым их можно приписывать.
+    Синтаксис обычно описывается в классических нотациях а ля BNF, а правила в виде типовых дробей.
+    Например, так выглядят дроби для просто-типизированного $\lambda$-исчисления:
+    \[
+        \begin{array}{l c r}
+            \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+            &
+            \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+            &
+            \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+        \end{array}
+    \]
+
+    Типовые метки имеют чисто-синтаксическую природу, однако их можно проинтерпретировать.
+    Самая популярная интерпретация~--- воспринимать типовую метку как множество.
+    Так, метке $int \to int$ можно поставить в соответствие множество функций между множествами ограниченных целых чисел.
+
+    \subsection{Параметрический полиморфизм первого ранга}
+
+
+
+
+    Подобно тому как $\lambda$-выражения позволяют обобщать выражения по значениям на уровне термов, так $\forall$ (\texttt{forall}) в типах позволяет обобщать типы
+
+    % todo
+
+    \subsection{Полиморфизм высшего ранга}
+
+    % TODO
+
+    \subsection{Реализация параметрического полиморфизма}
+
+    % todo
+
+    \subsection{Полиморфизм по runtime-представлению}
+
+    %todo
+
+
+    \section{Специальный полиморфизм}
+
+    % todo
+
+
+%    \section{Инициальные интерпретаторы}
+%
+%
+%
+%    \section{Интерпретаторы, реализация функций высших порядков}
+%
+%    \section{Монады}
+
+    % todo persistent data structures
+
+\end{document}
