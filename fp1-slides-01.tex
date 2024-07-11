@@ -602,8 +602,9 @@
     \begin{frame}[fragile]{``Кодирование наоборот''\footnote{``Наоборот'' также известно как tagless final, \href{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}{\color{blue} church-boehm-berarducci encoding}, CPS transformation.} \popslide}
         \begin{itemize}
             \item Пусть функции не возвращают результат, а принимают способ его сразу обработать
-            \item[\then] Функции не продают, но показывают
-            \item[\then] ``Штуку я не дам, скажи, зачем она тебе, я всё сделаю''
+            \item Функции не продают, но показывают
+            \item ``Штуку я не дам, скажи, зачем она тебе, я всё сделаю''
+            \item Вместо передачи объекта к месту деконструирования, передаём деконструирование к месту создания объекта
             \item Вместо \texttt{(X) -> R} теперь \texttt{(X, (R) -> a) -> a}
         \end{itemize}
     \end{frame}

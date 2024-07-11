@@ -20,6 +20,7 @@
             \item Синтаксис и семантика $\lambda$-исчисления
             \item Абстракция по данным в $\lambda$-исчислении: кортежи, натуральные числа, логические величины
             \item[\newtopic] Нормальные формы
+            \item[\newtopic] Рекурсия и $\comb{Y}$-комбинатор
             \item[\newtopic] Стратегии редукции
         \end{itemize}
     \end{frame}
@@ -180,6 +181,470 @@
                 \term{6}
             \end{align*}
             \item Важно грамотно выбирать уровень абстракции
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{Комбинатор неподвижной точки}
+
+    \begin{frame}{Рекурсия}
+        \begin{itemize}
+            \item Одной примитивной рекурсии в языке не достаточно, чтобы быть полным по Тьюрингу
+            \item Чтобы добиться полноты, нужна полноценная рекурсия
+            \item  В прикладные языки рекурсия встроена --- достаточно в теле именованной функции вызвать её саму
+            \item Но у нас в языке нет именованных функций
+            \item Договорённость о синонимах не решает проблемы
+            \begin{itemize}
+                \item Это синтаксическая конвенция, а не семантическая (вычислительная)
+                \item $\term{fac} \termdef \cdots \term{fac} \cdots$ --- бесконечное дерево, которое в месте вхождения синонима в правую часть повторяется снова и снова
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Рекурсивные уравнения на термах}
+        Хотим подобрать такой терм $\term{fac}$, чтобы $\term{fac} \ap N \eqbeta \pause \term{if} \ap (\term{iszero} \ap N) \pause \ap \term{1} \pause \ap (\term{mult} \ap N \ap (\term{fac} \ap (\term{pred} \ap N)))$.
+
+        \pause
+        \vspace{0.5em}
+        Решаем рекурсивное уравнение на термах!
+        \begin{enumerate}
+            \item \pause Абстрагируемся в левой части по $\term{fac}$ и $N$:
+            \[
+                \term{fac} \ap N
+                \eqbeta
+                % https://tex.stackexchange.com/questions/245934/how-can-i-make-underbrace-texts-have-the-normal-text-size
+                \underbrace{(\lambda rec \ap n \ldotp \term{if} \ap (\term{iszero} \ap \framebox{n}) \ap \term{1} \ap (\term{mult} \ap \framebox{n} \ap (\framebox{rec} \ap (\term{pred} \ap \framebox{n}))))}_{\textstyle \term{fac'}}
+                \ap \term{fac} \ap N
+            \]
+            \item \pause Делаем в обеих частях $\eta$-редукцию, так как она не портит аппликативного поведения:
+            \[
+                \term{fac} \eqbeta \term{fac'} \ap \term{fac}
+            \]
+            \item \pause То есть $\term{fac}$ --- неподвижная точка отображения $\term{fac'}$!  Найдём её $\comb{Y}$-комбинатором:
+            \[
+                \term{fac}
+                \eqbeta \pause
+                \comb{Y} \ap \term{fac'}
+                \eqbeta \pause
+                \comb{Y} \ap (\lambda rec \ap n \ldotp \term{if} \ap (\term{iszero} \ap n) \ap \term{1} \ap (\term{mult} \ap n \ap (rec \ap (\term{pred} \ap n))))
+            \]
+            \vspace{-1em}
+            \item \pause Делаем проверку:
+            \begin{align*}
+                \term{fac} \ap N
+                &\eqbeta \pause
+                \comb{Y} \ap \term{fac'} \ap N
+                \eqbeta \pause
+                \term{fac'} \ap (\comb{Y} \ap \term{fac'}) \ap N
+                \\&\eqbeta \pause
+                (\lambda rec \ap n \ldotp \term{if} \ap (\term{iszero} \ap \framebox{n}) \ap \term{1} \ap (\term{mult} \ap \framebox{n} \ap (\framebox{rec} \ap (\term{pred} \ap \framebox{n})))) \ap (\comb{Y} \ap \term{fac'}) \ap N
+                \\&\eqbeta \pause
+                \term{if} \ap (\term{iszero} \ap \framebox{N}) \ap \term{1} \ap (\term{mult} \ap \framebox{N} \ap (\framebox{$\comb{Y} \ap \term{fac'}$} \ap (\term{pred} \ap \framebox{N})))
+            \end{align*}
+        \end{enumerate}
+    \end{frame}
+
+    \begin{frame}{Комбинатор рекурсии (неподвижной точки)}
+        \pause
+        \vspace{-0.5em}
+        \begin{block}{Свойство комбинатора неподвижной точки ($\comb{Y}$ --- пример такого комбинатора)}
+            \[
+                \underbrace{\comb{Y} \ap F}_{\textstyle X} \eqbeta F \ap (\underbrace{\comb{Y} \ap F}_{\textstyle X})
+            \]
+        \end{block}
+        \pause
+        \vspace{0.5em}
+        Стоп, стоп. Как анонимная функция стала рекурсивной?
+        \[
+            \term{fac}
+            \eqt
+            \comb{Y} \ap \underbrace{(\lambda \framebox{rec} \ap n \ldotp \term{if} \ap (\term{iszero} \ap n) \ap \term{1} \ap (\term{mult} \ap n \ap (\framebox{rec} \ap (\term{pred} \ap n))))}_{\textstyle \term{fac'}}
+        \]
+        \pause
+        $\comb{Y}$-комбинатор передаёт в нашу функцию терм, который ведёт себя ровно так же, как она!\footnote{Получили конечный терм, который в результате вычислений может сколь угодно разрастаться.}
+
+        \pause
+        \vspace{0.5em}
+
+        И теперь можем добавить рекурсию в язык как синтаксический сахар:
+        \[
+            \term{fac} \ap n
+            \termdef
+            \term{if} \ap (\term{iszero} \ap n) \ap \term{1} \ap (\term{mult} \ap n \ap (\framebox{$\term{fac}$} \ap (\term{pred} \ap n)))
+        \]
+        Ура, рекурсия!
+    \end{frame}
+
+    \begin{frame}[fragile]{Выбор инструмента: примитивная рекурсия vs рекурсия \popslide}
+        \begin{itemize}
+            \item Примитивная рекурсия
+            \begin{itemize}
+                \item Задаёт процесс из конечного, заранее заданного, количества шагов
+                \item Аналог цикла \mintinline{python}|for in range| в современных языках
+            \end{itemize}
+            \item Рекурсия
+            %! suppress = Ellipsis
+            \begin{itemize}
+                \item Количество шагов определяется в процессе (и никак иначе: halting problem)
+                \item Завершение процесса определяется выполнением произвольного условия (базы рекурсии)
+                \item В современных языках выражается рекурсией\footnote{Хвостовая рекурсия полностью эквивалентна обычной, хотя и похожа на примитивную (см. \href{https://en.wikipedia.org/wiki/Trampoline\_(computing)\#High-level_programming}{\color{blue} trampolining}).} и циклом \mintinline{python}|while condition: ...|
+            \end{itemize}
+            \item Всегда нужно выбирать \emph{наименее могущественный} из подходящих инструментов
+            \begin{itemize}
+                \item Проще для рассуждений и доказательства свойств
+                \item Меньше пространство для ошибок
+                \item Скорее всего, код будет эффективнее исполняться
+                \item В частности, какие функции примитивно-рекурсивные, а какие --- нет, рассказывает теория вычислимости
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{Кодирование данных в лямбда-исчислении}
+
+    \subsection{Значения-варианты}
+
+    \begin{frame}[fragile]{\subsecname}
+        Одна сущность может быть нескольких различных видов:
+        \begin{itemize}
+            \item \pause Пользователь может быть авторизованный и не авторизованный
+            \item \pause Вершина программы может быть константой, а может --- бинарной операцией
+        \end{itemize}
+        \pause
+        \vspace{1em}
+        Хотим, чтобы в зависимости от её вида, сущность обрабатывал разный код:
+        \begin{minted}{python}
+            def eval(node): #\pause#
+                if is_const(node): #\pause#
+                    return node.value  # У константы должно быть значение
+                elif is_plus(node): #\pause#
+                    return eval(node.left) + eval(node.right)  # У плюса - операнды
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Моделируем значения-варианты}
+        \pause
+        \begin{block}{API вариантов}
+            \begin{itemize}
+                \item Один вариант будем называть ``левым'', второй --- ``правым''
+                \item Два конструктора $\term{inl}$ и $\term{inr}$
+                \item Элиминатор позволяет выполнить разный код в зависимости от варианта: $\term{either}$
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Законы вариантов}
+            \begin{enumerate}
+                \item $\forall f~g~x \pause \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta \pause f \ap x$
+                \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap x) \eqbeta g \ap y$
+            \end{enumerate}
+        \end{block}
+        \pause
+        \begin{itemize}
+            \item[\todo] Что если нужно закодировать больше двух вариантов?
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Тегированное представление вариантов}
+        \begin{block}{Законы вариантов}
+            \begin{enumerate}
+                \item $\forall f~g~x \pause \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta \pause f \ap x$
+                \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap x) \eqbeta g \ap y$
+            \end{enumerate}
+        \end{block}
+        \pause
+        \begin{block}{Конструкторы}
+            \begin{itemize}
+                \item Будем приписывать булев тег для различения вариантов
+                \item $\term{inl} \ap x \termdef \term{pair} \ap \term{false} \ap x$
+                \item $\term{inr} \ap y \termdef \term{pair} \ap \term{true} \ap y$
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Элиминатор}
+            \begin{itemize}
+                \item Вызвать нужную функцию в зависимости от тега
+                \item $\term{either} \ap f \ap g \ap (\term{pair} \ap tag \ap val) \termdef \term{if} \ap tag \ap (f \ap val) \ap (g \ap val)$
+            \end{itemize}
+        \end{block}
+    \end{frame}
+
+    \begin{frame}[fragile]{Кодирование вариантов ``наоборот''}
+        \begin{block}{Законы вариантов}
+            \begin{enumerate}
+                \item $\forall f~g~x \pause \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta \pause f \ap x$
+                \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap x) \eqbeta g \ap y$
+            \end{enumerate}
+        \end{block}
+        \pause
+        \begin{block}{Конструкторы}
+            \begin{itemize}
+                \item Принимают один аргумент
+                \item Принимают два действия, из которых выполняют нужное на аргументе
+                \item $\term{inl} \ap x \termdef \lambda f~g \ldotp f \ap x$
+                \item $\term{inr} \ap y \termdef \lambda f~g \ldotp g \ap y$
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Элиминатор}
+            \begin{itemize}
+                \item Просто передаёт функции значению для обработки содержимого
+                \item $\term{either} \ap f \ap g \ap v \termdef v \ap f \ap g$
+            \end{itemize}
+        \end{block}
+    \end{frame}
+
+    \subsection{Списки}
+
+    \begin{frame}{\subsecname}
+        Иногда требуется хранить много сущностей одновременно, и при этом:
+        \begin{itemize}
+            \item Уметь добавить в коллекцию новую сущность
+            \item Найти сущность в коллекции по индексу
+        \end{itemize}
+        \vspace{0.5em}
+        \begin{center}
+            \includegraphics[width=0.5\textwidth]{figs/list}
+        \end{center}
+    \end{frame}
+
+    \begin{frame}[fragile]{Моделируем список}
+        \pause
+        \begin{block}{API списков}
+            \begin{itemize}
+                \item $\term{nil}$ --- пустой список
+                \item $\term{cons} \ap x \ap t$ --- список из элемента $x$ в голове и списка-хвоста $t$
+                \item[\eg] $\tlist{\term{1}, \term{2}, \term{3}} \termdef \pause \term{cons} \ap \term{1} \ap (\term{cons} \ap \term{2} \ap (\term{cons} \ap \term{3} \ap \term{nil}))$
+                \item Элиминатор, аккумулирующий элементы: $\term{fold}$
+                \item[\eg] $\term{fold} \ap \tlist{\term{1}, \term{2}, \term{3}} \ap f \ap ini \eqt f \ap \term{1} \ap (f \ap \term{2} \ap (f \ap \term{3} \ap ini))$
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Законы списков}
+            \begin{enumerate}
+                \item \pause $\forall f~ini\ldotp \term{fold} \ap \term{nil} \ap f \ap ini \eqbeta \pause ini$
+                \item \pause $\forall x~t~f~ini\ldotp \term{fold} \ap (\term{cons} \ap x \ap t) \ap f \ap ini \eqbeta \pause f \ap x \ap (\term{fold} \ap t \ap f \ap ini)$
+            \end{enumerate}
+        \end{block}
+    \end{frame}
+
+    \begin{frame}[fragile]{Списки в Си \popslide}
+        \begin{minted}{C}
+            struct Node {
+                int value;
+                Node * tail;
+            };
+
+            Node * nil = NULL;
+
+            Node * cons(int value, Node * tail) {
+                return new Node { value, tail };
+            }
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Списки на вариантах}
+        \begin{block}{Законы списков}
+            \begin{enumerate}
+                \item \pause $\forall f~ini\ldotp \term{fold} \ap \term{nil} \ap f \ap ini \eqbeta \pause ini$
+                \item \pause $\forall x~t~f~ini\ldotp \term{fold} \ap (\term{cons} \ap x \ap t) \ap f \ap ini \eqbeta \pause f \ap x \ap (\term{fold} \ap t \ap f \ap ini)$
+            \end{enumerate}
+        \end{block}
+        \pause
+        \begin{block}{Конструкторы}
+            \begin{itemize}
+                \item Вершина либо пустая, либо пара из элемента и хвоста
+                \item $\term{nil} \termdef \pause \term{inl} \ap \term{0}\footnote{Произвольный терм, чтобы удовлетворить интерфейсу вариантов.}$
+                \item $\term{cons} \ap x \ap t \termdef \pause \term{inr} \ap (\term{pair} \ap x \ap t)$
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Элиминатор}
+            \[
+                \begin{array}{l}
+                    \term{fold} \ap xs \ap f \ap ini \termdef \pause \term{either} \ap \pause (\term{K} \ap ini) \ap \pause (\lambda (\term{pair} \ap x \ap t)\ldotp f \ap x \ap (\term{fold} \ap t \ap f \ap ini)) \ap \pause xs
+                \end{array}
+            \]
+        \end{block}
+    \end{frame}
+
+    \begin{frame}[fragile]{Списки Чёрча (``наоборот'')}
+        \begin{block}{Законы списков}
+            \begin{enumerate}
+                \item \pause $\forall f~ini\ldotp \term{fold} \ap \term{nil} \ap f \ap ini \eqbeta \pause ini$
+                \item \pause $\forall x~t~f~ini\ldotp \term{fold} \ap (\term{cons} \ap x \ap t) \ap f \ap ini \eqbeta \pause f \ap x \ap (\term{fold} \ap t \ap f \ap ini)$
+            \end{enumerate}
+        \end{block}
+        \pause
+        \begin{block}{Конструкторы}
+            \begin{itemize}
+                \item По аналогии с числами Чёрча $\term{k} = \lambda s~z\ldotp \underbrace{s~(s~(\cdots (s~(}_{\textstyle k} z\underbrace{)\cdots ))}_{\textstyle k}$
+                \item $\term{nil} \termdef \lambda s~z \ldotp z$
+                \item $\term{cons} \ap x \ap t \termdef \pause \lambda s~z\ldotp \pause s~x~(t~s~z)$
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Элиминатор}
+            \begin{itemize}
+                \item $\term{fold} \ap xs \ap f \ap ini \termdef xs \ap f \ap ini$
+                \item $\term{fold} \eqeta \term{id}$
+            \end{itemize}
+        \end{block}
+    \end{frame}
+
+    \begin{frame}[fragile]{Задачки про списки}
+        \[\tlist{M_0, M_1, \cdots, M_{k-1}} \termdef \lambda s~z\ldotp \underbrace{s~M_0~(s~M_1~(\cdots (s~M_{k-1}~(}_{\textstyle k} z\underbrace{)\cdots ))}_{\textstyle k}\]
+        \begin{itemize}
+            \item[\todo] Напишите проверку на пустоту списка
+            \item[\todo] Напишите конкатенацию списков
+            \item[\todo] Напишите взятие головы списка
+        \end{itemize}
+        \pause
+        \begin{block}{Проверка на пустоту списка}
+            \begin{columns}[onlytextwidth]
+                \begin{column}[t]{0.485\textwidth}
+                    \[\term{isZero} \ap n \termdef n~(\lambda z'\ldotp \term{false})~\term{true}\]
+                    \vspace{-1.5em}
+                \end{column}\hfill\pause%
+                \begin{column}[t]{0.485\textwidth}
+                    \[\term{isEmpty} \ap l \termdef \pause l~(\lambda x~z'\ldotp \term{false})~\term{true}\]
+                    \vspace{-1.5em}
+                \end{column}
+            \end{columns}
+        \end{block}
+        \pause
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.47\textwidth}
+                \begin{block}{Сложение списков?}
+                    \[\term{plus} \ap n \ap m \termdef \lambda s~z\ldotp n~s~(m~s~z)\]
+                \end{block}
+            \end{column}\hfill
+            \pause%
+            \begin{column}[t]{0.5\textwidth}
+                \begin{block}{Взятие головы списка}
+                    \[\begin{array}{l l}
+                          \term{headOrDefault}~\textbf{nil}~d        & \eqt d \\
+                          \term{headOrDefault}~(\textbf{cons}~x~t)~d & \eqt x
+                    \end{array}\]
+                    \pause
+                    Реализация:
+                    $\term{headOrDefault} \ap xs \termdef \pause xs \ap \mathbf{K}  \text{ или } \pause \textbf{fst}$
+                \end{block}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+
+    \sectionplan{Энергичность и ленивость}
+
+    \begin{frame}[fragile]{Условное выражение как функция}
+        Возьмём какой-нибудь привычный язык программирования.
+        Эквивалентен ли код?
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{python}
+
+                    if b:
+                        return f()
+                    else:
+                        return g()
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{python}
+                    def myif(cond, t, e):
+                        if cond:
+                            return t
+                        else:
+                            return e
+                    myif(b, f(), g())
+                \end{minted}
+            \end{column}
+        \end{columns}
+        \pause
+        Нет, например:
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{python}
+                    def fac(n):
+                        if n <= 1:
+                            return 1
+                        else:
+                            return n * fac(n - 1)
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{python}
+                    def fac(n):
+                        return myif(n <= 1,
+                            1,
+                            n * fac(n - 1)
+                        )
+                \end{minted}
+            \end{column}
+        \end{columns}
+        \vspace{1em}
+        Что произойдёт? \pause Вычисление разойдётся.
+        \begin{minted}{python}
+            fac(3) -> myif(n <= 1, 1, n * fac(n - 1)) #\pause#
+                   -> myif(n <= 1, 1, n * myif(n - 1 <= 1, 1, (n - 1) * fac(n - 1 - 1))...
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Энергичная и ленивая семантики вычисления}
+        \pause
+        \vspace{-0.7em}
+        \begin{block}{Подстановочная модель вызова}
+            Вызов функции означает подстановку текста её тела в место вызова.
+        \end{block}
+        \pause
+        \vspace{-0.3em}
+        \begin{block}{Энергичная семантика вычислений}
+            Аргументы функции вычисляются до её вызова (подстановки).
+        \end{block}
+        \pause
+        \vspace{-0.3em}
+        \begin{block}{Ленивая семантика вычислений}
+            Сначала происходит вызов функции, аргументы без необходимости не вычисляются.
+        \end{block}
+        \pause
+        От энергичной семантики можно перейти к ленивой, как? \pause Лямбды!
+        \pause
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{python}
+                    def fac(n):
+                        return myif(n <= 1,
+                            lambda: 1,
+                            lambda: n * fac(n - 1)
+                        )
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{python}
+                    def myif(cond, t, e):
+                        if cond:
+                            return t()
+                        else:
+                            return e()
+                \end{minted}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+
+    \sectionplan{Материалы}
+
+    \begin{frame}{Что посмотреть в транспорте}
+        \begin{itemize}
+            \item \href{https://habr.com/ru/articles/486548/}{\color{blue} Статья: Примитивно-рекурсивные функции и функция Аккермана}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Серьёзные материалы}
+        \begin{itemize}
+            \item \href{http://www.cs.ru.nl/barendregt60/essays/klop/art16_klop.pdf}{\color{blue} Klop, J. W. ``New fixed point combinators from old.'' Reflections on Type Theory, $\lambda$-Calculus, and the Mind. Essays dedicated to Henk Barendregt on the occasion of his 60th birthday, Radboud University Nijmegen (2007): 197--211.197--211}
         \end{itemize}
     \end{frame}
 
