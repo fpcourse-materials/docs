@@ -290,7 +290,7 @@
                 Находим редекс:
                 \begin{center}
                     \begin{tikzpicture}
-                        \node [subtree] (top) {$K$};
+                        \node [expr] (top) {$\cdots$};
                         \node [hexpr] (ap) [below = of top] {$@$};
                         \node [hexpr] (lam) [below left = of ap] {$\lambda$};
                         \node [decl] (x) [below right = of lam] {$x$};
@@ -309,7 +309,7 @@
                 Сокращаем редекс:
                 \begin{center}
                     \begin{tikzpicture}
-                        \node [subtree] (top) {$K$};
+                        \node [expr] (top) {$\cdots$};
                         \node [subtree] (bot) [below = of top] {$\subst{M}{x}{N}$};
                         \draw[->] (bot) -- (top);
                     \end{tikzpicture}
@@ -326,7 +326,7 @@
                 [x \mapsto N]
                     ~ x \equiv N \\
                     [x \mapsto N] ~ y \equiv y \\
-                    [x \mapsto N] ~ P ~ Q \equiv ([x \mapsto N] P) ([x \mapsto N] Q) \\
+                    [x \mapsto N] ~ P ~ Q \equiv ([x \mapsto N] P) ~ ([x \mapsto N] Q) \\
                     [x \mapsto N] ~ \lambda x. ~ P \equiv \lambda x. ~ P \\
                     [x \mapsto N] ~ \lambda y. ~ P \equiv \lambda y. ~ [x \mapsto N] ~ P, & y \not\in FV(N) \\
                     [x \mapsto N] ~ \lambda y. ~ P \equiv \lambda y'. ~ [x \mapsto N] ~ ([y \mapsto y'] P), & y \in FV(N)
@@ -539,7 +539,7 @@
             \end{minted}
         \end{block}
         \pause
-        \begin{block}{Элиминаторы (свёртки)}
+        \begin{block}{Элиминаторы}
             Получают (используют) информацию из структуры данных:
             \begin{minted}{python}
                 barsik.murlicity

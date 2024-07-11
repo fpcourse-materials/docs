@@ -137,7 +137,7 @@
             \term{rec}
             \ap (\lambda \pause i \ap res \ldotp \term{mult} \ap (\term{suc} \ap i) \ap res)
             \ap \term{1} \ap n$
-            \item[\answer] $\term{pred} \termdef \pause \term{rec}~\term{K}~\term{0}$
+            \item[\answer] $\term{pred} \ap n \termdef \pause \term{rec}~\term{K}~\term{0} \ap n$
             \item Во всех случаях можно сделать $\eta$-редукцию
         \end{itemize}
     \end{frame}
@@ -217,7 +217,7 @@
             \]
             \item \pause Делаем в обеих частях $\eta$-редукцию, так как она не портит аппликативного поведения:
             \[
-                \term{fac} \eqbeta \term{fac'} \ap \term{fac}
+                \term{fac} \eqbeta_\eta \term{fac'} \ap \term{fac}
             \]
             \item \pause То есть $\term{fac}$ --- неподвижная точка отображения $\term{fac'}$!  Найдём её $\comb{Y}$-комбинатором:
             \[
@@ -333,7 +333,7 @@
         \begin{block}{Законы вариантов}
             \begin{enumerate}
                 \item $\forall f~g~x \pause \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta \pause f \ap x$
-                \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap x) \eqbeta g \ap y$
+                \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap y) \eqbeta g \ap y$
             \end{enumerate}
         \end{block}
         \pause
@@ -346,7 +346,7 @@
         \begin{block}{Законы вариантов}
             \begin{enumerate}
                 \item $\forall f~g~x \pause \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta \pause f \ap x$
-                \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap x) \eqbeta g \ap y$
+                \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap y) \eqbeta g \ap y$
             \end{enumerate}
         \end{block}
         \pause
@@ -370,7 +370,7 @@
         \begin{block}{Законы вариантов}
             \begin{enumerate}
                 \item $\forall f~g~x \pause \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta \pause f \ap x$
-                \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap x) \eqbeta g \ap y$
+                \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap y) \eqbeta g \ap y$
             \end{enumerate}
         \end{block}
         \pause
