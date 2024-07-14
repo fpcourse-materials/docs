@@ -17,7 +17,7 @@ clean-slides:
 clean-all: clean-slides
 	rm -i --force *.pdf
 
-sem-all: sem2 sem1
+sem-all: sem3 sem2 sem1
 
 sem1: sem1h sem1p
 
@@ -34,6 +34,14 @@ sem2h:
 
 sem2p:
 	sh build-slides.sh 1 02 pause
+
+sem3: sem3h sem3p
+
+sem3h:
+	sh build-slides.sh 1 03 handout
+
+sem3p:
+	sh build-slides.sh 1 03 pause
 
 handouttrue:
 	echo "\handouttrue" > flags.tex

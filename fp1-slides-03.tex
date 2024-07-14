@@ -1,0 +1,276 @@
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+
+\title[Типы в $\lambda$-исчислении]{Практика 3. Типы в $\lambda$-исчислении}
+\date{осень 2024}
+
+\begin{document}
+
+    \setcounter{framenumber}{-1}
+    \maketitle
+
+    \begin{frame}{В предыдущих сериях}
+        \begin{itemize}
+            \item Синтаксис и семантика лямбда-исчисления
+            \item Эквивалентности на термах
+            \item[\newtopic] Синтаксис типов и термов $\lambda_\to$
+            \item[\newtopic] Правила типизации $\lambda_\to$
+            \item[\newtopic] Гарантии системы $\lambda_\to$
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+
+    \sectionplan{Идея систем типов}
+
+    \begin{frame}{Мотивация статического анализа программ}
+        \begin{itemize}
+            \item Программное обеспечение — это сложно
+            \item В программах случаются ошибки (постоянно и неизбежно)
+            \item Поиск ошибок может занимать годы, десятилетия, вечность
+            \item Нужны методы для того, чтобы судить о программах и их
+            свойствах автоматически
+            \item Программы могут работать долго
+            \item Хотим отвергать ``плохие'' программы до исполнения (статически)
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Анализ типов}
+        \vspace{-0.5em}
+        \begin{block}{Идея анализа типов}
+            \begin{itemize}
+                \item Попытаемся приписать каждой ноде программы синтаксические метки по определённым правилам
+                \item Если метки таким образом приписать можно --- программа ``хорошая''
+                \item Вид таких меток и правил задаётся \textit{системой типов}
+                \item Анализ типов --- разновидность статического анализа ($\subset$ constraint-based analysis)
+            \end{itemize}
+        \end{block}
+        \pause
+        \vspace{-3em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.15\textwidth}
+                \begin{center}
+                    \begin{tikzpicture}
+                        \node [hdecl] (f) {$f : int \to int$};
+                        \node [hexpr] (lam) [below=of f] {$\lambda : int \to int$};
+                        \node [decl] (y) [below right = of lam] {$y {\color{red}~: int}$};
+                        \node [expr] (div) [below=of lam] {$\div : int$};
+                        \node [expr] (x) [below left=of div] {$x : int$};
+                        \node [expr] (plus) [below right = of div] {$+ : int$};
+                        \node [hexpr] (param) [below left=of plus] {$y : int$};
+                        \node [expr] (two) [below right = of plus] {$2 : int$};
+                        \draw[->] (lam) -- (f);
+                        \draw[->] (div) -- (lam);
+                        \draw[->] (plus) -- (div);
+                        \draw[->] (x) -- (div);
+                        \draw[->] (two) -- (plus);
+                        \draw[->] (param) -- (plus);
+                        \draw[->] (y) -- (lam);
+                    \end{tikzpicture}
+                \end{center}
+            \end{column}\hfill%
+            \pause%
+            \begin{column}[t]{0.62\textwidth}
+                \begin{center}
+                    \begin{tikzpicture}
+                        \node [hexpr] (app) {$@ : int$};
+                        \node [hexpr] (f) [below left =of app] {$f : int \to int$};
+                        \node [expr] (mult) [below right= of app] {$\div : int$};
+                        \node [expr] (ten) [below left= of mult] {$10 : int$};
+                        \node [expr] (four) [below right= of mult] {$4 : int$};
+                        \draw[->] (mult) -- (app);
+                        \draw[->] (f) -- (app);
+                        \draw[->] (ten) -- (mult);
+                        \draw[->] (four) -- (mult);
+                    \end{tikzpicture}
+                \end{center}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}[fragile]{Роль типов в ЯП}
+        \begin{itemize}
+            \item Выявление некоторых классов ошибок
+            \begin{minted}{haskell}
+                GHCi> length 42         -- Ошибка: на вход не список, а число
+                GHCi> foldr (+) "ABCDE" -- Ошибка: плюс работает на числах, но не символах
+            \end{minted}
+            \item Механизм абстракции: интерфейс\footnote{В общем смысле, не мешать с ООП.}, скрывающий детали реализации
+            \item Документация --- как использовать сущность
+            \item Обеспечивают безопасность языка --- нет сегфолтов
+            \item \textit{Частичная} спецификация поведения сущности
+            \item Эффективность --- можно производить более агрессивные оптимизации
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Ограниченность систем типов}
+        \begin{itemize}
+            \item Хотелось бы, чтобы все ``хорошие'' программы типизировались, а все ``плохие'' ~--- нет
+            \item Однако по теореме Успенского-Райса задача проверки любого нетривиального\footnote{Существуют программы, как обладающие таким свойством, так и не обладающие.} свойства программы неразрешима
+        \end{itemize}
+        \pause
+        \vspace{1em}
+        В чем подвох с системами типов? \pause
+        \begin{itemize}
+            \item Всё, что типизируется, --- ``хорошее'', но обратное не всегда верно
+            \item[$\Rightarrow$] Всегда существуют ``хорошие'' программы, которые не типизируются\footnote{В маргинальных случаях (e.g. TypeScript) к тому же существуют ``плохие'', которые типизируются.}
+        \end{itemize}
+        \begin{center}
+            \includegraphics[height=0.25\textheight]{figs/types}
+        \end{center}
+    \end{frame}
+
+    \begin{frame}{При чём тут ФП?}
+        \begin{itemize}
+            \item Парадигме агрессивного абстрагирования требуются гибкие системы типов
+            \item ФП языки минималистичные и регулярные --- с ними проще работать
+        \end{itemize}
+        \begin{center}
+            \includegraphics[height=0.6\textheight]{figs/cube}
+        \end{center}
+    \end{frame}
+
+
+    \sectionplan{Контекст типизации}
+
+    \begin{frame}[fragile]{Контекст типизации}
+        \begin{itemize}
+            \item \pause В программах используются введённые ранее имена
+            \item \pause Для типизации нужно знать типы сущностей, связанных ранее с этими именами
+            \item \pause Будем поддерживать доп. структуру данных, которую будем заполнять именами с соответствующими им типами в процессе обхода дерева программы
+        \end{itemize}
+        \pause
+        \begin{block}{Пример на Си}
+            \vspace{-1em}
+            \begin{columns}[onlytextwidth]
+                \begin{column}{0.485\textwidth}
+                    \begin{minted}{c}
+                    int dostrange(int a, char i) {
+                        // point 0
+                        int c = 5;
+                        for (int i = 0; i < 15; ++i) {
+                            i -= 1; // point 1
+                            long r = i;
+                            i *= r; // point 2
+                        }
+                        return a + (int)i * c; // point 3
+                    }
+                    \end{minted}
+                \end{column}\hfill%
+                \begin{column}{0.485\textwidth}
+                    Контекст типизации в каждой из точек:
+                    \begin{enumerate}
+                        \setcounter{enumi}{-1}
+                        \item $\{a : \mathrm{int},\, i : \mathrm{char}\}$
+                        \item \pause $\{a : \mathrm{int},\, c : \mathrm{int},\, i : \mathrm{int}\}$
+                        \item \pause $\{a : \mathrm{int},\, c : \mathrm{int},\, i : \mathrm{int},\, r : \mathrm{long}\}$
+                        \item \pause $\{a : \mathrm{int},\, c : \mathrm{int},\, i : \mathrm{char}\}$
+                        \item[$+$] \pause Глобальные определения: \pause \texttt{<}, \texttt{+}, \texttt{*}\ldots
+                    \end{enumerate}
+                \end{column}
+            \end{columns}
+        \end{block}
+    \end{frame}
+
+    \begin{frame}{Контекст типизации: пример на лямбда-исчислении}
+        В чистом лямбда-исчислении имена вводятся с помощью абстракции.
+        \begin{columns}[onlytextwidth]
+            \begin{column}{0.485\textwidth}
+                \begin{center}
+                    \begin{tikzpicture}
+                        \node [expr] (lamf) {(0) $\lambda$};
+                        \node [decl] (f) [below right=of lamf] {$f {\color{red}~: \tau}$};
+                        \node [expr] (lamg) [below  =of lamf] {(1) $\lambda$};
+                        \node [decl] (g) [below right= of lamg] {$g {\color{red}~: \sigma}$};
+                        \node [expr] (lamx) [below  =of lamg] {(2) $\lambda$};
+                        \node [decl] (x) [below right= of lamx] {$x {\color{red}~: \zeta}$};
+                        \node [expr] (apf) [below  =of lamx] {$@$};
+                        \node [expr] (vf) [below left= of apf] {$f$};
+                        \node [expr] (apg) [below right=of apf] {$@$};
+                        \node [expr] (vg) [below left= of apg] {$g$};
+                        \node [expr] (vx) [below right= of apg] {$x$};
+                        \draw[->] (lamg) -- (lamf);
+                        \draw[->] (lamx) -- (lamg);
+                        \draw[->] (f) -- (lamf);
+                        \draw[->] (g) -- (lamg);
+                        \draw[->] (x) -- (lamx);
+                        \draw[->] (apf) -- (lamx);
+                        \draw[->] (apg) -- (apf);
+                        \draw[->] (vf) -- (apf);
+                        \draw[->] (vg) -- (apg);
+                        \draw[->] (vx) -- (apg);
+                    \end{tikzpicture}
+                \end{center}
+            \end{column}\hfill%
+            \begin{column}{0.485\textwidth}
+                Контекст типизации для каждой вершины:
+                \begin{enumerate}
+                    \setcounter{enumi}{-1}
+                    \item \pause $\emptyset$
+                    \item \pause $\{f : \tau\}$
+                    \item \pause $\{f : \tau, g : \sigma\}$
+                    \item[$*.$] \pause $\{f : \tau, g : \sigma, x : \zeta\}$
+                \end{enumerate}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+
+    \sectionplan{STLC / simply typed $\lambda$-calculus / $\lambda_\to$}
+
+    \begin{frame}{Определение \secname}
+        \vspace{-0.5em}
+        \pause
+        \begin{block}{Синтаксис типов в $\lambda_{\rightarrow}$}
+            \begin{description}
+                \item[Типовые переменные] \vspace{-1em} $\alpha, \beta, \ldots \in \mathbb{T}$
+                \hspace{2em}
+                \begin{tikzpicture}
+                    \node [expr] (a) {$\alpha$};
+                \end{tikzpicture}
+                \item[Стрелочные типы] \vspace{-2em} $\sigma, \tau \in \mathbb{T} \Rightarrow (\sigma\rightarrow\tau)\in\mathbb{T}$\footnote{Стрелочка --- правоассоциативный оператор: $\tau \to (\sigma \to \zeta) \eqt \tau \to \sigma \to \zeta$.}
+                \hspace{2em}
+                \begin{tikzpicture}
+                    \node [expr] (arr) {$\to$};
+                    \node [subtree] (t) [below left= of arr] {$\sigma$};
+                    \node [subtree] (s) [below right= of arr] {$\tau$};
+                    \draw[->] (t.north) -- (arr);
+                    \draw[->] (s.north) -- (arr);
+                \end{tikzpicture}
+            \end{description}
+        \end{block}
+        \pause
+        \begin{block}{Утверждение типизации}
+            \begin{itemize}
+                \item Синтаксис: $\Gamma$ --- контекст, $M \in \Lambda, \sigma \in \mathbb{T}$, то $\Gamma \vdash M : \sigma$ --- утверждение типизации
+                \item Синтаксическая категория, увязывающая вместе термы и типы с контекстом
+                \item Утверждает, что в контексте $\Gamma$ терм $M$ имеет тип $\sigma$
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+    \end{frame}
+
+\end{document}
