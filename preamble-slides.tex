@@ -195,23 +195,9 @@
 % ------------------------------------------------
 
 % Custom commands
-% New topic on "in previous series"
-\newcommand{\newtopic}[0]{$+$}
+% * Decor
+\newcommand{\newtopic}[0]{$+$} % item: new topic on "in previous series"
 \newcommand{\then}{$\Rightarrow$} % item: consequences
-
-
-\newcommand{\err}[0]{\textcolor{red}{ошибка}} % compilation error
-\newcommand{\comb}[1]{\mathbf{#1}} % combinator
-\newcommand{\step}{\rightsquigarrow} % reduction step
-\newcommand{\sstep}{\twoheadrightarrow} % multiple steps reduction
-\newcommand{\term}[1]{\mathbf{#1}} % predefined lambda-term reference
-\newcommand{\ap}{~} % lambda-term application
-\newcommand{\termdef}{\coloneqq} % lamda term binding
-\newcommand{\subst}[3]{\left[#2 \mapsto #3 \right] #1} % substitution
-\newcommand{\eqbeta}{=_\beta} % beta equality
-\newcommand{\eqeta}{=_\eta} % eta-equality
-\newcommand{\eqt}{=} % tree-equality of terms
-\newcommand{\tlist}[1]{\term{[}#1\term{]}} % list-term
 \newcommand{\pop}[0]{\SunCloud} %item:  general eduation
 \newcommand{\popslide}[0]{(\pop)}
 \newcommand{\advanced}[0]{$\varhexstar$} % item: advanced science
@@ -221,16 +207,29 @@
 \newcommand{\todo}[0]{todo} % item: question
 \newcommand{\answer}[0]{\Lightning} % item: answer to the previous question
 \newcommand{\eg}[0]{e.g.} % item: example
-
 \newcommand{\defi}[0]{$\Delta$} % item: definition on smth
 \newcommand{\textdefi}[1]{\textbf{#1}}
 \newcommand{\positive}{$+$} % item: pros
 \newcommand{\negative}{{\color{red} $-$}} % item: cons
-\newcommand{\adding}{$+$} % item: something new
-\renewcommand{\emph}[1]{{\color{blue} \textit{#1}}}
-\newcommand{\vocab}[1]{\textbf{#1}} % item: important new word
 \newcommand%! suppress = EscapeHashOutsideCommand
 \NB[1][0.3]{N\kern-#1em{B}} % default kern amount: -0.3em
+\renewcommand{\emph}[1]{{\color{blue} \textit{#1}}}
+\newcommand{\vocab}[1]{\textbf{#1}} % item: important new word
+% * Lambda calculi
+\newcommand{\comb}[1]{\mathbf{#1}} % defined combinator
+\newcommand{\term}[1]{\mathbf{#1}} % predefined lambda-term reference
+\newcommand{\termdef}{\coloneqq} % lamda term binding
+\newcommand{\step}{\rightsquigarrow} % reduction step
+\newcommand{\sstep}{\twoheadrightarrow} % multiple steps reduction
+\newcommand{\ap}{~} % lambda-term application
+\newcommand{\subst}[3]{\left[#2 \mapsto #3 \right] #1} % substitution
+\newcommand{\eqbeta}{=_\beta} % beta equality
+\newcommand{\eqeta}{=_\eta} % eta-equality
+\newcommand{\eqt}{=} % tree-equality of terms
+\newcommand{\tlist}[1]{\term{[}#1\term{]}} % list-term
+% * Legacy
+%\newcommand{\err}[0]{\textcolor{red}{ошибка}} % compilation error
+
 % ------------------------------------------------
 
 % Speaker notes

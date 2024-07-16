@@ -217,14 +217,14 @@
             \]
             \item \pause Делаем в обеих частях $\eta$-редукцию, так как она не портит аппликативного поведения:
             \[
-                \term{fac} \eqbeta \term{fac'} \ap \term{fac}
+                \term{fac} \eqt_{\beta\eta} \term{fac'} \ap \term{fac}
             \]
             \item \pause То есть $\term{fac}$ --- неподвижная точка отображения $\term{fac'}$!  Найдём её $\comb{Y}$-комбинатором:
             \[
                 \term{fac}
-                \eqbeta \pause
+                \eqt_{\beta\eta} \pause
                 \comb{Y} \ap \term{fac'}
-                \eqbeta \pause
+                \eqt_{\delta} \pause
                 \comb{Y} \ap (\lambda rec \ap n \ldotp \term{if} \ap (\term{iszero} \ap n) \ap \term{1} \ap (\term{mult} \ap n \ap (rec \ap (\term{pred} \ap n))))
             \]
             \vspace{-1em}
@@ -256,7 +256,7 @@
         Стоп, стоп. Как анонимная функция стала рекурсивной?
         \[
             \term{fac}
-            \eqt
+            \termdef
             \comb{Y} \ap \underbrace{(\lambda \framebox{rec} \ap n \ldotp \term{if} \ap (\term{iszero} \ap n) \ap \term{1} \ap (\term{mult} \ap n \ap (\framebox{rec} \ap (\term{pred} \ap n))))}_{\textstyle \term{fac'}}
         \]
         \pause
