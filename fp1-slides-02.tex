@@ -165,7 +165,7 @@
                 f~\term{2}~(
                 f~\term{1}~(
                 f~\term{0}~\term{1}))
-                \\ &\step_{\delta} \pause
+                \\ &\step_{\beta} \pause
                 (\lambda i \ap res\ldotp \term{mult}~(\term{suc}~i) \ap res)~\term{2}~(
                 f~\term{1}~(
                 f~\term{0}~\term{1}))
@@ -201,7 +201,7 @@
     \end{frame}
 
     \begin{frame}{Рекурсивные уравнения на термах}
-        Хотим подобрать такой терм $\term{fac}$, чтобы $\term{fac} \ap N \eqbeta \pause \term{if} \ap (\term{iszero} \ap N) \pause \ap \term{1} \pause \ap (\term{mult} \ap N \ap (\term{fac} \ap (\term{pred} \ap N)))$.
+        Хотим подобрать такой терм $\term{fac}$, чтобы $\term{fac} \ap N \eqbeta \pause \term{if} \ap (\term{iszero} \ap N) \ap \term{1} \ap (\term{mult} \ap N \ap (\term{fac} \ap (\term{pred} \ap N)))$.
 
         \pause
         \vspace{0.5em}
@@ -222,9 +222,9 @@
             \item \pause То есть $\term{fac}$ --- неподвижная точка отображения $\term{fac'}$!  Найдём её $\comb{Y}$-комбинатором:
             \[
                 \term{fac}
-                \eqt_{\beta\eta} \pause
+                \termdef \pause
                 \comb{Y} \ap \term{fac'}
-                \eqt_{\delta} \pause
+                \eqt_{\beta} \pause
                 \comb{Y} \ap (\lambda rec \ap n \ldotp \term{if} \ap (\term{iszero} \ap n) \ap \term{1} \ap (\term{mult} \ap n \ap (rec \ap (\term{pred} \ap n))))
             \]
             \vspace{-1em}
@@ -251,30 +251,28 @@
                 \underbrace{\comb{Y} \ap F}_{\textstyle X} \eqbeta F \ap (\underbrace{\comb{Y} \ap F}_{\textstyle X})
             \]
         \end{block}
-        \pause
-        \vspace{0.5em}
-        Стоп, стоп. Как анонимная функция стала рекурсивной?
         \[
             \term{fac}
             \termdef
             \comb{Y} \ap \underbrace{(\lambda \framebox{rec} \ap n \ldotp \term{if} \ap (\term{iszero} \ap n) \ap \term{1} \ap (\term{mult} \ap n \ap (\framebox{rec} \ap (\term{pred} \ap n))))}_{\textstyle \term{fac'}}
         \]
+        \begin{itemize}
+            \item[\todo] Стоп, стоп. Как анонимная функция стала рекурсивной?
+            \item[\answer] \pause $\comb{Y}$ передаёт в нашу функцию терм, который ведёт себя ровно так же, как она!\footnote{Получили конечный терм, который в результате вычислений может сколь угодно разрастаться.}
+        \end{itemize}
         \pause
-        $\comb{Y}$-комбинатор передаёт в нашу функцию терм, который ведёт себя ровно так же, как она!\footnote{Получили конечный терм, который в результате вычислений может сколь угодно разрастаться.}
-
-        \pause
-        \vspace{0.5em}
-
-        И теперь можем добавить рекурсию в язык как синтаксический сахар:
-        \[
-            \term{fac} \ap n
-            \termdef
-            \term{if} \ap (\term{iszero} \ap n) \ap \term{1} \ap (\term{mult} \ap n \ap (\framebox{$\term{fac}$} \ap (\term{pred} \ap n)))
-        \]
-        Ура, рекурсия!
+        \begin{block}{Договорённость о рекурсивных синонимах}
+            Вводим рекурсию как синтаксический сахар для определения выше:
+            \vspace{-0.5em}
+            \[
+                \term{fac} \ap n
+                \termdef
+                \term{if} \ap (\term{iszero} \ap n) \ap \term{1} \ap (\term{mult} \ap n \ap (\framebox{$\term{fac}$} \ap (\term{pred} \ap n)))
+            \]
+        \end{block}
     \end{frame}
 
-    \begin{frame}[fragile]{Выбор инструмента: примитивная рекурсия vs рекурсия \popslide}
+    \begin{frame}[fragile]{Выбор инструмента: примитивная рекурсия vs рекурсия \practicalslide}
         \begin{itemize}
             \item Примитивная рекурсия
             \begin{itemize}
@@ -298,15 +296,16 @@
         \end{itemize}
     \end{frame}
 
-    \sectionplan{Кодирование данных в лямбда-исчислении}
 
-    \subsection{Значения-варианты}
+    \section{Кодирование данных в лямбда-исчислении}
+
+    \subsectionplan{Значения-варианты}
 
     \begin{frame}[fragile]{\subsecname}
         Одна сущность может быть нескольких различных видов:
         \begin{itemize}
-            \item \pause Пользователь может быть авторизованный и не авторизованный
-            \item \pause Вершина программы может быть константой, а может --- бинарной операцией
+            \item Пользователь может быть авторизованный и не авторизованный
+            \item Вершина программы может быть константой, а может --- бинарной операцией
         \end{itemize}
         \pause
         \vspace{1em}
@@ -332,7 +331,7 @@
         \pause
         \begin{block}{Законы вариантов}
             \begin{enumerate}
-                \item $\forall f~g~x \pause \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta \pause f \ap x$
+                \item $\forall f~g~x \pause \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta f \ap x$
                 \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap y) \eqbeta g \ap y$
             \end{enumerate}
         \end{block}
@@ -361,7 +360,7 @@
         \begin{block}{Элиминатор}
             \begin{itemize}
                 \item Вызвать нужную функцию в зависимости от тега
-                \item $\term{either} \ap f \ap g \ap (\term{pair} \ap tag \ap val) \termdef \term{if} \ap tag \ap (f \ap val) \ap (g \ap val)$
+                \item $\term{either} \ap f \ap g \ap (\term{pair} \ap tag \ap val) \termdef \term{if} \ap tag \ap (f \ap val) \ap (g \ap val)$\footnote{То же самое что $\term{either} \ap f \ap g \ap p \termdef \term{if} \ap (\term{fst} \ap p) \ap (f \ap (\term{snd} \ap p)) \ap (g \ap (\term{snd} \ap p))$.}
             \end{itemize}
         \end{block}
     \end{frame}
@@ -391,7 +390,7 @@
         \end{block}
     \end{frame}
 
-    \subsection{Списки}
+    \subsectionplan{Списки}
 
     \begin{frame}{\subsecname}
         Иногда требуется хранить много сущностей одновременно, и при этом:
@@ -411,9 +410,9 @@
             \begin{itemize}
                 \item $\term{nil}$ --- пустой список
                 \item $\term{cons} \ap x \ap t$ --- список из элемента $x$ в голове и списка-хвоста $t$
-                \item[\eg] $\tlist{\term{1}, \term{2}, \term{3}} \termdef \pause \term{cons} \ap \term{1} \ap (\term{cons} \ap \term{2} \ap (\term{cons} \ap \term{3} \ap \term{nil}))$
+                \item[\eg] $\tlist{\term{1}, \term{2}, \term{3}} \eqt \pause \term{cons} \ap \term{1} \ap (\term{cons} \ap \term{2} \ap (\term{cons} \ap \term{3} \ap \term{nil}))$
                 \item Элиминатор, аккумулирующий элементы: $\term{fold}$
-                \item[\eg] $\term{fold} \ap \tlist{\term{1}, \term{2}, \term{3}} \ap f \ap ini \eqt f \ap \term{1} \ap (f \ap \term{2} \ap (f \ap \term{3} \ap ini))$
+                \item[\eg] $\term{fold} \ap \tlist{\term{1}, \term{2}, \term{3}} \ap f \ap ini \eqbeta f \ap \term{1} \ap (f \ap \term{2} \ap (f \ap \term{3} \ap ini))$
             \end{itemize}
         \end{block}
         \pause
@@ -495,41 +494,33 @@
             \item[\todo] Напишите проверку на пустоту списка
             \item[\todo] Напишите конкатенацию списков
             \item[\todo] Напишите взятие головы списка
-        \end{itemize}
-        \pause
-        \begin{block}{Проверка на пустоту списка}
+            \item[\answer] \pause
             \begin{columns}[onlytextwidth]
-                \begin{column}[t]{0.485\textwidth}
+                \begin{column}{0.485\textwidth}
                     \[\term{isZero} \ap n \termdef n~(\lambda z'\ldotp \term{false})~\term{true}\]
                     \vspace{-1.5em}
                 \end{column}\hfill\pause%
-                \begin{column}[t]{0.485\textwidth}
+                \begin{column}{0.485\textwidth}
                     \[\term{isEmpty} \ap l \termdef \pause l~(\lambda x~z'\ldotp \term{false})~\term{true}\]
                     \vspace{-1.5em}
                 \end{column}
             \end{columns}
-        \end{block}
-        \pause
-        \vspace{-1em}
-        \begin{columns}[onlytextwidth]
-            \begin{column}[t]{0.47\textwidth}
-                \begin{block}{Сложение списков?}
-                    \[\term{plus} \ap n \ap m \termdef \lambda s~z\ldotp n~s~(m~s~z)\]
-                \end{block}
-            \end{column}\hfill
-            \pause%
-            \begin{column}[t]{0.5\textwidth}
-                \begin{block}{Взятие головы списка}
+            \item[\answer] \pause $\term{plus} \ap n \ap m \termdef \lambda s~z\ldotp n~s~(m~s~z)$
+            \item[\answer] \pause
+            \begin{columns}[onlytextwidth]
+                \begin{column}{0.485\textwidth}
                     \[\begin{array}{l l}
                           \term{headOrDefault}~\textbf{nil}~d        & \eqt d \\
                           \term{headOrDefault}~(\textbf{cons}~x~t)~d & \eqt x
                     \end{array}\]
-                    \pause
-                    Реализация:
-                    $\term{headOrDefault} \ap xs \termdef \pause xs \ap \mathbf{K}  \text{ или } \pause \textbf{fst}$
-                \end{block}
-            \end{column}
-        \end{columns}
+                    \vspace{-1.5em}
+                \end{column}\hfill\pause%
+                \begin{column}{0.485\textwidth}
+                    \[\term{headOrDefault} \ap xs \termdef \pause xs \ap \mathbf{K}  \text{ или } \pause \textbf{fst}\]
+                    \vspace{-1.5em}
+                \end{column}
+            \end{columns}
+        \end{itemize}
     \end{frame}
 
 
