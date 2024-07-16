@@ -60,13 +60,13 @@
             \begin{column}[t]{0.15\textwidth}
                 \begin{center}
                     \begin{tikzpicture}
-                        \node [hdecl] (f) {$f : int \to int$};
-                        \node [hexpr] (lam) [below=of f] {$\lambda : int \to int$};
+                        \node [decl] (f) {$f : int \to int$};
+                        \node [expr] (lam) [below=of f] {$\lambda : int \to int$};
                         \node [decl] (y) [below right = of lam] {$y {\color{red}~: int}$};
                         \node [expr] (div) [below=of lam] {$\div : int$};
                         \node [expr] (x) [below left=of div] {$x : int$};
                         \node [expr] (plus) [below right = of div] {$+ : int$};
-                        \node [hexpr] (param) [below left=of plus] {$y : int$};
+                        \node [expr] (param) [below left=of plus] {$y : int$};
                         \node [expr] (two) [below right = of plus] {$2 : int$};
                         \draw[->] (lam) -- (f);
                         \draw[->] (div) -- (lam);
@@ -82,8 +82,8 @@
             \begin{column}[t]{0.62\textwidth}
                 \begin{center}
                     \begin{tikzpicture}
-                        \node [hexpr] (app) {$@ : int$};
-                        \node [hexpr] (f) [below left =of app] {$f : int \to int$};
+                        \node [expr] (app) {$@ : int$};
+                        \node [expr] (f) [below left =of app] {$f : int \to int$};
                         \node [expr] (mult) [below right= of app] {$\div : int$};
                         \node [expr] (ten) [below left= of mult] {$10 : int$};
                         \node [expr] (four) [below right= of mult] {$4 : int$};
@@ -112,7 +112,7 @@
         \end{itemize}
     \end{frame}
 
-    \begin{frame}{Ограниченность систем типов}
+    \begin{frame}{Ограниченность систем типов \popslide}
         \begin{itemize}
             \item Хотелось бы, чтобы все ``хорошие'' программы типизировались, а все ``плохие'' ~--- нет
             \item Однако по теореме Успенского-Райса задача проверки любого нетривиального\footnote{Существуют программы, как обладающие таким свойством, так и не обладающие.} свойства программы неразрешима
@@ -129,7 +129,7 @@
         \end{center}
     \end{frame}
 
-    \begin{frame}{При чём тут ФП?}
+    \begin{frame}{При чём тут ФП? \popslide}
         \begin{itemize}
             \item Парадигме агрессивного абстрагирования требуются гибкие системы типов
             \item ФП языки минималистичные и регулярные --- с ними проще работать
@@ -227,6 +227,33 @@
 
     \sectionplan{STLC / simply typed $\lambda$-calculus / $\lambda_\to$}
 
+    \begin{frame}[fragile]{STLC типизация интуитивно}
+        \begin{itemize}
+            \item[\todo] Припишите тип терму $\lambda x^{\alpha}\ldotp x$
+            \item[\answer] \pause
+            \begin{itemize}
+                \item Терм задаёт функцию --- тип стрелочный: $\alpha \to ~?$
+                \item Типизируем тело, зная $\Gamma = \{x : \alpha\}$, $\lambda x^\alpha\ldotp \underbrace{x}$
+                \item % todo
+            \end{itemize}
+            \item[\todo] Припишите тип терму $\lambda x^\alpha~f^{\alpha \to \beta}\ldotp f \ap x$
+            \item[\answer] \pause % todo
+            \item[\todo] Припишите тип терму $\lambda x~y\ldotp x$
+            \item[\answer] % todo
+            \item[\todo] Припишите тип терму $\lambda x~y~f\ldotp f \ap x \ap y$ % todo
+            \item[\answer] % todo
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{STLC население типов интуитивно}
+        \begin{itemize}
+            \item[\todo] Населите тип $(\beta\to\gamma)\to(\alpha\to\beta)\to\alpha\to\gamma$
+            \item[\answer] \pause % todo
+        \end{itemize}
+    \end{frame}
+
+    % todo переместить контекст типизации сюда
+
     \begin{frame}{Определение \secname}
         \vspace{-0.5em}
         \pause
@@ -271,6 +298,103 @@
                 \]
             \end{center}
         \end{block}
+    \end{frame}
+
+    \subsectionplan{Задача проверки типа}
+
+    \begin{frame}{Проверка типа комбинатора $\term{B}$ в $\lambda_\to$}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        \pause
+        %! suppress = EscapeAmpersand
+        \[\resizebox{0.8\hsize}{!}{
+            \infer[\visible<3->{intro\to}]
+            {\emptyset \vdash \lambda f~g~x.~f~(g~x) : (\beta \to \gamma) \to (\alpha \to \beta) \to \alpha \to \gamma}
+            {\visible<3->{
+                \infer[\visible<4->{intro\to}]
+                {\{f: \beta \to \gamma\} \vdash \lambda g~x.~f~(g~x) : (\alpha \to \beta) \to \alpha \to \gamma}
+                {\visible<4->{
+                    \infer[\visible<5->{intro\to}]
+                    {\{f : \beta \to \gamma, g : \alpha \to \beta\} \vdash \lambda x.~f~(g~x) : \alpha \to \gamma}
+                    {\visible<5->{
+                        \infer[\visible<6->{elim\to}]{\{f : \beta \to \gamma, g : \alpha \to \beta, x:  \alpha\} \vdash f~(g~x) : \gamma}
+                        {\visible<6->{
+                            \infer[\visible<7->{ctx}]{\Gamma \vdash f : \beta \to \gamma}{} &
+                            \infer[\visible<8->{elim\to}]{\Gamma \vdash g~x : \beta}{\visible<8->{
+                                \infer[\visible<9->{ctx}]{\Gamma \vdash g : \alpha \to \beta}{} &
+                                \infer[\visible<10->{ctx}]{\Gamma \vdash x : \alpha}{}
+                            }}
+                        }}
+                    }}
+                }}
+            }}
+        }\]
+        \begin{itemize}
+            \item \visible<11->{Получилось перевёрнутое синтаксическое дерево терма!}
+            \item[\todo] \visible<12->{Меняется ли что-то для типизации в стиле Чёрча?}
+            \item[\answer] \visible<13->{В этой задаче --- нет: тип терму уже приписан, информации для построения дерева достаточно}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[noframenumbering]{Таинственные связи \popslide}
+        Дерево вывода типа комбинатора $\term{B}$ или \visible<2->{вывод силлогизма в исчислении высказываний?}
+        %! suppress = EscapeAmpersand
+        \[\resizebox{0.8\hsize}{!}{
+            \infer[intro\to]{\emptyset \vdash \visible<1>{{\color{blue} \lambda f~g~x.~f~(g~x) :~}} (\beta \to \gamma) \to ({ \alpha} \to \beta) \to \alpha \to \gamma}{
+                \infer[intro\to]{\{\visible<1>{{\color{blue}f:~}} \beta \to \gamma\} \vdash \visible<1>{{\color{blue} \lambda g~x.~f~(g~x) :~}} ({ \alpha} \to \beta) \to \alpha \to \gamma}{
+                    \infer[intro\to]{\{\visible<1>{{\color{blue}f:~}} \beta \to \gamma, \visible<1>{{\color{blue}g:~}} {\alpha} \to \beta\} \vdash \visible<1>{{\color{blue} \lambda x.~f~(g~x) :~}} \alpha \to \gamma }{
+                        \infer[MP]{\{\visible<1>{{\color{blue}f:~}} \beta \to \gamma, \visible<1>{{\color{blue}g:~}} {\alpha} \to \beta, \visible<1>{{\color{blue}x:~}}  \alpha\} \vdash \visible<1>{{\color{blue} f~(g~x) :~}} \gamma }{
+                            \infer[InCtx]{\Gamma \vdash \visible<1>{{\color{blue} f :~}} \beta \to \gamma}{} &
+                            \infer[MP]{\Gamma \vdash \visible<1>{{\color{blue} g~x :~}} \beta}{
+                                \infer[InCtx]{\Gamma \vdash \visible<1>{{\color{blue} g :~}} {\alpha} \to \beta}{} &
+                                \infer[InCtx]{\color{black} \Gamma \vdash \visible<1>{{\color{blue} x :~}} { \alpha}}{}
+                            }}}}
+            }
+        }\]
+    \end{frame}
+
+    \subsectionplan{Задача населения типа}
+
+    \begin{frame}{Простые примеры задач населения}
+        % todo убрать смущение долой
+        Найдите все возможные варианты для терма $M$ в каждом из случаев:
+        \begin{enumerate}
+            \item $\{x: \beta\} \vdash M: \alpha \to \alpha$
+            \item $\{x: \beta\} \vdash M: \alpha \to \beta$
+            \item $\{x: \beta\} \vdash M: \alpha \to \gamma$
+        \end{enumerate}
+        \pause
+        \vspace{0.5em}
+        Решение:
+        \begin{enumerate}
+            \item \pause $M \eqt \lambda y\ldotp y$
+            \begin{itemize}
+                \item На вход вызывающий может подать что угодно
+                \item На выходе обязан ожидать, что $M$ вернёт значение того же типа, что подаётся на вход
+            \end{itemize}
+            \item \pause $M \eqt \lambda y\ldotp x$
+            \begin{itemize}
+                \item На вход вызывающий может подать что угодно
+                \item На выходе обязан ожидать значение того же типа, что имеет $x$
+            \end{itemize}
+            \item \pause Таких $M$ не может быть
+            \begin{itemize}
+                \item На вход вызывающий может подать что угодно
+                \item На выходе может требовать что угодно
+            \end{itemize}
+        \end{enumerate}
     \end{frame}
 
 \end{document}

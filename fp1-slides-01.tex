@@ -602,7 +602,7 @@
         \end{center}
     \end{frame}
 
-    \begin{frame}[fragile]{``Кодирование наоборот''\footnote{``Наоборот'' также известно как tagless final, \href{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}{\color{blue} church-boehm-berarducci encoding}, CPS transformation.} \popslide}
+    \begin{frame}[fragile]{``Кодирование наоборот''\footnote{``Наоборот'' также известно как tagless final, \href{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}{\color{blue} church-boehm-berarducci encoding}, CPS transformation, codata.} \popslide}
         \begin{itemize}
             \item Пусть функции не возвращают результат, а принимают способ его сразу обработать
             \item Функции не продают, но показывают
@@ -863,7 +863,7 @@
                         \term{and} ~x~y \termdef \pause \term{if} \ap x \ap y \ap \term{false}
                     \]
                     \pause
-                    Или бета-эквивалентный вариант:
+                    Или эквивалентный вариант:
                     \[\term{and}~x~y \termdef \lambda t~e\ldotp \pause x~(y~t~e)~e\]
                     \vspace{-1em}
                 \end{block}
