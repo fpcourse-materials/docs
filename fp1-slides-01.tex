@@ -251,41 +251,47 @@
         \end{columns}
     \end{frame}
 
-    \begin{frame}{Синтаксические договорённости}
-        Снизим синтаксическую зашумлённость с помощью следующих договорённостей:
-        \pause
-        \begin{block}{Договорённость о введении синонимичных имён}
-            \[
-                \term{B} \termdef \lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)
-            \]
-            Введём специальную $\delta$-редукцию для синтаксической подстановки определений:
-            \[
-                \term{B} \step_{\delta} \lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)
-            \]
-        \end{block}
-        \pause
-        \begin{block}{Договорённость об аргументах: ``комбинаторный'' синтаксис}
-            Следующую запись определения будем считать эквивалентной предыдущей:
-            \[
-                \term{B} \ap f \ap g \termdef \lambda x\ldotp f~(g~x)
-            \]
-        \end{block}
-    \end{frame}
-
     \subsectionplan{Семантика $\lambda$-исчисления}
 
     \begin{frame}[fragile]{\subsecname \popslide}
         \pause
         \begin{itemize}
-            \item Задаём смысл термов через эквивалентность
+            \item Вычисление --- это переписывание выражений по правилам
+            \item Для $\lambda$-термов определяются правила переписывания
+            \item Если термы ``похожим'' образом переписываются, то они эквивалентны
             \item Термы ``означают'' одно и то же, если эквивалентны
             \item[\eg] $2+2$ и $1+3$ записаны по-разному, но ``означают'' одно и то же
-            \item Смысл терма --- класс эквивалентности, в котором он находится
+            \item Можно задать смысл терма как класс эквивалентности, в котором он находится
             \item Класс можно задать ``особенным'' представителем (далее)
         \end{itemize}
     \end{frame}
 
+    \begin{frame}[fragile]{Подстановка}
+        \begin{block}{Определение}
+            \begin{equation}
+                \nonumber
+                \begin{cases}
+                [x \mapsto N]
+                    ~ x \equiv N \\
+                    [x \mapsto N] ~ y \equiv y \\
+                    [x \mapsto N] ~ P ~ Q \equiv ([x \mapsto N] P) ~ ([x \mapsto N] Q) \\
+                    [x \mapsto N] ~ \lambda x. ~ P \equiv \lambda x. ~ P \\
+                    [x \mapsto N] ~ \lambda y. ~ P \equiv \lambda y. ~ [x \mapsto N] ~ P, & y \not\in FV(N) \\
+                    [x \mapsto N] ~ \lambda y. ~ P \equiv \lambda y'. ~ [x \mapsto N] ~ ([y \mapsto y'] P), & y \in FV(N)
+                \end{cases}
+            \end{equation}
+        \end{block}
+        \begin{itemize}
+            \item[\todo] $[x \mapsto y] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause y ~ (\lambda y. ~ y ~ z)$
+            \item[\todo] $[x \mapsto y ~ z] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause y ~ z ~ (\lambda y. ~ y ~ z)$
+            \item[\todo] $[y \mapsto x] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause x ~ (\lambda y. ~ y ~ z)$
+            \item[\todo] $[z \mapsto x] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause x ~ (\lambda y. ~ y ~ x)$
+            \item[\todo] $[z \mapsto x ~ y] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause x ~ (\lambda y'. ~ y' ~ (x ~ y))$
+        \end{itemize}
+    \end{frame}
+
     \begin{frame}{$\beta$-редукция --- применение функций}
+        \pause
         \begin{columns}[onlytextwidth]
             \begin{column}[t]{0.485\textwidth}
                 Находим редекс:
@@ -322,39 +328,38 @@
         Этого правила переписывания термов достаточно, чтобы описать любое вычисление!
     \end{frame}
 
-    \begin{frame}[fragile]{Подстановка}
-        \begin{block}{Определение}
-            \begin{equation}
-                \nonumber
-                \begin{cases}
-                [x \mapsto N]
-                    ~ x \equiv N \\
-                    [x \mapsto N] ~ y \equiv y \\
-                    [x \mapsto N] ~ P ~ Q \equiv ([x \mapsto N] P) ~ ([x \mapsto N] Q) \\
-                    [x \mapsto N] ~ \lambda x. ~ P \equiv \lambda x. ~ P \\
-                    [x \mapsto N] ~ \lambda y. ~ P \equiv \lambda y. ~ [x \mapsto N] ~ P, & y \not\in FV(N) \\
-                    [x \mapsto N] ~ \lambda y. ~ P \equiv \lambda y'. ~ [x \mapsto N] ~ ([y \mapsto y'] P), & y \in FV(N)
-                \end{cases}
-            \end{equation}
-        \end{block}
-        \begin{itemize}
-            \item[\todo] $[x \mapsto y] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause y ~ (\lambda y. ~ y ~ z)$
-            \item[\todo] $[x \mapsto y ~ z] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause y ~ z ~ (\lambda y. ~ y ~ z)$
-            \item[\todo] $[y \mapsto x] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause x ~ (\lambda y. ~ y ~ z)$
-            \item[\todo] $[z \mapsto x] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause x ~ (\lambda y. ~ y ~ x)$
-            \item[\todo] $[z \mapsto x ~ y] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause x ~ (\lambda y'. ~ y' ~ (x ~ y))$
-        \end{itemize}
-    \end{frame}
-
     \begin{frame}[fragile]{Эквивалентности}
         Эквивалентны ли следующие термы?
         \begin{itemize}
-            \item[\todo] $x \stackrel{?}{\equiv} x$ --- \pause синтаксическое равенство
-            \item[\todo] $x \stackrel{?}{\equiv} y$ --- \pause нет
-            \item[\todo] $\lambda x. ~ x \stackrel{?}{\equiv} \lambda y. ~ y$ --- \pause $\alpha$-эквивалентность
-            \item[\todo] $\lambda x. ~ x \stackrel{?}{\equiv} (\lambda y. ~ y) (\lambda x. ~ x)$ --- \pause $\beta$-эквивалентность
-            \item[\todo] $\lambda x ~ y. ~ x ~ y \stackrel{?}{\equiv} \lambda x. ~ x$ --- \pause $\eta$-эквивалентность
+            \item[\todo] $x \stackrel{?}{\eqt} x$ --- \pause синтаксическое равенство
+            \item[\todo] $x \stackrel{?}{\eqt} y$ --- \pause нет
+            \item[\todo] $\lambda x. ~ x \stackrel{?}{\eqt} \lambda y. ~ y$ --- \pause $\alpha$-эквивалентность
+            \item[\todo] $\lambda x. ~ x \stackrel{?}{\eqt} (\lambda y. ~ y) (\lambda x. ~ x)$ --- \pause $\beta$-эквивалентность
+            \item[\todo] $\lambda x ~ y. ~ x ~ y \stackrel{?}{\eqt} \lambda x. ~ x$ --- \pause $\eta$-эквивалентность
         \end{itemize}
+    \end{frame}
+
+    \subsectionplan{Дополнительные мета-договорённости}
+
+    \begin{frame}{\subsecname}
+        Снизим синтаксическую зашумлённость с помощью следующих договорённостей:
+        \begin{block}{Договорённость о введении синонимичных имён}
+            \begin{itemize}
+                \item Можем вводить новые термы:
+                \[
+                    \term{B} \termdef \lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)
+                \]
+                \item ``Комбинаторный'' синтаксис допустим:
+                \[
+                    \term{B} \ap f \ap g \termdef \lambda x\ldotp f~(g~x)
+                \]
+                \item Встречая такие термы, можем их переписывать на определение:
+                \[
+                    \term{B} \step_{\delta} \lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)
+                \]
+                \item Аналогично $\beta$-эквивалентности определим $\delta$-эквивалентность: $\eqt_\delta$
+            \end{itemize}
+        \end{block}
     \end{frame}
 
     \subsectionplan{Сопутствующие концепции}
@@ -716,15 +721,6 @@
                 \end{array}
             \]
         \end{itemize}
-        \pause
-        \begin{block}{Соглашение о распаковке}
-            \[
-                \begin{array}{l l}
-                    \term{curry}~f~a~b                 & \termdef f~(\term{pair}~a~b) \\
-                    \term{uncurry}~f~(\term{pair}~a~b) & \termdef f~a~b
-                \end{array}
-            \]
-        \end{block}
     \end{frame}
 
     \begin{frame}{}
@@ -734,7 +730,7 @@
         \end{center}
     \end{frame}
 
-    \subsection{Логические величины}
+    \subsectionplan{Логические величины}
 
     \begin{frame}{Моделируем логические величины}
         \pause
@@ -872,7 +868,7 @@
         \end{columns}
     \end{frame}
 
-    \subsection{Натуральные числа}
+    \subsectionplan{Натуральные числа}
 
     \begin{frame}[fragile]{Натуральные числа $\mathbb{N} \coloneqq \{0, 1, 2, 3, \cdots\}$}
         \pause
