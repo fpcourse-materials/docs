@@ -345,7 +345,7 @@
         Снизим синтаксическую зашумлённость с помощью следующих договорённостей:
         \begin{block}{Договорённость о введении синонимичных имён}
             \begin{itemize}
-                \item Можем вводить новые термы:
+                \item Можем вводить синонимы для термов:
                 \[
                     \term{B} \termdef \lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)
                 \]
@@ -353,11 +353,6 @@
                 \[
                     \term{B} \ap f \ap g \termdef \lambda x\ldotp f~(g~x)
                 \]
-                \item Встречая такие термы, можем их переписывать на определение:
-                \[
-                    \term{B} \step_{\delta} \lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)
-                \]
-                \item Аналогично $\beta$-эквивалентности определим $\delta$-эквивалентность: $\eqt_\delta$
             \end{itemize}
         \end{block}
     \end{frame}
@@ -386,7 +381,7 @@
         \begin{columns}[onlytextwidth]
             \begin{column}[t]{0.485\textwidth}
                 \vspace{0.5em}
-                \[\comb{K}^* \ap q \step_\delta (\lambda x~y\ldotp y) \ap q \step_\beta \lambda y\ldotp y \]
+                \[\comb{K}^* \ap q \step_\beta (\lambda x~y\ldotp y) \ap q \step_\beta \lambda y\ldotp y \]
             \end{column}\hfill%
             \begin{column}[t]{0.485\textwidth}
                 \begin{minted}{python}
@@ -608,7 +603,7 @@
         \end{center}
     \end{frame}
 
-    \begin{frame}[fragile]{``Кодирование наоборот''\footnote{``Наоборот'' также известно как tagless final, \href{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}{\color{blue} church-boehm-berarducci encoding}, CPS transformation, codata.} \popslide}
+    \begin{frame}[fragile]{``Кодирование наоборот''\footnote{``Наоборот'' также известно как tagless final, \href{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}{\color{blue} church-boehm-berarducci encoding}, CPS transformation.} \popslide}
         \begin{itemize}
             \item Пусть функции не возвращают результат, а принимают способ его сразу обработать
             \item Функции не продают, но показывают
@@ -690,11 +685,11 @@
             \item[\answer] \pause
             \begin{align*}
                 \term{fst} \ap &(\term{pair} \ap \framebox{N} \ap M)
-                \step_\delta \pause \\
+                \step_\beta \pause \\
                 \term{fst} \ap &((\lambda x~y\ldotp \lambda f \ldotp f \ap x \ap y) \ap N \ap M)
                 \step_\beta \pause \\
                 \term{fst} \ap &(\lambda f \ldotp f \ap N \ap M)
-                \step_\delta \pause \\
+                \step_\beta \pause \\
                 (\lambda p \ldotp p \ap \term{K}) \ap &(\lambda f \ldotp f \ap N \ap M)
                 \step_\beta \pause \\
                 &(\lambda f \ldotp f \ap N \ap M) \ap \term{K}
