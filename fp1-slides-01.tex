@@ -251,6 +251,22 @@
         \end{columns}
     \end{frame}
 
+    \begin{frame}{Дополнительные синтаксические договорённости}
+        Снизим синтаксическую зашумлённость с помощью следующих договорённостей:
+        \begin{block}{Договорённость о введении синонимичных имён}
+            \begin{itemize}
+                \item Можем вводить синонимы для термов:
+                \[
+                    \term{B} \termdef \lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)
+                \]
+                \item ``Комбинаторный'' синтаксис допустим:
+                \[
+                    \term{B} \ap f \ap g \termdef \lambda x\ldotp f~(g~x)
+                \]
+            \end{itemize}
+        \end{block}
+    \end{frame}
+
     \subsectionplan{Семантика $\lambda$-исчисления}
 
     \begin{frame}[fragile]{\subsecname \popslide}
@@ -337,24 +353,6 @@
             \item[\todo] $\lambda x. ~ x \stackrel{?}{\eqt} (\lambda y. ~ y) (\lambda x. ~ x)$ --- \pause $\beta$-эквивалентность
             \item[\todo] $\lambda x ~ y. ~ x ~ y \stackrel{?}{\eqt} \lambda x. ~ x$ --- \pause $\eta$-эквивалентность
         \end{itemize}
-    \end{frame}
-
-    \subsectionplan{Дополнительные мета-договорённости}
-
-    \begin{frame}{\subsecname}
-        Снизим синтаксическую зашумлённость с помощью следующих договорённостей:
-        \begin{block}{Договорённость о введении синонимичных имён}
-            \begin{itemize}
-                \item Можем вводить синонимы для термов:
-                \[
-                    \term{B} \termdef \lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)
-                \]
-                \item ``Комбинаторный'' синтаксис допустим:
-                \[
-                    \term{B} \ap f \ap g \termdef \lambda x\ldotp f~(g~x)
-                \]
-            \end{itemize}
-        \end{block}
     \end{frame}
 
     \subsectionplan{Сопутствующие концепции}
@@ -716,6 +714,13 @@
                 \end{array}
             \]
         \end{itemize}
+        \pause
+        \begin{block}{Договорённость о распаковке}
+            Пусть пару можно разобрать сразу при получении:
+            \[\term{uncurry} \termdef \lambda f\ldotp \lambda (\term{pair} \ap a \ap b) \ldotp f \ap a \ap b\]
+            Или в комбинаторном синтаксисе:
+            \[\term{uncurry} \ap f \ap (\term{pair} \ap a \ap b) \termdef f \ap a \ap b\]
+        \end{block}
     \end{frame}
 
     \begin{frame}{}

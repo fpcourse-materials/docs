@@ -122,7 +122,7 @@
         В чем подвох с системами типов? \pause
         \begin{itemize}
             \item Всё, что типизируется, --- ``хорошее'', но обратное не всегда верно
-            \item[$\Rightarrow$] Всегда существуют ``хорошие'' программы, которые не типизируются\footnote{В маргинальных случаях (e.g. TypeScript) к тому же существуют ``плохие'', которые типизируются.}
+            \item[$\Rightarrow$] Всегда существуют ``хорошие'' программы, которые не типизируются\footnote{На приктике к тому же зачастую существуют ``плохие'', которые типизируются.}
         \end{itemize}
         \begin{center}
             \includegraphics[height=0.25\textheight]{figs/types}
@@ -140,7 +140,80 @@
     \end{frame}
 
 
-    \sectionplan{Контекст типизации}
+    \sectionplan{$\lambda_\to$ интуитивно}
+
+    \begin{frame}[fragile]{$\lambda_\to$ типизация интуитивно (1)}
+        \begin{itemize}
+            \item[\todo] Припишите тип терму $\lambda x^{\alpha}\ldotp x$
+            \item[\answer] \pause
+            \begin{itemize}
+                \item Терм задаёт функцию --- тип стрелочный: $\alpha \to ~?$
+                \item Типизируем тело, зная $\{x : \alpha\}$: $\lambda x^\alpha\ldotp \underbrace{x}$
+                \item Тип результата функции --- $\alpha$ (уже знаем тип $x$)
+                \item Значит, тип всей функции $\alpha \to \alpha$
+            \end{itemize}
+            \item[\todo] Протипизируйте $f \ap x$, зная, что $\{x : \alpha, f : \alpha\to\beta\}$
+            \item[\answer] \pause
+            \begin{itemize}
+                \item Тип $x$ совпадает с ожидаемым типом аргумента
+                \item Тип применения $f \ap x$ --- тип результата функции $\beta$
+            \end{itemize}
+            \item[\todo] Припишите тип терму $\lambda x^\alpha~f^{\alpha \to \beta}\ldotp f \ap x$
+            \item[\answer] \pause
+            \begin{itemize}
+                \item Видим абстракцию --- пишем стрелку $\alpha \to ~?$
+                \item Типизируем тело, зная $\{x : \alpha\}$: $\lambda x^\alpha \ldotp \underbrace{\lambda f^{\alpha \to \beta}\ldotp f \ap x}$
+                \item Тип тела --- тоже функция: $\alpha \to ((\alpha \to \beta) \to ~?)$
+                \item Типизируем тело вложенной функции, зная $\{x : \alpha, f : \alpha \to \beta\}$: $\lambda x^\alpha \ldotp \lambda f^{\alpha \to \beta}\ldotp \underbrace{f \ap x}$
+                \item Уже решали, итоговый тип: $\alpha \to ((\alpha \to \beta) \to \beta)$
+                \item По ассоциативности стрелки можно убрать одни скобки: $\alpha \to (\alpha \to \beta) \to \beta$
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{$\lambda_\to$ типизация интуитивно (2)}
+        \begin{itemize}
+            \item[\todo] Припишите тип терму $\lambda x~y\ldotp x$
+            \item[\answer] \pause
+            \begin{itemize}
+                \item Типы аргументов на записаны в терме --- выбираем их самостоятельно
+                \item Тело терма никак типы аргументов не ограничивает (нет аппликаций)
+                \item Выбираем различные буквы: $\alpha \to \beta \to ~?$
+                \item Тип результата совпадает с типом первого аргумента
+                \item Ответ: $\alpha\to\beta\to\alpha$
+            \end{itemize}
+            \item[\todo] Припишите тип терму $\lambda x~y~f\ldotp f \ap x \ap y$
+            \item[\answer] \pause
+            \begin{itemize}
+                \item $f$ в теле принимает два аргумента
+                \item Типы $x$ и $y$ никак не ограничены
+                \item $\alpha\to\beta\to(\alpha\to\beta\to~?)\to~?$
+                \item Тип результата функции ничем не ограничен --- берём свежую букву
+                \item Ответ: $\alpha\to\beta\to(\alpha\to\beta\to\gamma)\to\gamma$
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{$\lambda_\to$ население типов интуитивно}
+        \begin{itemize}
+            \item[\todo] Населите тип $(\beta\to\gamma)\to(\alpha\to\beta)\to\alpha\to\gamma$
+            \item[\answer] \pause
+            \begin{itemize}
+                \item Вспоминаем про ассоциативность стрелки: $(\beta\to\gamma)\to((\alpha\to\beta)\to\alpha\to\gamma)$
+                \item Это явно функция, пишем абстрактор: $\lambda f^{\beta\to\gamma}\ldotp \underbrace{\_}_{(\alpha\to\beta)\to\alpha\to\gamma}$
+                \item Аналогично ещё две стрелки дают два аргумента: $\lambda f^{\beta\to\gamma}\ap g^{\alpha\to\beta} \ap x^\alpha\ldotp \underbrace{\_}_\gamma$
+                \item Единственный способ получить значение типа $\gamma$ --- вызвать $f$:\\
+                $\lambda f^{\beta\to\gamma}\ap g^{\alpha\to\beta} \ap x^\alpha\ldotp f \ap \underbrace{\_}_\beta$
+                \item Конструируем подходящий аргумент для $f$ типа $\beta$ вызовом $g$:\\
+                $\lambda f^{\beta\to\gamma}\ap g^{\alpha\to\beta} \ap x^\alpha\ldotp f \ap (g \ap \underbrace{\_}_\alpha)$
+                \item Воспользуемся $x$, чтобы достроить терм нужного типа:\\
+                $\lambda f^{\beta\to\gamma}\ap g^{\alpha\to\beta} \ap x^\alpha\ldotp f \ap (g \ap x)$
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+
+    \sectionplan{$\lambda_\to$ формально}
 
     \begin{frame}[fragile]{Контекст типизации}
         \begin{itemize}
@@ -224,37 +297,7 @@
         \end{columns}
     \end{frame}
 
-
-    \sectionplan{STLC / simply typed $\lambda$-calculus / $\lambda_\to$}
-
-    \begin{frame}[fragile]{STLC типизация интуитивно}
-        \begin{itemize}
-            \item[\todo] Припишите тип терму $\lambda x^{\alpha}\ldotp x$
-            \item[\answer] \pause
-            \begin{itemize}
-                \item Терм задаёт функцию --- тип стрелочный: $\alpha \to ~?$
-                \item Типизируем тело, зная $\Gamma = \{x : \alpha\}$, $\lambda x^\alpha\ldotp \underbrace{x}$
-                \item % todo
-            \end{itemize}
-            \item[\todo] Припишите тип терму $\lambda x^\alpha~f^{\alpha \to \beta}\ldotp f \ap x$
-            \item[\answer] \pause % todo
-            \item[\todo] Припишите тип терму $\lambda x~y\ldotp x$
-            \item[\answer] % todo
-            \item[\todo] Припишите тип терму $\lambda x~y~f\ldotp f \ap x \ap y$ % todo
-            \item[\answer] % todo
-        \end{itemize}
-    \end{frame}
-
-    \begin{frame}[fragile]{STLC население типов интуитивно}
-        \begin{itemize}
-            \item[\todo] Населите тип $(\beta\to\gamma)\to(\alpha\to\beta)\to\alpha\to\gamma$
-            \item[\answer] \pause % todo
-        \end{itemize}
-    \end{frame}
-
-    % todo переместить контекст типизации сюда
-
-    \begin{frame}{Определение \secname}
+    \begin{frame}{Определение STLC / simply typed $\lambda$-calculus / $\lambda_\to$}
         \vspace{-0.5em}
         \pause
         \begin{block}{Синтаксис типов в $\lambda_{\rightarrow}$}
@@ -343,8 +386,6 @@
         }\]
         \begin{itemize}
             \item \visible<11->{Получилось перевёрнутое синтаксическое дерево терма!}
-            \item[\todo] \visible<12->{Меняется ли что-то для типизации в стиле Чёрча?}
-            \item[\answer] \visible<13->{В этой задаче --- нет: тип терму уже приписан, информации для построения дерева достаточно}
         \end{itemize}
     \end{frame}
 
@@ -365,36 +406,426 @@
         }\]
     \end{frame}
 
+
+    \subsectionplan{Задача вывода типа}
+
+    %! suppress = TrimWhitespace
+    \newcommand{\btypename}{Вывод типа для комбинатора $\term{B}$ }
+
+    \begin{frame}[t]{\btypename (0)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        \[{\color{red}\emptyset \vdash \lambda f~g~x.~f~(g~x) :~ ?_0}\]
+        \vspace{-1em}
+        \begin{itemize}
+            \item Требуется вывести тип терма
+            \item Внешней информации нет, типизируем в пустом контексте
+            \item Пока для неизвестного типа используем мета-переменную $?_0$
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (1)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) :~ ?_1 \to ?_2}
+            {\color{red}\{f :~ ?_1\} \vdash \lambda g~x.~f~(g~x) :~ ?_2}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item Видим абстракцию на верхнем уровне: правило $intro\to$
+            \item Правило требует стрелочной структуры типа, запоминаем $?_0 =~ ?_1\to ?_2$
+            \item Обогащаем контекст переменной типа аргумента функции
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (2)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) : ?_1 \to \color{red} ?_3 \to ?_4}{
+                \color{red}\infer[intro\to]{\color{black}\{f :~ ?_1\} \vdash \lambda g~x.~f~(g~x) :~ \color{red}?_3 \to ?_4}{
+                        {\{f :~ ?_1, g :~ ?_3\} \vdash \lambda x.~f~(g~x) :~ ?_4 }
+                }}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item Снова абстракция на верхнем уровне: $intro\to$
+            \item Тип $?_2$ должен иметь стрелочную структуру, запоминаем $?_2 =~ ?_3 \to ?_4$
+            \item Обогащаем контекст
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (3)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) :~ ?_1 \to ?_3 \to \color{red}?_5 \to ?_6}{
+                \infer[intro\to]{\{f:~ ?_1\} \vdash \lambda g~x.~f~(g~x) :~ ?_3 \to \color{red}?_5 \to ?_6}{
+                    \color{red}\infer[intro\to]{\color{black}\{f:~ ?_1, g:~ ?_3\} \vdash \lambda x.~f~(g~x) :~ \color{red}?_5 \to ?_6 }{
+                            {\{f:~ ?_1, g:~ ?_3, x:~ ?_5\} \vdash f~(g~x) :~ ?_6 }
+                    }}}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item Снова абстракция на верхнем уровне: $intro\to$
+            \item Запоминаем: $?_4 =~ ?_5 \to ?_6$
+            \item Обогащаем контекст
+            \item Обозначим для краткости $\Gamma = \{f:~ ?_1, g:~ ?_3, x:~ ?_5\}$
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (4)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        %! suppress = EscapeAmpersand
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) : ?_1 \to ?_3 \to ?_5 \to ?_6}{
+                \infer[intro\to]{\{f: ?_1\} \vdash \lambda g~x.~f~(g~x) : ?_3 \to ?_5 \to ?_6}{
+                    \infer[intro\to]{\{f: ?_1, g: ?_3\} \vdash \lambda x.~f~(g~x) : ?_5 \to ?_6 }{
+                        \color{red}\infer[elim\to]{\color{black}\{f: ?_1, g: ?_3, x: ?_5\} \vdash f~(g~x) :~ ?_6}{
+                            \Gamma \vdash f : ?_7 \to ?_6 &
+                            \Gamma \vdash g~x : ?_7
+                        }}}}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item Аппликация на верхнем уровне: правило $elim\to$
+            \item Тип аргумента неизвестен, заводим мета-переменную $?_7$
+            \item Типы аргумента и параметра должны совпадать
+            \item Тип результата функции равен типу аппликации
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (5)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        %! suppress = EscapeAmpersand
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) : {\color{red}(?_7 \to ?_6)} \to ?_3 \to ?_5 \to ?_6}{
+                \infer[intro\to]{\{f: {\color{red}?_7 \to ?_6}\} \vdash \lambda g~x.~f~(g~x) : ?_3 \to ?_5 \to ?_6}{
+                    \infer[intro\to]{\{f: {\color{red}?_7 \to ?_6}, g: ?_3\} \vdash \lambda x.~f~(g~x) : ?_5 \to ?_6 }{
+                        \infer[elim\to]{\{f: {\color{red}?_7 \to ?_6}, g: ?_3, x: ?_5\} \vdash f~(g~x) }{
+                            \color{red}
+                            \infer[1]{\color{black}\Gamma \vdash f : {\color{red}?_7 \to ?_6}}{} &
+                            \Gamma \vdash g~x : ?_7
+                        }}}}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item В левой ветке правило типизации $ctx$
+            \item Получаем, что $?_1 =~ ?_7 \to ?_6$
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (6)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        %! suppress = EscapeAmpersand
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) : (?_7 \to ?_6) \to ?_3 \to ?_5 \to ?_6}{
+                \infer[intro\to]{\{f: ?_7 \to ?_6\} \vdash \lambda g~x.~f~(g~x) : ?_3 \to ?_5 \to ?_6}{
+                    \infer[intro\to]{\{f: ?_7 \to ?_6, g: ?_3\} \vdash \lambda x.~f~(g~x) : ?_5 \to ?_6 }{
+                        \infer[elim\to]{\{f: ?_7 \to ?_6, g: ?_3, x: ?_5\} \vdash f~(g~x) }{
+                            \infer[ctx]{\Gamma \vdash f : ?_7 \to ?_6}{} &
+                            \color{red}\infer[elim\to]{\color{black}\Gamma \vdash g~x : ?_7}{
+                                \Gamma \vdash g : ?_8 \to ?_7 &
+                                \Gamma \vdash x : ?_8
+                            }}}}}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item В правой ветке снова видим аппликацию: $elim\to$
+            \item Заводим мета-переменную $?_8$
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (7)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        %! suppress = EscapeAmpersand
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) : (?_7 \to ?_6) \to ({\color{red} ?_8 \to ?_7}) \to ?_5 \to ?_6}{
+                \infer[intro\to]{\{f: ?_7 \to ?_6\} \vdash \lambda g~x.~f~(g~x) : ({\color{red} ?_8 \to ?_7}) \to ?_5 \to ?_6}{
+                    \infer[intro\to]{\{f: ?_7 \to ?_6, g: {\color{red} ?_8 \to ?_7}\} \vdash \lambda x.~f~(g~x) : ?_5 \to ?_6 }{
+                        \infer[elim\to]{\Gamma \vdash f~(g~x) }{
+                            \infer[ctx]{\Gamma \vdash f : ?_7 \to ?_6}{} &
+                            \infer[elim\to]{\Gamma \vdash g \ap x : ?_7}{
+                                \color{red}\infer[ctx]{\color{black}\Gamma \vdash g : {\color{red} ?_8 \to ?_7}}{} &
+                                \Gamma \vdash x : ?_8
+                            }}}}}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item В левой ветке первое правило: $ctx$
+            \item Получаем $?_3 = ?_8 \to ?_7$
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (8)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        %! suppress = EscapeAmpersand
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) : (?_7 \to ?_6) \to ({\color{red} ?_5} \to ?_7) \to ?_5 \to ?_6}{
+                \infer[intro\to]{\{f: ?_7 \to ?_6\} \vdash \lambda g~x.~f~(g~x) : ({\color{red} ?_5} \to ?_7) \to ?_5 \to ?_6}{
+                    \infer[intro\to]{\{f: ?_7 \to ?_6, g: {\color{red}?_5} \to ?_7\} \vdash \lambda x.~f~(g~x) : ?_5 \to ?_6 }{
+                        \infer[elim\to]{\{f: ?_7 \to ?_6, g: {\color{red}?_5} \to ?_7, x: ?_5\} \vdash f~(g~x) }{
+                            \infer[ctx]{\Gamma \vdash f : ?_7 \to ?_6}{} &
+                            \infer[elim\to]{\Gamma \vdash g \ap x : ?_7}{
+                                \infer[ctx]{\Gamma \vdash g : {\color{red}?_5} \to ?_7}{} &
+                                \color{red} \infer[ctx]{\color{black} \Gamma \vdash x : {\color{red} ?_5}}{}
+                            }}}}}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item В правой ветке снова срабатывает первое правило: $ctx$
+            \item Получаем $?_8 = ?_5$
+            \item[\answer] Заменяем мета-переменные на типовые $(\beta \to \gamma) \to (\alpha \to \beta) \to \alpha \to \gamma$
+        \end{itemize}
+    \end{frame}
+
+
     \subsectionplan{Задача населения типа}
 
     \begin{frame}{Простые примеры задач населения}
-        % todo убрать смущение долой
         Найдите все возможные варианты для терма $M$ в каждом из случаев:
-        \begin{enumerate}
-            \item $\{x: \beta\} \vdash M: \alpha \to \alpha$
-            \item $\{x: \beta\} \vdash M: \alpha \to \beta$
-            \item $\{x: \beta\} \vdash M: \alpha \to \gamma$
-        \end{enumerate}
+        \begin{itemize}
+            \item[\todo] $\{x: \beta\} \vdash M: \alpha \to \alpha$
+            \item[\todo] $\{x: \beta\} \vdash M: \alpha \to \beta$
+            \item[\todo] $\{x: \beta\} \vdash M: \alpha \to \gamma$
+            \item[\answer] \pause
+            \begin{itemize}
+                \item Единственный терм типа $\alpha$ передаётся аргументом
+                \item Терм обязан вернуть свой аргумент: $M \eqt \lambda x\ldotp x$
+            \end{itemize}
+            \item[\answer] \pause
+            \begin{itemize}
+                \item Единственное значение типа $\beta$ есть в контексте
+                \item Обязаны вернуть значение из контекста $M \eqt \lambda y\ldotp x$
+            \end{itemize}
+            \item[\answer] \pause
+            \begin{itemize}
+                \item Значение типа $\gamma$ брать неоткуда
+                \item Этот тип не населён в данном контексте
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+
+    \subsectionplan{Стили типизации}
+
+    \begin{frame}{Типизация в стиле Карри vs {\color{red} в стиле Чёрча}}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        \vspace{1em}
         \pause
-        \vspace{0.5em}
-        Решение:
-        \begin{enumerate}
-            \item \pause $M \eqt \lambda y\ldotp y$
-            \begin{itemize}
-                \item На вход вызывающий может подать что угодно
-                \item На выходе обязан ожидать, что $M$ вернёт значение того же типа, что подаётся на вход
-            \end{itemize}
-            \item \pause $M \eqt \lambda y\ldotp x$
-            \begin{itemize}
-                \item На вход вызывающий может подать что угодно
-                \item На выходе обязан ожидать значение того же типа, что имеет $x$
-            \end{itemize}
-            \item \pause Таких $M$ не может быть
-            \begin{itemize}
-                \item На вход вызывающий может подать что угодно
-                \item На выходе может требовать что угодно
-            \end{itemize}
-        \end{enumerate}
+        По Чёрчу в термах записываются типы при связанных переменных.
+        \begin{itemize}
+            \item Количество кода
+            \begin{description}
+                \item[По Чёрчу] Программисту приходится больше писать
+                \item[По Карри] Меньше кода, сложнее задача типовой подсистеме языка
+            \end{description}
+            \item Количество способов приписать терму тип
+            \begin{description}
+                \item[По Чёрчу] Либо $0$, либо $1$
+                \item[По Карри] Либо $0$, либо $\infty$
+            \end{description}
+            \item \pause Алгоритм вывода
+            \begin{description}
+                \item[По Чёрчу] Проще, вся необходимая информация написана в терме
+                \item[По Карри] Сложнее, приходится решать систему типовых уравнений
+            \end{description}
+        \end{itemize}
+    \end{frame}
+
+
+    \sectionplan{Ограниченность STLC \advancedslide}
+
+    \begin{frame}{Не всё сильно-нормализуемое типизируется \advancedslide}
+        Вспомним: всё, что типизируется, ``хорошее'', но обратное не всегда верно. Будем ``хорошим'' считать сильную нормализуемость.
+
+        \vspace{1em}
+        $\mathbf{2}~\mathbf{K}$ терм сильно нормализуем и редуцируется так:
+        \[\mathbf{2}~\mathbf{K} = \lambda z\ldotp \mathbf{K}~(\mathbf{K}~z) = \lambda z~a~b\ldotp z\]
+        Однако протипизировать это не получится.
+        \begin{itemize}
+            \item Наиболее общий тип $\mathbf{K}$~--- это $\gamma \to \tau \to \gamma$
+            \item $\mathbf{2} \termdef \lambda s~z\ldotp s~(s~z)$, наиболее общий тип $\mathbf{2}$~--- это $(\alpha \to \alpha) \to \alpha \to \alpha$
+            \item По правилу типизации аппликации, применение $\mathbf{2}$ к $\mathbf{K}$ накладывает на $\gamma, \tau, \alpha$ ограничения $\alpha = \gamma, \alpha = \tau \to \gamma$
+        \end{itemize}
+        Противоречие.
+    \end{frame}
+
+    \begin{frame}{Эквивалентности не сохраняют тип \advancedslide}
+        \begin{block}{$\beta$-эквивалентность не сохраняет тип}
+            Из лекции известно, что если $M$ редуцируется к $N$ и $\Gamma \vdash M: \tau$,
+            то $\Gamma \vdash N: \tau$.
+
+            Неправда, что если $M$ редуцируется к $N$ и $\Gamma \vdash N: \tau$, то
+            $\Gamma \vdash M: \tau$.
+
+            Пример: $N = \lambda x\ldotp x$, $N: \alpha \to
+            \alpha$; $M = \lambda x\ldotp (\lambda y\ldotp x)~(x~\mathbf{I})$, и
+            за одно редуцирование $M$ переходит в $N$, но $M: \alpha \to \alpha$ не
+            выполняется: тогда бы подтерм $x~\mathbf{I}$ не типизировался, так как $\alpha$
+            не является стрелочным типом.
+        \end{block}
+        \begin{block}{$\eta$-эквивалентность не сохраняет тип}
+            Если $\lambda x\ldotp M~x: \tau$ (где $x$ не является свободным в $M$), то
+            $M: \tau$.
+
+            Если $M: \tau$, то не обязательно $\lambda x \ldotp M~x: \tau$.
+
+            Пример:
+            $\mathbf{I}: \alpha \to \alpha$, но $\lambda x~y\ldotp x~y: (\beta \to \gamma) \to
+            (\beta \to \gamma)$ нельзя приписать тип $\alpha \to \alpha$: тогда бы подтерм
+            $x~y$ не типизировался, так как $\alpha$ не является стрелочным типом.
+        \end{block}
+    \end{frame}
+
+
+    \sectionplan{Материалы}
+
+    \begin{frame}{Что посмотреть в транспорте}
+        \begin{itemize}
+            \item \href{https://youtu.be/f12hIDF0XPc}{\color{blue} Формальная верификация операционных систем}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Серьёзные материалы}
+        \begin{itemize}
+            \item \href{https://www.mccme.ru/dubna/2017/courses/bragilevsky.html}{\color{blue} Соответствие Карри–Ховарда: от матлогики к программированию}
+            \item \href{https://www.youtube.com/watch?v=_HYI7zjkrEs&list=PLvPsfYrGz3wuVAGhNf6-i7uafXg56oqM5}{\color{blue} Вывод типов от Хиндли-Милнера до GHC 8.8}
+            \item \href{https://youtu.be/o-7zhrUP3ds}{\color{blue} Программирование с зависимыми типами на языке Idris}
+            \item \href{https://www.amazon.com/Type-driven-Development-Idris-Edwin-Brady/dp/1617293024}{\color{blue} Edwin Brady ''Type-Driven Development with Idris``}
+            \item Pierce, Benjamin C. Types and programming languages. MIT press, 2002.
+            \item Пирс Б. Типы в языках программирования. — Лямбда пресс, Добросвет, 2012. — 656 c.
+            \item \href{https://thinkingwithtypes.com/}{\color{blue} Sandy Maguire ''Thinking with Types. Type-Level Programming in Haskell``}
+            \item Henk Barendregt, Wil Dekkers, and Richard Statman. ``Lambda Calculus with Types''. Cambridge University Press, New York, NY, USA, 2013.
+            \item J. Roger Hindley. ``Basic Simple Type Theory''. Cambridge University Press, New York, NY, USA, 1997
+        \end{itemize}
     \end{frame}
 
 \end{document}
