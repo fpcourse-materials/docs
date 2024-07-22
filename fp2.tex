@@ -68,8 +68,8 @@
 % Code
 % https://tex.stackexchange.com/questions/99475/how-to-invoke-latex-with-the-shell-escape-flag-in-texstudio-former-texmakerx
 % Colored, requires --shell-escape compiling option
-% \usepackage{minted}
-% \setminted{xleftmargin=\parindent, autogobble, escapeinside=\#\#}
+\usepackage{minted}
+\setminted{xleftmargin=\parindent, autogobble, escapeinside=\#\#}
 \usepackage{listings}
 % ------------------------------------------------
 
@@ -99,9 +99,11 @@
 
     \tableofcontents
 
+    \newpage
+
     \section*{Введение}
 
-    В функциональном программировании и языковом дизайне в частности существует некоторый набор знаний, считающихся общеизвестным фольклором.
+    В функциональном программировании и соответствующем языковом дизайне существует некоторый набор знаний, считающихся общеизвестным фольклором.
     Сложность в том, что эти знания рассеяны по книгам, статьям и ``культовым'' блог-постам, и требуется довольно много времени и сил для восстановления целостной картины.
 
     Цель этого курса --- собрать в одном месте такие фольклорные знания и организовать их в некоторую систему.
@@ -109,15 +111,119 @@
 
     В связи с широтой контекста, этот курс является обзорным и не всегда глубоким.
     Так, детали реализации в GHC или теор-категорные основания вещей могут даваться в общем виде и без конкретики.
-    В то же время в плоскости языкового дизайна и пользовательского опыта на Haskell курс пытается быть максимально подробным.
+    В то же время в плоскости языкового дизайна через оптику функционального программирования и пользовательского опыта на Haskell курс пытается быть максимально подробным.
 
     Выбор тем и структура курса во многом обусловлены организацией языка Haskell, который этот курс использует как референсный.
     Не в последнюю очередь выбор тем для курса обусловлен интересами его автора.
 
 
-    \section{Параметрический полиморфизм}
+    \section{Воспоминания о ФП}
 
-    \subsection{Напоминание про типы}
+    В этом разделе мы вспомним основные концепции функционального программирования и языка Haskell.
+
+    \subsection{Термы и редукция}
+
+    В ФП программы представляют собой выражения.
+    Выполнение программ --- редукция таких выражений до более простых.
+    Выражения можно представлять как в виде линейной записи символов, так и в виде дерева, для понимания которого не требуется знания вспомогательных правил ассоциативности и проч.
+
+    Основная идея функционального программирования --- $\lambda$-абстракция.
+    Она позволяет взять произвольное выражение и заменить его фрагмент на формальный параметр.
+    Формальный параметр должен быть задекларирован выше по дереву с помощью специальной $\lambda$-вершины.
+    Вместо формального параметра можно в дальнейшем подставлять различные конкретные параметры, то есть использовать одно выражение для различных целей.
+
+    \begin{tikzpicture}
+        \node [expr] (div) {$\div$};
+        \node [expr] (x) [below left=of div] {$x$};
+        \node [expr] (plus) [below right = of div] {$+$};
+        \node [expr] (two) [below right = of plus] {$2$};
+        \node [hexpr] (mult) [below left = of plus] {$\times$};
+        \node [hexpr] (ten) [below left = of mult] {$10$};
+        \node [hexpr] (four) [below right = of mult] {$4$};
+        \draw[->] (plus) -- (div);
+        \draw[->] (x) -- (div);
+        \draw[->] (mult) -- (plus);
+        \draw[->] (ten) -- (mult);
+        \draw[->] (four) -- (mult);
+        \draw[->] (two) -- (plus);
+    \end{tikzpicture}
+    \begin{tikzpicture}
+        \node [hdecl] (f) {$f$};
+        \node [hexpr] (lam) [below=of f] {$\lambda$};
+        \node [hdecl] (y) [below right =of lam] {$y$};
+        \node [expr] (div) [below=of lam] {$\div$};
+        \node [expr] (x) [below left=of div] {$x$};
+        \node [expr] (plus) [below right = of div] {$+$};
+        \node [hexpr] (param) [below left=of plus] {$y$};
+        \node [expr] (two) [below right = of plus] {$2$};
+        \draw[->] (lam) -- (f);
+        \draw[->] (div) -- (lam);
+        \draw[->] (plus) -- (div);
+        \draw[->] (x) -- (div);
+        \draw[->] (two) -- (plus);
+        \draw[->] (param) -- (plus);
+        \draw[->] (y) -- (lam);
+    \end{tikzpicture}
+    \begin{tikzpicture}
+        \node [hexpr] (app) {$@$};
+        \node [hexpr] (f) [below left =of app] {$f$};
+        \node [expr] (mult) [below right= of app] {$\times$};
+        \node [expr] (ten) [below left= of mult] {$10$};
+        \node [expr] (four) [below right= of mult] {$4$};
+        \draw[->] (mult) -- (app);
+        \draw[->] (f) -- (app);
+        \draw[->] (ten) -- (mult);
+        \draw[->] (four) -- (mult);
+    \end{tikzpicture}
+
+    Простейший функциональный язык --- $\lambda$-исчисление.
+    Выражения в нём называются $\lambda$-термами.
+    Термы можно сконструировать тремя способами:
+    \begin{description}
+        \item[Переменные] $x \in \Lambda$, если $x \in V$ \hspace{2em}
+        \begin{tikzpicture}
+            \node [expr] (x) {x};
+        \end{tikzpicture}
+        \item[Абстракция] $(\lambda x\ldotp M) \in \Lambda$, если $x \in V, M \in \Lambda$ \hspace{2em}
+        \begin{tikzpicture}
+            \node [expr] (lam) {$\lambda$};
+            \node [decl] (x) [below right = of lam] {$x$};
+            \node [subtree] (m) [below = of lam] {$M$};
+            \draw[->] (m.north) -- (lam);
+            \draw[->] (x) -- (lam);
+        \end{tikzpicture}
+        \item[Аппликация] $(M~N) \in \Lambda$, если $M \in \Lambda, N \in \Lambda$ \hspace{2em}
+        \begin{tikzpicture}
+            \node [expr] (dog) {$@$};
+            \node [subtree] (m) [below left= of lam] {$M$};
+            \node [subtree] (n) [below right= of lam] {$N$};
+            \draw[->] (m.north) -- (lam);
+            \draw[->] (n.north) -- (lam);
+        \end{tikzpicture}
+    \end{description}
+
+    Редукция определяется следующим правилом переписывания: ищется применение $\lambda$-функции к аргументу и в её тело осуществляется подстановка аргумента во все свободные вхождения переменной, связанной лямбдой.
+
+    \begin{tikzpicture}
+        \node [expr] (top) {$\cdots$};
+        \node [hexpr] (ap) [below = of top] {$@$};
+        \node [hexpr] (lam) [below left = of ap] {$\lambda$};
+        \node [decl] (x) [below right = of lam] {$x$};
+        \node [subtree] (l) [below = of lam] {$M$};
+        \node [subtree] (r) [below right = of ap] {$N$};
+        \draw[->] (ap) -- (top);
+        \draw[->] (lam) -- (ap);
+        \draw[->] (l) -- (lam);
+        \draw[->] (r.north) -- (ap);
+        \draw[->] (x) -- (lam);
+    \end{tikzpicture}
+    \begin{tikzpicture}
+        \node [expr] (top) {$\cdots$};
+        \node [subtree] (bot) [below = of top] {$\subst{M}{x}{N}$};
+        \draw[->] (bot) -- (top);
+    \end{tikzpicture}
+
+    \subsection{Типы}
 
     Программное обеспечение --- это сложно.
     Поэтому постоянно и неизбежно в программах возникают ошибки.
@@ -188,6 +294,30 @@
     Типовые метки имеют чисто-синтаксическую природу, однако их можно проинтерпретировать.
     Самая популярная интерпретация~--- воспринимать типовую метку как множество.
     Так, метке $int \to int$ можно поставить в соответствие множество функций между множествами ограниченных целых чисел.
+
+    \subsection{Функции в Haskell}
+
+    В своей основе Haskell представляет собой расширенное типизированное $\lambda$-исчисление.
+
+    Примеры $\lambda$-абстракций в REPL окружении GHCi:
+
+    \begin{lstlisting}[language=Haskell]
+        f x = x + 1
+    \end{lstlisting}
+
+    \subsection{Данные в Haskell}
+
+    \subsection{Классы типов в Haskell}
+
+    \subsection{Монады в Haskell}
+
+
+    % todo
+
+
+    \section{Параметрический полиморфизм}
+
+    \subsection{Напоминание про типы}
 
     \subsection{Параметрический полиморфизм первого ранга}
 
