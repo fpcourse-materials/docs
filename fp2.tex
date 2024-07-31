@@ -383,6 +383,16 @@
           Dog name -> "This is dog " ++ name
     \end{lstlisting}
 
+    В Haskell если специальный синтаксис для объявления полей с именованными метками.
+    \begin{lstlisting}[language=Haskell]
+        data Penguin = Penguin { getName :: String, getAge :: Int }
+        penguin = Penguin { getName = "Andrey", getAge = 500 }
+    \end{lstlisting}
+    Haskell генерирует функции-аксессоры для доступа к полям объекта:
+    \begin{lstlisting}[language=Haskell]
+        ghci> :t getName :: Penguin -> String
+    \end{lstlisting}
+
     Часто функции в программировании частичные --- при некоторых значениях аргументов они могут вернуть результат, а при некоторых~--- нет.
     Давайте моделировать это с помощью специального типа данных.
     Если есть целочисленный результат, будем возвращать его.
@@ -536,18 +546,23 @@
 
         example :: State Int Int
         example =
-          put 42 >>= \() ->
           get >>= \x ->
-          pure (x + 1)
+          put 42 >>= \() ->
+          get >>= \y ->
+          pure (x + y)
+
+        ghci> runState example 1
+        43
     \end{lstlisting}
 
     Для таких монадических цепочек существует специальный синтаксический сахар:
     \begin{lstlisting}[language=Haskell]
         example :: State Int Int
         example = do
-          put 42
           x <- get
-          pure (x + 1)
+          put 42
+          y <- get
+          pure (x + y)
     \end{lstlisting}
 
     \section{Параметрический полиморфизм}
