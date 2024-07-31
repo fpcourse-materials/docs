@@ -485,7 +485,7 @@
     Например, изменяют какое-то состояние или пишут в консоль.
     Иными словами, производят побочные эффекты.
     В любом случае в Haskell мы можем только вернуть из функции только результат, поэтому такие побочные эффекты мы кодируем в качестве дополнительной структуры, оборачивающей чистый результат.
-    Т.е. если функция без побочных эффектов возвращала какой-то тип \texttt{a}, то после добавления побочных эффектов в её реализацию она будет возвращать некоторый тип \texttt{f a}.
+    Т.е. если функция без побочных эффектов возвращала какой-то тип \texttt{a}, то после добавления побочных эффектов в её реализацию она будет возвращать некоторый тип \emph{вычислений} \texttt{f a}.
 
     \begin{itemize}
         \item Если функция кидает ошибку, то \texttt{f = Maybe}.
@@ -496,10 +496,59 @@
     Стандартная библиотека Haskell предоставляет несколько классов типов для работы со значениями вида \texttt{f a}.
     Они позволяют абстрагироваться от структуры \texttt{f} и работать со значениями \texttt{a} внутри, как будто нет никакой дополнительной структуры.
 
+    Первый такой класс типов позволяет писать выражения над вычислениями \texttt{f a}.
+    \begin{lstlisting}[language=Haskell]
+        class Functor f => Applicative (f :: * -> *) where
+          pure :: a -> f a
+          liftA2 :: (a -> b -> c) -> f a -> f b -> f c
 
+        instance Applicative Maybe where
+          pure :: a -> Maybe a
+          pure = Just
 
-    % todo
+          liftA2 :: (a -> b -> c) -> Maybe a -> Maybe b -> Maybe c
+          liftA2 _ Nothing _ = Nothing
+          liftA2 _ _ Nothing = Nothing
+          liftA2 f (Just x) (Just y) = Just (f x y)
+    \end{lstlisting}
 
+    Второй класс типов позволяет делать последовательную композицию вычислений в императивном стиле:
+    \begin{lstlisting}[language=Haskell]
+        class Applicative m => Monad (m :: * -> *) where
+          (>>=) :: m a -> (a -> m b) -> m b
+
+        newtype State s a = State { runState :: s -> (s, a) }
+
+        instance Monad (State s) where
+          (>>=) :: State s a -> (a -> State s b) -> State s b
+          m >>= k = State \s ->
+            let (s', x) = runState m s in
+            runState (k x) s'
+    \end{lstlisting}
+
+    Теперь если мы определим базовые операции работы с состоянием, мы сможем писать код в императивном стиле.
+    \begin{lstlisting}[language=Haskell]
+        get :: State s s
+        get = State \s -> (s, s)
+
+        put :: s -> State s ()
+        put newS = State \oldS -> (newS, ())
+
+        example :: State Int Int
+        example =
+          put 42 >>= \() ->
+          get >>= \x ->
+          pure (x + 1)
+    \end{lstlisting}
+
+    Для таких монадических цепочек существует специальный синтаксический сахар:
+    \begin{lstlisting}[language=Haskell]
+        example :: State Int Int
+        example = do
+          put 42
+          x <- get
+          pure (x + 1)
+    \end{lstlisting}
 
     \section{Параметрический полиморфизм}
 
