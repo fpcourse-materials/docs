@@ -7,7 +7,7 @@
 
 \input{preamble-slides}
 
-\title[Типы в $\lambda$-исчислении]{Практика 3. Типы в $\lambda$-исчислении}
+\title[Введение в Haskell]{Практика 4. Введение в Haskell}
 \date{осень 2024}
 
 \begin{document}
@@ -21,7 +21,6 @@
             \item Структуры данных в чистом лямбда-исчислении
             \item Просто-типизированное лямбда-исчисление
             \item Стиль программирования с явной передачей обновлённого состояния вместо изменения старого
-            \pause
             \item[\newtopic] Базовый синтаксис Haskell
             \item[\newtopic] Базовые типы
             \item[\newtopic] Группировка объявлений: \mintinline{haskell}|let| и \mintinline{haskell}|where|
@@ -31,6 +30,186 @@
 
     \begin{frame}[noframenumbering]{Содержание}
         \tableofcontents
+    \end{frame}
+
+    \sectionplan{Введение}
+
+    \begin{frame}{Как изучать Haskell}
+        \begin{block}{Почему Haskell}
+            \begin{itemize}
+                \item Писать не функционально максимально неудобно
+                \item Наружу вывернуты концепции и абстракции в ущерб простоте и эргономике
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{\color{red} Как неправильно}
+            \begin{itemize}
+                \item Принимать на веру лекции и практики
+                \item Пытаться по примерам и типам нащупать, как этим пользоваться
+                \item Привычка от изучения языков с магическими правилами\footnote{\href{https://docs.python.org/3/reference/datamodel.html\#special-method-names}{\color{blue} Python special method names.}}
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{\color{green} Как правильно}
+            \begin{itemize}
+                \item Открыть определение и почитать
+                \item Поредуцировать руками простые примеры
+                \item Лучший способ осознать что-то из ФП~--- реализовать то же самое самостоятельно
+            \end{itemize}
+        \end{block}
+    \end{frame}
+
+    % todo задачки на процент и композицию
+
+    % todo задачки на специализацию полиморфных функций
+
+    % todo задачки на аккумуляторы
+
+    % todo инфра
+
+    % todo подчёркивания
+
+
+    \sectionplan{Инфраструктура Haskell \practicalslide}
+
+    \begin{frame}{Компилятор GHC}
+        \begin{itemize}
+            \item Единственный компилятор Haskell
+            \item Работает не быстро (зато умный)
+            \item Версия языка зафиксирована в стандарте Haskell Report 2010
+            \item Язык развивается расширениями компилятора
+            \begin{itemize}
+                \item Подключение прагмой в начале файла \texttt{\{-\# LANGUAGE ... \#-\}}
+                \item Или ключами компиляции (в конфигах проекта)
+                \item Добавляют синтаксический сахар (\texttt{LambdaCase}, \texttt{ImplicitParams})
+                \item Обогащают систему типов (\texttt{RankNTypes})
+                \item Добавляют фичи (\texttt{MultiParamTypeClasses}, \texttt{GADTs})
+                \item Добавляют экспериментальные фичи (\texttt{LinearTypes})
+            \end{itemize}
+            \item \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/index.html}{\color{blue} https://ghc.gitlab.haskell.org/ghc/doc/users\_guide/index.html}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Системы сборки}
+        \begin{itemize}
+            \item По конфигурации проекта правильно вызывают компилятор
+        \end{itemize}
+        \begin{description}
+            \item[Cabal] Common Architecture for Building Applications and Libraries
+            \begin{itemize}
+                \item Система сборки + библиотека
+            \end{itemize}
+            \item[Stack] Более новая система, надстройка над cabal
+            \begin{itemize}
+                \item Сама скачает компилятор нужной версии
+                \item \texttt{stack new my-project; cd my-project}
+                \item \texttt{stack run} --- запустить \texttt{main}
+                \item \texttt{stack build} --- собрать проект
+                \item \texttt{stack test} --- запустить тесты
+                \item \texttt{stack ghci} --- REPL с загруженным проектом
+            \end{itemize}
+        \end{description}
+    \end{frame}
+
+    \begin{frame}[fragile]{REPL, GHCi}
+        \begin{block}{REPL (read-eval-print-loop)}
+            Интерактивное окружение, исполняющее вводимые в него высказывания и тут же демонстрирующее результат.
+        \end{block}
+        \begin{itemize}
+            \item Компилятор работает долго, а GHCi --- быстро
+            \item Пишем код, загружаем в интерпретатор: \texttt{stack ghci}
+            \item Основные возможности
+            \begin{description}
+                \item Исполнить выражение
+                \item[:r (reload)] Перезагрузить интерпретатор
+                \item[:t (type)] Посмотреть тип выражения
+                \item[:i (info)] Посмотреть документацию функции
+                \item[:set] Установить расширения языка и флаги компиляции
+            \end{description}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Типовые дыры в Haskell}
+        В определении функции можно ставить подчеркивания:
+        \begin{minted}{haskell}
+            plus' :: Int -> Int -> Int
+            plus' x y = x + _
+        \end{minted}
+        \vspace{1em}
+        \begin{minted}{haskell}
+            Found hole: _ :: Int
+            In the second argument of (+), namely _
+            In the expression: x + _
+            In an equation for plus': plus' x y = x + _
+            Relevant bindings include
+            y :: Int
+              (bound at /home/user/fp/examples/src/Lib.hs:9:9)
+            x :: Int
+              (bound at /home/user/fp/examples/src/Lib.hs:9:7)
+            plus' :: Int -> Int -> Int
+              (bound at /home/user/fp/examples/src/Lib.hs:9:1)
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Другие тулы}
+        \begin{itemize}
+            \item Линтер (\texttt{hlint}) помогает находить ошибки в программах
+            \item Очень помогает в обучении
+            \item[\NB] На этом курсе обязателен к использованию!
+            \item Форматтер автоматически форматирует код: \texttt{brittany}, \texttt{ormolu}\ldots
+            \item Обязателен к использованию во многих языках: экономит время и повышает консистентность кода
+            \item В Haskell не всегда удовлетворительно работает
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{LSP}
+        \begin{itemize}
+            \item LSP ~--- Language Server Protocol ~--- это протокол взаимодействия между движками IDE и текстовыми редакторами
+            \item Есть language server для большинства языков
+            \item \href{https://github.com/haskell/haskell-language-server/releases}{\color{blue}Есть для Haskell}, работает \emph{только} для той же версии ghc
+            \item Большинство редакторов кода поддерживает LSP и с его помощью почти превращается в IDE
+        \end{itemize}
+        \begin{block}{IDE для Haskell на примере vscode}
+            \begin{itemize}
+                \item Устанавливаете в систему \texttt{haskell-language-server}
+                \item Устанавливаете в систему \texttt{hlint}
+                \item Ставите плагины: \href{https://marketplace.visualstudio.com/items?itemName=haskell.haskell}{\color{blue} Haskell (может поставить и остальные)}, \href{https://marketplace.visualstudio.com/items?itemName=justusadam.language-haskell}{\color{blue} Haskell Syntax},
+                \href{https://marketplace.visualstudio.com/items?itemName=hoovercj.haskell-linter}{\color{blue} haskell-linter}
+            \end{itemize}
+        \end{block}
+    \end{frame}
+
+    \sectionplan{Материалы}
+
+    \begin{frame}{Что посмотреть в транспорте}
+        \begin{itemize}
+            \item \href{https://youtu.be/n3H_YipBDrY?si=s1_yS-4r8JcZiuUi}{\color{blue} Vitaly Bragilevsky - The clear path to Haskell complexities}
+            \item \href{https://youtu.be/sGFdbpGamWk}{\color{blue} Podlodka \#211 – Haskell | Александр Вершилов}
+            \item \href{https://youtu.be/ndfLLz-wehE?si=A53s_VYg-UWJVWkW}{\color{blue}  Property-based testing в Haskell} --- так тестируются наши домашки
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Полезные ссылки}
+        \begin{itemize}
+            \item \href{https://hoogle.haskell.org/}{\color{blue} Hoogle} --- типизированный поиск по документации библиотек
+            \item \href{https://hackage.haskell.org/package/base-4.18.1.0/docs/Debug-Trace.html}{\color{blue} Отладка принтами: Debug.Trace}
+            \item \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/index.html}{\color{blue} GHC docs} --- про компилятор и расширения языка
+            \item \href{https://wiki.haskell.org/Typeclassopedia}{\color{blue} Typeclassopedia}
+            \item \href{https://docs.haskellstack.org/en/stable/}{\color{blue} Stack build system}
+            \item \href{https://gitlab.haskell.org/ghc/ghc/-/wikis/commentary/rts/haskell-execution}{\color{blue} The Haskell Execution Model}
+            \item \href{https://gitlab.haskell.org/ghc/ghc/-/wikis/commentary/compiler/generated-code}{\color{blue} I know kung fu: learning STG by example}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Серьёзные материалы}
+        \begin{itemize}
+            \item \href{https://www.amazon.com/Get-Programming-Haskell-Will-Kurt/dp/1617293768}{\color{blue} Will Kurt ''Get Programming with Haskell``}
+            \item Две части курса Дениса Николаевича на степике: \href{https://stepik.org/course/75/syllabus}{\color{blue} раз} и \href{https://stepik.org/course/693/syllabus}{\color{blue} два}
+            \item \href{https://www.youtube.com/playlist?list=PL-_cKNuVAYAVX_q9XOKoFm95234G6YfOj}{\color{blue} Лекции Дениса Николаевича на МКН}
+            \item \href{https://www.amazon.com/Haskell-Depth-Vitaly-Bragilevsky-ebook/dp/B098C6ZFZR}{\color{blue} Vitaly Bragilevsky ''Haskell in depth``}
+            \item \href{https://www.youtube.com/watch?v=DS0dgYVnHy4&list=PLvPsfYrGz3wtQeNnms4dKnqqguoEb5TPx}{\color{blue} Компилятор GHC языка Haskell: теория языков программирования в работе}
+            \item \href{https://www.amazon.com/Parallel-Concurrent-Programming-Haskell-Multithreaded/dp/1449335942}{\color{blue} Simon Marlow ''Parallel and Concurrent Programming in Haskell: Techniques for Multicore and Multithreaded Programming``}
+        \end{itemize}
     \end{frame}
 
 \end{document}
