@@ -1,0 +1,36 @@
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+
+\title[Типы в $\lambda$-исчислении]{Практика 3. Типы в $\lambda$-исчислении}
+\date{осень 2024}
+
+\begin{document}
+
+    \setcounter{framenumber}{-1}
+    \maketitle
+
+    \begin{frame}{В предыдущих сериях}
+        \begin{itemize}
+            \item Синтаксис и семантика лямбда-исчисления
+            \item Структуры данных в чистом лямбда-исчислении
+            \item Просто-типизированное лямбда-исчисление
+            \item Стиль программирования с явной передачей обновлённого состояния вместо изменения старого
+            \pause
+            \item[\newtopic] Базовый синтаксис Haskell
+            \item[\newtopic] Базовые типы
+            \item[\newtopic] Группировка объявлений: \mintinline{haskell}|let| и \mintinline{haskell}|where|
+            \item[\newtopic] Операторы и сечения
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+\end{document}
