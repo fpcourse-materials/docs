@@ -1,3 +1,5 @@
+%! suppress = Quote
+%! suppress = MissingImport
 %! suppress = MissingLabel
 %! suppress = LineBreak
 
@@ -59,16 +61,224 @@
         \end{block}
     \end{frame}
 
-    % todo задачки на процент и композицию
+    \sectionplan{Рекурсия и аккумуляторы}
 
-    % todo задачки на специализацию полиморфных функций
+    \begin{frame}[fragile]{Задачки на рекурсию}
+        \begin{itemize}
+            \item[\todo] Реализуйте факториал
+            \item[\todo] Реализуйте примитивную рекурсию
+            \item[\answer] \pause
+            \item[] % workaround because of columns
+            \begin{columns}[onlytextwidth]
+                \begin{column}{0.485\textwidth}
+                    \begin{block}{Математика}
+                        \[
+                            n! =
+                            \begin{cases}
+                                1, n \le 1 \\
+                                n * (n - 1)!, otherwise
+                            \end{cases}
+                        \]
+                    \end{block}
+                \end{column}\hfill%
+                \begin{column}{0.485\textwidth}
+                    \begin{block}{Haskell}
+                        \begin{minted}{haskell}
+                        fac n
+                          | n <= 1 = 1
+                          | otherwise = n * fac (n - 1)
+                        \end{minted}
+                    \end{block}
+                \end{column}
+            \end{columns}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                rec :: (Int -> a -> a) -> a -> Int -> a
+                rec f ini n = if n <= 0 then ini else f (n - 1) (rec f ini (n - 1))
+            \end{minted}
+        \end{itemize}
+    \end{frame}
 
-    % todo задачки на аккумуляторы
+    \begin{frame}[fragile]{Техника аккумулирующего параметра\footnote{\href{https://youtu.be/8gnhaE2nmQ0?si=A8lDF9pJqa_07x9q}{\color{blue} \advanced Continuation-passing style, defunctionalization, and associativity.}}}
+        \begin{itemize}
+            \item[\todo] Какая сложность по памяти у рекурсивного факториала?
+            \item[\answer] \pause Линейная:
+            \begin{minted}{haskell}
+                fac 4 -> 4 * fac 3 -> 4 * (3 * fac 2)
+                -> 4 * (3 * (2 * fac 1)) -> 4 * (3 * (2 * 1)) -> 24
+            \end{minted}
+            \item Будем накапливать промежуточные результаты в параметре-аккумуляторе
+            \begin{minted}{haskell}
+                fac' n = go n (n - 1)
+                  where
+                    go acc n'
+                      | n' <= 0 = acc
+                      | otherwise = go (acc * n') (n' - 1)
+            \end{minted}
+            \item[\todo] Проредуцируйте пример \mintinline{haskell}|fac' 4|
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                fac' 4 -> go 4 3 -> go (4 * 3) 2 -> go ((4 * 3) * 2) 1
+                -> go (((4 * 3) * 2) * 1) 0 -> ((4 * 3) * 2) * 1 -> 24
+            \end{minted}
+            \item Выражения можно сокращать сразу! Константа по памяти
+        \end{itemize}
+    \end{frame}
 
-    % todo инфра
+    \begin{frame}[fragile]{Злополучный Фибоначчи}
+        \begin{itemize}
+            \item Реализация по определению имеет экспоненциальную сложность
+            \item[\todo] Реализуйте эффективное вычисление n-го числа Фибоначчи
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                fib :: Int -> Int
+                fib n = go 1 1 n
+                  where
+                    go prev curr n
+                      | n <= 1 = prev
+                      | otherwise = go curr (prev + curr) (n - 1)
+            \end{minted}
+        \end{itemize}
+    \end{frame}
 
-    % todo подчёркивания
+    \sectionplan{Полиморфные функции}
 
+    \begin{frame}[fragile]{\secname}
+        \begin{itemize}
+            \item Типы с маленькой буквы --- типовые переменные
+            \item Могут принимать разные значения в зависимости от контекста
+            \item[\todo] \mintinline{haskell}|ghci> :t id|
+            \item[\todo] \mintinline{haskell}|ghci> :t id "something here"|
+            \item[\todo] \mintinline{haskell}|ghci> :t const|
+            \item[\todo] \mintinline{haskell}|ghci> :t const id|
+            \item[\todo] \mintinline{haskell}|ghci> :t flip const|
+            \item[\todo] \mintinline{haskell}|ghci> :t :t uncurry (flip const)|
+            \item[\answer] \pause \mintinline{haskell}|id :: a -> a|
+            \item[\answer] \pause \mintinline{haskell}|id "something here" :: String|
+            \item[\answer] \pause \mintinline{haskell}|const :: a -> b -> a|
+            \item[\answer] \pause \mintinline{haskell}|const id :: b -> a -> a|
+            \item[\answer] \pause \mintinline{haskell}|flip const :: b -> a -> a|
+            \item[\answer] \pause \mintinline{haskell}|uncurry (flip const) :: (b, a) -> a|
+        \end{itemize}
+    \end{frame}
+    
+    \begin{frame}[fragile]{Конструирование реализаций}
+        \begin{minted}{haskell}
+            ($) :: (a -> b) -> a -> b
+            (&) :: a -> (a -> b) -> b
+            (.) :: (b -> c) -> (a -> b) -> a -> c
+            f :: Int -> a -> a
+            g :: Int -> Double
+        \end{minted}
+        \begin{itemize}
+            \item[\todo] Запишите через доллар \mintinline{haskell}|h x = f 1 (g x)|
+            \item[\todo] Запишите через композицию
+            \item[\todo] Запишите в бесточечном стиле
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                h x = f 1 $ g x
+                h x = (f 1 . g) x
+                h = f 1 . g
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Больше полиморфных функций\footnote{\color{blue}\url{http://conal.net/blog/posts/semantic-editor-combinators}}}
+        \begin{itemize}
+            \item[\todo] Реализуйте функцию, применяющую функцию к первой компоненте пары
+            \item[\todo] Прибавьте единицу к первой компоненте \mintinline{haskell}|((Int, a), b)|
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                first :: (a -> a') -> (a, b) -> (a', b)
+                first f (x, y) = (f x, y)
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                first . first :: (a -> a') -> ((a, b), c) -> ((a', b), c)
+                (first . first) (+1) value :: ((Int, b), c)
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{System F \advancedslide}
+
+    \begin{frame}{Полиморфные функции}
+        \vspace{-0.5em}
+        \begin{itemize}
+            \item[\advanced] То, что типизация остаётся валидной после подстановки в тип~--- теорема метатеории
+            \vspace{-1.3em}
+            \begin{columns}[onlytextwidth]
+                \begin{column}[t]{0.05\textwidth}
+                \end{column}\hfill%
+                \begin{column}[t]{0.95\textwidth}
+                    \begin{theorem}[Лемма подстановки типа для $\lambda_{\rightarrow}$]
+                        $\Gamma\vdash M : \sigma \Rightarrow [\alpha\mapsto\tau]\Gamma\vdash \hspace{3.25em}M : [\alpha\mapsto\tau]\sigma$ {\color{blue} ($\lambda_{\rightarrow}$ по Карри)}
+                        \\
+                        $\Gamma\vdash M : \sigma \Rightarrow [\alpha\mapsto\tau]\Gamma\vdash {\color{red} [\alpha\mapsto\tau]}M : [\alpha\mapsto\tau]\sigma$ {\color{red} ($\lambda_{\rightarrow}$ по Чёрчу)}
+                    \end{theorem}
+                \end{column}
+            \end{columns}
+            \vspace{0.3em}
+            \item Если мы в языке разрешим приписывать типы термам, мы потеряем гибкость:
+            \[
+                \begin{array}{l}
+                    \comb{K} : \alpha \to \beta \to \alpha \\
+                    \comb{K} \ap \term{1} : {\color{red}\text{cannot match } \alpha \text{ with } \term{Int}}
+                \end{array}
+            \]
+            \item Введём в теорию абстракцию на типах и аппликацию термов к типам!
+            \[
+                \begin{array}{l}
+                    \comb{K} : \forall \alpha \ap \beta \ldotp \alpha \to \beta \to \alpha
+                    \\
+                    \comb{K} \ap @\term{Int} : \forall \beta \ldotp \term{Int} \to \beta \to \term{Int}
+                    \\
+                    \comb{K} \ap @\term{Int} \ap @\term{Float} \ap \term{1} : \term{Float} \to \term{Int}
+                \end{array}
+            \]
+            \item Теперь выбор конкретного типа происходит на стороне пользователя функции
+            \item Такие функции называются \textbf{полиморфными} --- умеют работать с различными типами
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Полиморфные функции в Haskell \advancedslide}
+        \begin{itemize}
+            \item Haskell неявно приписывает \texttt{forall} по всем типовым переменным:
+            \begin{minted}{haskell}
+                ghci> :set -fprint-explicit-foralls
+                ghci> :t const
+                const :: forall {a} {b}. a -> b -> a
+            \end{minted}
+            \item Типовые переменные всегда начинаются с маленькой буквы (\mintinline{haskell}|a|), в отличие от типовых констант (\mintinline{haskell}|Int| --- конкретный тип)
+            \item Типовые применения компилятор выставляет автоматически неявно
+            \item Иногда бывает полезно типовые применения указывать вручную (\texttt{TypeApplications})
+            \begin{itemize}
+                \item
+                \begin{minted}{haskell}
+                    ghci> :set -XTypeApplications
+                    ghci> :t const @Int
+                    const @Int :: forall {b}. Int -> b -> Int
+                \end{minted}
+                \item В промышленных языках синтаксис примерно такой:
+                \begin{minted}{kotlin}
+                    fun <A, B> const(x: A, y: B): A
+                    const<Int, Float>(1, 2)
+                \end{minted}
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Higher ranked types \advancedslide}
+        \begin{itemize}
+            \item Бывает полезно в функции высшего порядка уметь задавать типы для функции-параметра:
+            \begin{minted}{haskell}
+                fst :: forall a b. (#\framebox{forall c}#. (a -> b -> c) -> c) -> a
+                fst lambdaPair = lambdaPair #\framebox{@a}# const
+            \end{minted}
+            \item Требуется расширение компилятора \texttt{RankNTypes}
+            \item Вывод типов становится неразрешим, компилятору требуются явные подсказки в виде типовых аннотаций и аппликаций
+        \end{itemize}
+    \end{frame}
 
     \sectionplan{Инфраструктура Haskell \practicalslide}
 
