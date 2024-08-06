@@ -169,16 +169,17 @@
             (.) :: (b -> c) -> (a -> b) -> a -> c
             f :: Int -> a -> a
             g :: Int -> Double
+            h :: ((), Double) -> Int
         \end{minted}
         \begin{itemize}
-            \item[\todo] Запишите через доллар \mintinline{haskell}|h x = f 1 (g x)|
+            \item[\todo] Запишите через доллар \mintinline{haskell}|h x = f 1 (g (h ((), x)))|
             \item[\todo] Запишите через композицию
             \item[\todo] Запишите в бесточечном стиле
             \item[\answer] \pause
             \begin{minted}{haskell}
-                h x = f 1 $ g x
-                h x = (f 1 . g) x
-                h = f 1 . g
+                example x = f 1 $ g $ curry h () x
+                example x = (f 1 . g . curry h ()) x
+                example = f 1 . g . curry h ()
             \end{minted}
         \end{itemize}
     \end{frame}
