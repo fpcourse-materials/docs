@@ -297,12 +297,23 @@
     \end{frame}
 
     \begin{frame}[fragile]{Персистентные структуры данных}
-        kek
+        \begin{itemize}
+            \item[\defi] \vocab{Эфемерный интерфейс} --- изменение структуры данных меняет саму эту структуру
+            \begin{minted}{kotlin}
+                xs.append(1)
+                xs.append(2)
+            \end{minted}
+            \item[\defi] \vocab{Персистентный интерфейс} --- изменение порождает новую структуру, оставляя старую неизменной
+            \begin{minted}{haskell}
+                ys = 1 : xs
+                zs = 2 : ys
+            \end{minted}
+            \item[\NB] В Haskell все структуры данных персистентные
+        \end{itemize}
+        \begin{center}
+            \includegraphics[width=0.7\textwidth]{figs/persistent-list}
+        \end{center}
     \end{frame}
-
-    % todo
-
-    % todo персистентность
 
     \sectionplan{Всякое разное}
 
