@@ -487,11 +487,29 @@
         \end{minted}
     \end{frame}
 
+    \begin{frame}[fragile]{Типы-суммы в С++\footnote{\color{blue}\url{https://en.cppreference.com/w/cpp/utility/variant}.} \popslide}
+        \begin{minted}{cpp}
+            std::variant<Cat, Dog, Parrot> pet{Cat{"barsik", 42}};
+
+            if (std::has_alternative<Cat>(pet)) {
+                std::cout << "Cat " << std::get<Cat>(pet).name << std::endl;
+            } else if (std::has_alternative<Dog>(pet)) {
+                std::cout << "Dog " << std::get<Dog>(pet).name << std::endl;
+            } else if (std::has_alternative<Parrot>(pet)) {
+                std::cout << "Parrot" << std::endl;
+            } else {
+                assert(false && "unreachable code"); // No exhaustiveness check
+            }
+        \end{minted}
+    \end{frame}
+
     \begin{frame}[fragile]{Типы-суммы в ООП языках: пример на Python \popslide}
         \begin{minted}{python}
             class Pet: pass
-            class Cat(Pet): cat: CatT
-            class Dog(Pet): name: Name
+            class Cat(Pet):
+                cat: CatT
+            class Dog(Pet):
+                name: Name
             class Parrot(Pet): pass
 
             if isinstance(pet, Cat):
