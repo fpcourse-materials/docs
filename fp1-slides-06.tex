@@ -18,4 +18,111 @@
     \setcounter{framenumber}{-1}
     \maketitle
 
+    \begin{frame}[fragile]{В предыдущих сериях}
+        \begin{itemize}
+            \item Полиморфные функции в Haskell
+            \item Структуры данных в Haskell, полиморфизм структур данных
+            \item[\NB] Стиль программирования с явной передачей иммутабельного состояния
+            \begin{equation*}
+                \framebox{$\sigma_1$} \to \sigma_2 \to \cdots \to \sigma_{k - 1} \to \framebox{$\sigma_k$}
+            \end{equation*}
+            \item[\NB] Использование структур данных и идиомы newtype для контроля за выполнением инвариантов предметной области
+            \begin{equation*}
+                \framebox{\color{red}$\sigma_1$} {~\color{red} \rightarrow~} \sigma_2 {~\color{blue} \to~} \cdots {~\color{blue} \to~} \sigma_{k - 1} {~\color{blue} \to~} \framebox{$\sigma_k$}
+            \end{equation*}
+            \item[\newtopic] Классы типов
+            \item[\newtopic] Некоторые стандартные классы типов языка Haskell
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \sectionplan{Простые классы типов}
+
+    \begin{frame}[fragile]{Классы типов как механизм перегрузки}
+        \begin{itemize}
+            \item \vocab{Перегрузка (overloading)} --- из функций с одинаковыми именами и разными типами выбирается подходящая
+            \begin{minted}{cpp}
+                string show(int x) { ... }
+                string show(data d) { ... }
+            \end{minted}
+            \item Классы типов требуют задекларировать перегружаемую функцию и варьируемый типовой параметр явно
+            \begin{minted}{haskell}
+                class Show #\framebox{a}# where
+                  show :: #\framebox{a}# -> String
+            \end{minted}
+            \item Для каждого типа пишется по инстансу
+        \end{itemize}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.05\textwidth}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{haskell}
+                    instance Show #\framebox{Int}# where
+                      show :: #\framebox{Int}# -> String
+                      show x = ...
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{haskell}
+                    instance Show #\framebox{Data}# where
+                      show :: #\framebox{Data}# -> String
+                      show d = ...
+                \end{minted}
+            \end{column}
+        \end{columns}
+        \vspace{0.5em}
+        \begin{itemize}
+            \item В отличие от классической перегрузки, классы типов дружат с параметрическим полиморфизмом
+        \end{itemize}
+    \end{frame}
+    
+    \begin{frame}[fragile]{Задачки}
+        \begin{itemize}
+            \item[\todo] Реализуйте \mintinline{haskell}|Show| для следующего типа
+            \begin{minted}{haskell}
+                data LogLevel = Error | Warning | Debug | Info
+            \end{minted}
+            \item[\todo] Реализуйте \mintinline{haskell}|Show| для пары
+            \item[\todo] Придумайте класс для парсинга данных \mintinline{haskell}|MyRead|
+            \item[\todo] Реализуйте наивный парсинг пары
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                instance (Show a, Show b) => Show (a, b) where
+                  show (x, y) = "(" ++ show x ++ "," ++ show y ++ ")"
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                class MyRead a where
+                  readMaybe :: String -> Maybe a
+                  -- варьируемый типовой параметр может использоваться где угодно
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Ещё задачки}
+        \begin{itemize}
+            \item[\todo] Реализуйте функцию \mintinline{haskell}|domain|, перебирающую все значения типа
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                domain :: (Enum a, Bound a) => [a]
+                domain = [minBound .. maxBound]
+            \end{minted}
+            \item[\todo] Реализуйте проверку равенства функций
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                instance (Enum a, Bounde a, Eq b) => Eq (a -> b) where
+                  (==) :: (a -> b) -> (a -> b) -> Bool
+                  f == g = all $ zipWith (==) (map f domain) (map g domain)
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{Классы типов высших кайндов}
+
+
+
 \end{document}
