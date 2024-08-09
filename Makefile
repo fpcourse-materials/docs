@@ -67,6 +67,14 @@ sem6h:
 sem6p:
 	sh build-slides.sh 1 06 pause
 
+sem7: sem7h sem7p
+
+sem7h:
+	sh build-slides.sh 1 07 handout
+
+sem7p:
+	sh build-slides.sh 1 07 pause
+
 handouttrue:
 	echo "\handouttrue" > flags.tex
 
