@@ -18,4 +18,88 @@
     \setcounter{framenumber}{-1}
     \maketitle
 
+    \begin{frame}[fragile]{В предыдущих сериях}
+        \begin{itemize}
+            \item Структуры данных в лямбда-исчислении, операции с ними
+            \item Конструкторы данных и паттерн-матчинг в Haskell
+            \item Классы типов различных кайндов
+            \item[\newtopic] Классы типов \mintinline{haskell}|Semigroup|, \mintinline{haskell}|Monoid|
+            \item[\newtopic] Класс типов \mintinline{haskell}|Foldable|
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \sectionplan{Полугруппы и моноиды}
+
+    \begin{frame}[fragile]{Полугруппы и моноиды}
+        \begin{itemize}
+            \item[\defi] \vocab{Полугруппа} --- множество с ассоциативной бинарной операцией: \mintinline{haskell}|(x <> y) <> z #$\equiv$# x <> (y <> z)|
+            \begin{minted}{haskell}
+                class Semigroup a where
+                  (<>) :: a -> a -> a
+            \end{minted}
+            \item[\defi] \vocab{Моноид} --- полугруппа с нейтральным элементом: \mintinline{haskell}|x <> mempty #$\equiv$# mempty <> x #$\equiv$# x|
+            \begin{minted}{haskell}
+                class Semigroup a => Monoid a where
+                  mempty :: a
+            \end{minted}
+            \item[\todo] Сделайте список полугруппой и моноидом
+            \item[\todo] Сделайте статистику результатов тестов полугруппой и моноидом
+            \mintinline{haskell}|data Counts = Counts { errors :: Int, total :: Int }|
+            \item[\todo] Сделайте эндоморфизм полугруппой и моноидом
+            \mintinline{haskell}|data Endo a = Endo { getEndo :: a -> a }|
+            \item[\todo] Сделайте произвольную функциональную стрелку полугруппой и моноидом
+            \item[\todo] Сделайте \mintinline{haskell}|Maybe| полугруппой и моноидом
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{Свёртки}
+
+    \begin{frame}[fragile]{Правая свёртка списка или \ldots\footnote{За картинки спасибо Михаилу Беляеву.}}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}{0.485\textwidth}
+                \begin{minted}{haskell}
+                    foldr :: (a -> b -> b) -> b -> [a] -> b
+                    foldr f z [] = z
+                    foldr f z (x:xs) = f x (foldr f z xs)
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}{0.5\textwidth}
+                \begin{center}
+                    \includegraphics[width=1\textwidth]{figs/foldr}
+                \end{center}
+            \end{column}
+        \end{columns}
+        \begin{itemize}
+            \item \mintinline{haskell}|foldr f z [a, b, c] #$\equiv$# f a (f b (f c z))|
+            \item[\then] То есть списки Чёрча --- свёртка списков через \mintinline{haskell}|data|
+            \begin{itemize}
+                \item Аналогично и другие структуры данных чистого лямбда-исчисления
+                \item А с такими структурами можно, как мы убедились, делать всё то же самое
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Задачки на правую свёртку списков}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}{0.485\textwidth}
+                \begin{minted}{haskell}
+                    foldr :: (a -> b -> b) -> b -> [a] -> b
+                    foldr f z [] = z
+                    foldr f z (x:xs) = f x (foldr f z xs)
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}{0.5\textwidth}
+                \begin{center}
+                    \includegraphics[width=1\textwidth]{figs/foldr}
+                \end{center}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
 \end{document}
