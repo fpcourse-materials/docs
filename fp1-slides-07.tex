@@ -56,6 +56,27 @@
         \end{itemize}
     \end{frame}
 
+    \begin{frame}[fragile]{Абстракция: цена и новые возможности}
+        \vspace{-0.5em}
+        \begin{itemize}
+            \item В других языках есть всё те же примеры полугрупп, моноидов и т.д., но они не обобщены (как правило)
+            \item[\negative] Мозгу тяжело в абстракции без подготовки и тренировки (и всё равно тяжело)
+            \item[\negative] Пользователей (программистов) пугают незнакомые слова
+            \item[\positive] Можно писать обобщённый код: \mintinline{haskell}|foldMap :: (Monoid m, Foldable f) => (a -> m) -> f a -> m|
+            \item[\positive] Обобщённые алгебраические законы гарантируют корректность рефакторинга:
+            \begin{center}
+                \includegraphics[width=0.5\textwidth]{figs/foldLaws}
+            \end{center}
+            \item[\positive] Тестирование выполнения реализацией законов можно абстрагировать в библиотеку:
+            \begin{minted}{haskell}
+                import Test.QuickCheck.Classes.Base
+                test = lawsCheck $ foldableLaws $ Proxy @Tree
+            \end{minted}
+            \item[\positive] Намного проще понять новое, увидев в этом лишь пример знакомой общей концепции
+            \item[\positive] Компилятор имеет богатые возможности по генерации инстансов стандартных классов
+        \end{itemize}
+    \end{frame}
+
     \sectionplan{Свёртки}
 
     \begin{frame}[fragile]{Правая свёртка списка или \ldots\footnote{За картинки спасибо Михаилу Беляеву.}}
@@ -74,6 +95,7 @@
                 \end{center}
             \end{column}
         \end{columns}
+        \vspace{0.5em}
         \begin{itemize}
             \item \mintinline{haskell}|foldr f z [a, b, c] #$\equiv$# f a (f b (f c z))|
             \item[\then] То есть списки Чёрча --- свёртка списков через \mintinline{haskell}|data|
@@ -100,6 +122,120 @@
                 \end{center}
             \end{column}
         \end{columns}
+        \vspace{0.5em}
+        \begin{itemize}
+            \item[\todo] Реализуйте скалярное умножение двух векторов, заданных списками
+            \item[\todo] Реализуйте группировку пользователей по уровню подписки (\mintinline{haskell}|Data.Map.insertWith :: (a -> a -> a) -> k -> a -> Mak k a -> Map k a|)
+            \item[\answer] \pause
+             \begin{minted}{haskell}
+                 prod xs ys = foldr (*) 1 $ zipWith (+) xs ys
+             \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                group = foldr (\user -> Map.insertWith (++) [subscr user] user) Map.empty
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Левая свёртка списков}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}{0.485\textwidth}
+                \begin{minted}{haskell}
+                    foldl :: (b -> a -> b) -> b -> [a] -> b
+                    foldl f z [] = z
+                    foldl f z (x:xs) = foldl f (f z x) xs
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}{0.5\textwidth}
+                \begin{center}
+                    \includegraphics[width=1\textwidth]{figs/foldl}
+                \end{center}
+            \end{column}
+        \end{columns}
+        \vspace{0.5em}
+        \begin{itemize}
+            \item[\todo] Вычтите из чистой прибыли все убытки
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                income :: Num a => a -> [a] -> a
+                income earned expenses = foldl (-) earned expenses
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Класс типов \mintinline{haskell}|Foldable|}
+        kek
+    \end{frame}
+
+    \sectionplan{Ленивость и выбор свёртки}
+
+    \begin{frame}[fragile]{Ленивая семантика вычислений}
+        \vspace{-0.5em}
+        \begin{itemize}
+            \item В Haskell выражение не вычисляется пока оно не нужно
+            \item Что такое нужно? \pause Значение требуется вывести в реальность (e.g.\ напечатать)\footnote{Смешной анекдот: в Haskell любой алгоритм работает за константу (запоминает, что сделать потом).}
+            \item Просмотреть, что действительно вычисляется можно в консоли\footnote{Требуется \mintinline{haskell}|:set -XMonomorphismRestriction|. Пользуеся командой \texttt{:sprint}.}
+            \begin{columns}[onlytextwidth]
+                \begin{column}{0.485\textwidth}
+                    \begin{minted}{haskell}
+                        take :: Int -> [a] -> [a]
+                        take 0 xs = []
+                        take n [] = []
+                        take n (x:xs) = x : take (n - 1) xs
+
+                        length :: [a] -> Int
+                        length [] = 0
+                        length (x:xs) = 1 + length xs
+                    \end{minted}
+                \end{column}\hfill%
+                \begin{column}{0.485\textwidth}
+                    \begin{minted}{haskell}
+                        GHCi> xs = [1, 2 ..]
+                        GHCi> :sp xs#\pause#
+                        xs = _#\pause#
+                        GHCi> ghci> take 1 xs
+                        [1]#\pause#
+                        GHCi> :sp xs#\pause#
+                        xs = 1 : _#\pause#
+                        GHCi> ys = [repeat 1, repeat 2]
+                        GHCi> length ys
+                        2#\pause#
+                        ghci> :sp ys#\pause#
+                        ys = [_,_]
+                    \end{minted}
+                \end{column}
+            \end{columns}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Выбор свёртки списка \practicalslide}
+        kek
+    \end{frame}
+
+    \sectionplan{Рецепт приготовления свёрток}
+
+    \begin{frame}[fragile]{Рецепт приготовления свёрток}
+        kek
+    \end{frame}
+
+    \sectionplan{Материалы}
+
+    \begin{frame}{Что посмотреть в транспорте}
+        \begin{itemize}
+            \item \href{https://youtu.be/d3lYx13kdWU?si=ctrQy6pm_44aOgmR}{\color{blue} Лекция Дениса Москвина о функциональном программировании (алгебраические рассуждения и оптимизации работы со списками, fusion)}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Материалы}
+        \begin{itemize}
+            \item \href{https://wiki.haskell.org/GHC\_optimisations\#Fusion}{\color{blue} build/foldr list fusion}
+            \item \href{https://www.lektorium.tv/node/32421}{\color{blue} Компилятор GHC языка Haskell: теория языков программирования в работе}
+            \item \href{https://hackage.haskell.org/package/stgi}{\color{blue} stgi: Educational implementation of the STG (Spineless Tagless G-machine)}
+            \item \href{https://takenobu-hs.github.io/downloads/haskell_ghc_illustrated.pdf}{\color{blue} GHC illustrated}
+            \item \href{https://gitlab.haskell.org/ghc/ghc/-/wikis/commentary/compiler/}{\color{blue} GHC Commentary: The Compiler}
+            \item \href{https://gitlab.haskell.org/ghc/ghc/-/wikis/commentary/compiler/generated-code}{\color{blue} GHC Commentary: The Compiler: generated code}
+        \end{itemize}
     \end{frame}
 
 \end{document}
