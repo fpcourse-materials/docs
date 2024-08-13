@@ -165,7 +165,87 @@
     \end{frame}
 
     \begin{frame}[fragile]{Класс типов \mintinline{haskell}|Foldable|}
-        kek
+        \begin{block}{}
+            Коллекции, которые можно обойти и аккумулировать все элементы.
+            \begin{minted}{haskell}
+                class Foldable (f :: Type -> Type) where
+                  foldr :: (a -> b -> b) -> b -> f a -> b
+                  foldMap :: Monoid m => (a -> m) -> f a -> m
+                  ...
+            \end{minted}
+        \end{block}
+        \begin{itemize}
+            \item[\todo] Сделайте пару представителем \mintinline{haskell}|Foldable|
+            \item[\todo] Реализуйте \mintinline{haskell}|foldr| через \mintinline{haskell}|foldMap|, что изменится для \mintinline{haskell}|foldl|
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                instance Foldable ((,) e) where
+                  foldMap :: Monoid m => (a -> m) -> (e, a) -> m
+                  foldMap f (_, x) = f x
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                foldr f ini xs = foldMap (Endo . f) xs `appEndo` ini
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Рецепт приготовления специализированных свёрток}
+        \begin{itemize}
+            \item Для каждой \mintinline{haskell}|data| существует специализированная свёртка
+            \item Заменяем все конструкторы в дереве на функции соответствующих типов
+        \end{itemize}
+        \begin{enumerate}
+            \item Берём функций по числу конструкторов
+            \item Типы аргументов --- типы аргументов конструкторов
+            \item Рекурсивные типы --- результирующий тип свёртки
+        \end{enumerate}
+        \begin{minted}{haskell}
+            data List a = Nil | Cons a (List a)
+            foldList :: List a -> b -> (a -> b -> b) -> b
+        \end{minted}
+        \begin{itemize}
+            \item[\todo]
+            \begin{minted}{haskell}
+                data Bool = False | True
+            \end{minted}
+            \item[\todo]
+            \begin{minted}{haskell}
+                data Nat = Zero | Suc Nat
+            \end{minted}
+            \item[\todo]
+            \begin{minted}{haskell}
+                data Nat = Zero | Suc Nat
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                bool :: r -> r -> Bool -> r
+                nat :: r -> (r -> r) -> Nat -> r
+                uncurry :: (a -> b -> r) -> (a, b) -> r
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Работа с коллекциями \practicalslide}
+        \begin{block}{Origami Programming}
+            <<Recursive equations are the ``assembly language'' of functional programming, and direct recursion the go-to>>
+            -- Jeremy Gibbons, Origami Programming (The Fun of Programming), 2003
+        \end{block}
+        \begin{itemize}
+            \item Свёртки наглядно выражают идею аккумулирования коллекции
+            \begin{minted}{python}
+                state = initial_state
+                for x in xs:
+                  state = update_state(x, state)
+            \end{minted}
+            \item Собираем программы из универсальных кирпичиков:
+            \begin{minted}{haskell}
+                awarded = students  -- (&) :: a -> (a -> b) -> b
+                  & map (\(Student name marks) -> (name, average marks))
+                  & filter ((> 0) . snd)
+                  & foldMap (\(name, s) -> Map.singleton name ("clever cooky: " ++ show s))
+            \end{minted}
+        \end{itemize}
     \end{frame}
 
     \sectionplan{Ленивость и выбор свёртки}
@@ -210,13 +290,36 @@
     \end{frame}
 
     \begin{frame}[fragile]{Выбор свёртки списка \practicalslide}
-        kek
-    \end{frame}
-
-    \sectionplan{Рецепт приготовления свёрток}
-
-    \begin{frame}[fragile]{Рецепт приготовления свёрток}
-        kek
+        \pause
+        \begin{block}{foldr}
+            \begin{itemize}
+                \item[\positive] \pause Работает с бесконечными списками
+                \begin{itemize}
+                    \item Правый аргумент \mintinline{haskell}|f| --- результат свёртки на хвосте списка
+                    \item Если им не всегда пользоваться, он не будет вычислен
+                    \begin{minted}{haskell}
+                    and :: [Bool] -> Bool; and = foldr (&&) True
+                    -- and [True, False, ...] #$\equiv$# True && (#\framebox{False &&}# #\underline{(... && True)}#)
+                    \end{minted}
+                \end{itemize}
+                \item[\negative] Реализована не через хвостовую рекурсию
+            \end{itemize}
+        \end{block}
+        \begin{block}{foldl}
+            \begin{itemize}
+                \item[\positive] Реализуется через хвостовую рекурсию --- быстро, может быть компактно
+                \begin{itemize}
+                    \item Нужно использовать \mintinline{haskell}|Data.List.foldl'| --- энергичную версию
+                    \begin{minted}{haskell}
+                    foldl' f z (x:xs) = let acc = f z x in acc `seq` foldl' f acc xs
+                    \end{minted}
+                \end{itemize}
+                \item[\negative] Не работает с бесконечными списками
+                \begin{itemize}
+                    \item Реализация всегда делает рекурсивный вызов на хвосте вне зависимости от \mintinline{haskell}|f|
+                \end{itemize}
+            \end{itemize}
+        \end{block}
     \end{frame}
 
     \sectionplan{Материалы}
