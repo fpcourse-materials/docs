@@ -262,7 +262,7 @@
             \end{minted}
             \item Теперь пример с игроками можно больше механизировать
             \begin{minted}{haskell}
-                type Effs = Compose (Db ->) (Either DbError)
+                type Effs = Compose ((->) Db) (Either DbError)
                 dbLookup :: Id -> Effs Player -- больше не передаём БД вручную
             \end{minted}
             \item[\NB] Аппликативные функторы позволяют замести под ковёр неинтересную рутину и церемонии, оставив нас наедине с бизнес-логикой
