@@ -1,0 +1,287 @@
+%! suppress = EscapeHashOutsideCommand
+%! suppress = Quote
+%! suppress = MissingImport
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+
+\title[8. Аппликативные функторы]{Практика 8. Аппликативные функторы}
+\date{осень 2024}
+
+\begin{document}
+
+    \setcounter{framenumber}{-1}
+    \maketitle
+
+    \begin{frame}[fragile]{В предыдущих сериях}
+        \begin{itemize}
+            \item Полиморфные типы данных в Haskell (\mintinline{haskell}|Maybe|, \mintinline{haskell}|[]|, \mintinline{haskell}|Either|, \mintinline{haskell}|(->)|, \ldots)
+            \item Функторы
+            \item[\newtopic] Аппликативные функторы
+        \end{itemize}
+        \begin{center}
+            \includegraphics[width=0.6\textwidth]{figs/previous}
+        \end{center}
+    \end{frame}
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \sectionplan{Понимание классов типов}
+
+    \begin{frame}[fragile]{Disclaimer}
+        Понимание вещи --- чувство, иллюзия, состоящая из привыкания к ней и уверенности в себе.
+        \begin{block}{``Понимание'' любого класса типов}
+            \begin{itemize}
+                \item Знать сигнатуры основных его функций
+                \item Уметь использовать его функции на практике для типов-представителей
+                \item Уметь писать реализации этого класса, удовлетворяющие его законам
+                \item Уметь видеть на практике паттерны, которые им можно было бы абстрагировать
+            \end{itemize}
+        \end{block}
+        \begin{block}{Всё остальное не обязательно!}
+            \begin{itemize}
+                \item Знать глубокий теоретический фундамент этого класса типов (даже если он есть)
+                \item Чувствовать огромный набор интуиций, которые за ним стоят
+                \begin{itemize}
+                    \item Один из инструментов ``понимания''
+                \end{itemize}
+            \end{itemize}
+        \end{block}
+    \end{frame}
+
+    \begin{frame}[fragile]{Зоопарк классов типов\footnote{Шпаргалка по зоопарку: {\color{blue}\url{https://wiki.haskell.org/Typeclassopedia}}.}}
+        \begin{center}
+            \includegraphics[width=1\textwidth]{figs/Typeclassopedia-diagram}
+        \end{center}
+    \end{frame}
+
+    \sectionplan{Аппликативные функторы}
+    
+    \begin{frame}[fragile]{Больше, чем результат}
+        \begin{block}{Moggi's principle}
+            \begin{center}
+                <<Computations of type $\alpha$ correspond to values of type $f\ap\alpha$>>
+            \end{center}
+        \end{block}
+        %! suppress = EscapeUnderscore
+        \begin{itemize}
+            \item В чистом языке функция может только принять что-то и вернуть: $a\to b$
+            \item А что если хочется сделать что-то ещё? --- породить \emph{эффект}
+            \item Будем возвращать результат в коробочке с доп. информацией: $a\to f\ap b$
+            \item[\eg] \mintinline{haskell}|Identity _| --- просто результат
+            \item[\eg] \mintinline{haskell}|Maybe _| --- результата может не быть
+            \item[\eg] \mintinline{haskell}|(w, _)| --- к результату есть доп. значение
+            \item[\eg] \mintinline{haskell}|[_]| --- результатов может быть сколько угодно
+            \item[\eg] \mintinline{haskell}|e -> _| --- для получения результата требуется доп. значение
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Аппликативные функторы для вычислений над содержимым коробочек}
+        \begin{itemize}
+            \item Применяя функции вида $a \to f \ap b$ получаем значения вида $f \ap b$
+            \item Хотим продолжить делать вычисления над ними
+            \item Нужен специальный код для каждого $f$, знающий как это делать
+        \end{itemize}
+        \pause
+        \vspace{0.5em}
+        \begin{minted}{haskell}
+            class Applicative f where
+              pure :: a -> f a
+              liftA2 :: (a -> b -> c) -> f a -> f b -> f c
+        \end{minted}
+    \end{frame}
+    
+    \begin{frame}[fragile]{Аппликатив \mintinline{haskell}|Either|}
+        \begin{minted}{haskell}
+            class Applicative f where
+              pure :: a -> f a
+              liftA2 :: (a -> b -> c) -> f a -> f b -> f c
+        \end{minted}
+        \begin{itemize}
+            \item[\todo] Реализуйте инстанс аппликатива для \mintinline{haskell}|Either|
+            \item[\todo] По Id двух игроков, вычислите, у которого преимущество в игре
+            \begin{minted}{haskell}
+                data Player = Player { nick :: String, rank :: Int }
+                dbLookup :: Db -> Id -> Either DbError Player
+            \end{minted}
+            \item[\todo] По двум командам игроков (пара списков Id) вычислите, у которой преимущество
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                advantage :: Db -> [Id] -> [Id] -> Either DbError Bool
+                advantage db ids1 ids2 = liftA2 (<) (teamRank ids1) (teamRank ids2) where
+                  teamRank = fmap (sumBy rank) . liftAll (dbLookup db)
+                  sumBy f = sum . map f
+
+                liftAll :: Applicative f => (a -> f b) -> [a] -> f [b]
+                liftAll f = foldr (liftA2 (:)) (pure []) . map f
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Аппликатив \mintinline{haskell}|(->)|}
+        \begin{minted}{haskell}
+            class Applicative f where
+              pure :: a -> f a
+              liftA2 :: (a -> b -> c) -> f a -> f b -> f c
+        \end{minted}
+        \begin{itemize}
+            \item[\todo] Реализуйте инстанс аппликатива для функциональной стрелки
+            \item[\todo] Найдите всех пользователей по Id в надёжной БД
+            \begin{minted}{haskell}
+                dbLookup :: Id -> Db -> Player
+                liftAll :: Applicative f => (a -> f b) -> [a] -> f [b]
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                lookupAll :: [Id] -> Db -> [Player]
+                lookupAll = liftAll dbLookup
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Идиома вычислений в аппликативном контексте}
+        \vspace{-0.5em}
+        \begin{itemize}
+            \item Хотим использовать функции произвольной арности
+            \item Обобщим ``каррированной'' версией \mintinline{haskell}|liftA2| (на самом деле они эквивалентны)
+            \begin{minted}{haskell}
+                (<*>) :: Applicative f => f (a -> b) -> f a -> f b
+            \end{minted}
+            \item Теперь произвольный \mintinline{haskell}|liftAN| выражается однообразно
+            \begin{minted}{haskell}
+                liftA4 :: Applicative f => (a -> b -> c -> d -> r)
+                                        -> (f a -> f b -> f c -> f d -> f r)
+                liftA4 f a b c d = pure f <*> a <*> b <*> c <*> d
+            \end{minted}
+            \begin{itemize}
+                \item \mintinline{haskell}|pure f      :: f (a -> b -> c -> d -> r)|
+                \item \mintinline{haskell}|pure f <*> a     :: f (b -> c -> d -> r)|
+                \item \mintinline{haskell}|pure f <*> a <*> b    :: f (c -> d -> r)|
+                \item \mintinline{haskell}|pure f <*> a <*> b <*> c   :: f (d -> r)|
+                \item \mintinline{haskell}|pure f <*> a <*> b <*> c <*> d  :: (f r)|
+            \end{itemize}
+            \item Боллее идеоматично пользоваться \texttt{pure f <*> x = f <\$> x}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{\st{Death} Context parade \popslide}
+        \begin{enumerate}
+            \item Контекст типизации $\Gamma$ --- хранит типы переменных
+            \item Контекст типа \mintinline{haskell}|(Ord a, Bounded a) =>| --- перечень ограничений (constraints) на типовые переменные в этом типе
+            \item Вычислительный контекст \texttt{f} --- типовой конструктор, который объявлен представителем \mintinline{haskell}|Applicative|
+            \item Контекст-окружение \mintinline{haskell}|e ->| --- константная конфигурация, распространяемая реализацией \mintinline{haskell}|Applicative| для функциональной стрелки
+            \item Контекст зиппера --- части структуры данных, не находящиеся в фокусе зиппера
+            \item и т.д.
+        \end{enumerate}
+        \vspace{0.5em}
+        Так что слово ``контекст'' мы будем понимать по-разному в зависимости от контекста.
+    \end{frame}
+    
+    \sectionplan{Композиция типов}
+
+    \begin{frame}[fragile]{Функции на типах}
+        \begin{itemize}
+            \item[\todo] Как написать на типах \texttt{id}?
+            \item[\answer] \pause
+            \begin{itemize}
+                \item Kind: \mintinline{haskell}|Id :: * -> *|
+                \item Def: \mintinline{haskell}|type Id a = a|
+            \end{itemize}
+            \item[\todo] \pause Как написать на типах \texttt{flip}?
+            \item[\answer] \pause
+            \begin{itemize}
+                \item Kind: \mintinline{haskell}|Flip :: (* -> * -> *) -> * -> * -> *|
+                \item Def: \mintinline{haskell}|type Flip p a b = p b a|
+            \end{itemize}
+            \item[\todo] \pause Композиция типов?
+            \item[\answer] \pause
+            \begin{itemize}
+                \item Kind: \mintinline{haskell}|Compose' :: (* -> *) -> (* -> *) -> * -> *|
+                \item Def: \mintinline{haskell}|type Compose' f g a = f (g a)|
+            \end{itemize}
+            \item[\todo] \pause Композиция типов через \mintinline{haskell}|newtype|? В чем разница?
+            \item[\answer] \pause
+            %! suppress = EscapeHashOutsideCommand
+            \begin{itemize}
+                \item Def: \mintinline{haskell}|newtype Compose f g a = Compose (f (g a))|
+                \item Пропала эквивалентность \mintinline{haskell}|Compose f g a #$\sim$# f (g a)|
+                \item[\NB] Реализации классов типов ищутся для \mintinline{haskell}|Compose|, а не для \texttt{f}
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Композиция типов}
+        \vspace{-0.5em}
+        \pause
+        \begin{minted}{haskell}
+            newtype Compose f g a = Compose { getCompose :: f (g a) }
+        \end{minted}
+        \begin{itemize}
+            \item[\todo] \pause \mintinline{haskell}|GHCi> :t Compose [Just 42]|
+            \item[\answer] \pause \mintinline{haskell}|Compose [] Maybe Int|
+            \item[\todo] \pause \mintinline{haskell}|GHCi> :t Compose [Just [42]]|
+            \item[\answer] \pause \mintinline{haskell}|Compose [] Maybe [Int]|
+            \item[\todo] \pause \mintinline{haskell}|GHCi> :t Componse (Compose [Just [42]])|
+            \item[\answer] \pause \mintinline{haskell}|Compose (Compose [] Maybe) [] Int|
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Композиция функторов --- функтор}
+        \begin{itemize}
+            \item[\todo] Докажите
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                instance (Functor f, Functor g) => Functor (Compose f g) where
+                  fmap :: (a -> b) -> Compose f g a  -> Compose f g b
+                  --   :: (a -> b) -> f (g a)        -> f (g b)
+                  fmap f = Compose . fmap (fmap f) . getCompose
+            \end{minted}
+            \item[\todo] \pause
+            \begin{minted}{haskell}
+                GHCi> length <\$> Compose [Just [42]]
+            \end{minted}
+            \item[\answer] \pause \mintinline{haskell}|Compose [Just 1] :: Compose [] Maybe Int|
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Композиция аппликативов --- аппликатив}
+        \begin{itemize}
+            \item[\todo] Докажите
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                instance (Applicative f, Applicative g) => Applicative (Compose f g) where
+                  pure = Compose . pure . pure
+                  liftA2 op (Compose x) (Compose y) = liftA2 (liftA2 op) x y
+            \end{minted}
+            \item Теперь пример с игроками можно больше механизировать
+            \begin{minted}{haskell}
+                type Effs = Compose (Db ->) (Either DbError)
+                dbLookup :: Id -> Effs Player -- больше не передаём БД вручную
+            \end{minted}
+            \item[\NB] Аппликативные функторы позволяют замести под ковёр неинтересную рутину и церемонии, оставив нас наедине с бизнес-логикой
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{Материалы}
+
+    \begin{frame}[fragile]{Что посмотреть в транспорте}
+        \begin{itemize}
+            \item \href{https://youtu.be/n3H_YipBDrY?si=bsR5Fj56GEAIpAGE}{\color{blue} Vitaly Bragilevsky - The clear path to Haskell complexities}
+            \item \href{https://youtu.be/MbFqJ2NHS8M?si=LamIrSnrjbwCYrt2}{\color{blue}  Tagless-Final Style}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Серьёзные материалы}
+        \begin{itemize}
+            \item \href{https://www.staff.city.ac.uk/~ross/papers/Applicative.html}{\color{blue}Статья, вводящая аппликативы}
+        \end{itemize}
+    \end{frame}
+
+\end{document}
