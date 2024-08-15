@@ -118,6 +118,37 @@
         \end{itemize}
     \end{frame}
     
+    \begin{frame}[fragile]{Парсеры своими руками}
+        \begin{minted}{haskell}
+            newtype Parser a = Parser { runParser :: String -> Maybe (String, a) }
+        \end{minted}
+        \begin{itemize}
+            \item[\todo] Реализуйте парсер цифр \mintinline{haskell}|Parser Char|
+            \item[\todo] На его основе реализуйте парсер \mintinline{haskell}|Parser Int|
+            \item[\todo] Реализуйте парсер номера домашки как пару цифр \mintinline{haskell}|"09" ~> (0,9)|
+            \item[\todo] Реализуйте парсер пар цифр \mintinline{haskell}|"(0,9)" ~> (0,9)|
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                digitC = Parser \s -> case s of
+                  c:cs | Data.Char.isDigit c -> Just (c, cs)
+                  _ -> Nothing
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                digit = Data.Char.digitToInt <$> digitC
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                hwId = (,) <$> digit <*> digit
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                pairD = between (char '(') (char ')') $
+                  (,) <$> digit <* char ',' <*> digit
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+    
     \begin{frame}[fragile]{}
         kek
     \end{frame}
