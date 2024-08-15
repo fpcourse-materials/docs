@@ -18,4 +18,117 @@
     \setcounter{framenumber}{-1}
     \maketitle
 
+    \begin{frame}[fragile]{В предыдущих сериях}
+        \begin{itemize}
+            \item \mintinline{haskell}|Functor, Applicative|
+            \item[\newtopic] \mintinline{haskell}|Traversable, Alternative|
+            \item[\newtopic] Аппликативные парсеры
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \sectionplan{Traversable}
+
+    \begin{frame}[fragile]{Traversable}
+        \begin{minted}{haskell}
+            class (Functor t, Foldable t) => Traversable t where
+              sequenceA :: Applicative f => t (f a) -> f (t a)
+              traverse :: Applicative f => (a -> f b) -> t a -> f (t b)
+        \end{minted}
+        \begin{itemize}
+            \item \mintinline{haskell}|Functor| --- обработать значения в контейнере
+            \item \mintinline{haskell}|Foldable| --- аккумулировать значения в контейнере
+            \item \mintinline{haskell}|Traversable| --- обработать значения и аккумулировать эффекты
+            \item[\todo] Реализуйте \mintinline{haskell}|Functor| через \mintinline{haskell}|Traversable|
+            \item[\todo] Реализуйте \mintinline{haskell}|Foldable| через \mintinline{haskell}|Traversable|
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                fmap f = getIdentity . traverse (Identity . f)
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                foldMap f = getConst . traverse (Const . f)
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Применение \mintinline{haskell}|Traversable|}
+        \begin{itemize}
+            \item[\todo] \mintinline{haskell}|GHCi> sequenceA [("a", 1), ("b", 2)]|
+            \item[\todo] Достаньте из реестра всех пользователей по списку имён
+            \item[\todo] Изобретите цикл \mintinline{haskell}|for| и распечатайте в ``консоль'' каждое число два раза
+            \item[\answer] \pause \mintinline{haskell}|("ab", [1, 2])|
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                GHCi> mapM (usersDatabase !?) ["fred", "bob", "alice"]#\pause#
+                Just [User {..}, User {..}, User {..}]
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                for = flip traverse
+                GHCi> for [1, 2, 3] $ \x -> print x *> print x#\pause#
+                1 1 2 2 3 3
+                [(), (), ()]
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{Парсер-комбинаторы}
+
+    \begin{frame}[fragile]{Парсер}
+        \vspace{-0.5em}
+        \begin{itemize}
+            \item[\defi] Компонента, преобразующая менее структурированные данных в более структурированные
+            \item[\eg] Текст на языке программирования $\to$ дерево абстрактного синтаксиса
+            \item[\eg] Байты из сети $\to$ структура данных запроса пользователя
+            \item[\eg] Опции командной строки $\to$ объект конфигурации программы
+            \item[\eg] Нажатия на кнопки в игре $\to$ игровые действия
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Как пишут парсеры \popslide}
+        \vspace{-0.5em}
+        \begin{itemize}
+            \item Руками
+            \begin{itemize}
+                \item[\eg] Рекурсивный спуск, shift reduce...
+                \item[\positive] Очень быстрые, кастомизируемые, хорошие сообщения об ошибках
+                \item[\negative] Долго, сложно, противно писать и поддерживать
+                \item Хороший выбор для промышленных парсеров сложных языков
+            \end{itemize}
+            \item Генерируют по описанию на специальном языке
+            \begin{itemize}
+                \item[\eg] Antlr, yacc, bison, tree-sitter, protobuf...
+                \item[\positive] Просто описать грамматику в приятном синтаксисе
+                \item[\negative] Для сложных языков либо медленные, либо нужна уродливая специальная грамматика
+                \item[\negative] Должна быть реализация для мета-языка и интеграция с его системой сборки
+                \item[\negative] Может быть проблемой интеграция в большие проекты
+                \item[\negative] Плохо годятся для тонкой настройки
+            \end{itemize}
+            \item Парсер-комбинаторы --- язык для конструирования парсеров
+            \begin{itemize}
+                \item[\eg] Parsec, \href{https://github.com/microsoft/ts-parsec/tree/master}{\color{blue} ts-parsec}, \href{https://pypi.org/project/compynator/}{\color{blue} compynator}, \href{https://github.com/jparsec/jparsec}{\color{blue} jparsec}\ldots
+                \item[\positive] Полностью реализуются средствами языка, просто писать и парсеры и комбинаторы
+                \item[\positive] По скорости могут быть сопоставимы со сгенерированными парсерами
+                \item[\negative] Производительность и кастомизируемость ограничены, нужны навыки для использования
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+    
+    \begin{frame}[fragile]{}
+        kek
+    \end{frame}
+
+    \sectionplan{Материалы}
+
+    \begin{frame}[fragile]{Серьёзные материалы}
+        \begin{itemize}
+            \item Gibbons, Jeremy, and Bruno C. D. S. Oliveira. "The essence of the iterator pattern." \textit{Journal of functional programming} 19.3-4 (2009): 377-402.
+            \item Gibbons, Jeremy. "Design patterns as higher-order datatype-generic programs." \textit{Proceedings of the 2006 ACM SIGPLAN workshop on Generic programming}. 2006.
+        \end{itemize}
+    \end{frame}
+
 \end{document}
