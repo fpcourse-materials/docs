@@ -63,7 +63,7 @@
             \item[\answer] \pause \mintinline{haskell}|("ab", [1, 2])|
             \item[\answer] \pause
             \begin{minted}{haskell}
-                GHCi> mapM (usersDatabase !?) ["fred", "bob", "alice"]#\pause#
+                GHCi> traverse (usersDatabase !?) ["fred", "bob", "alice"]
                 Just [User {..}, User {..}, User {..}]
             \end{minted}
             \item[\answer] \pause
@@ -81,7 +81,7 @@
     \begin{frame}[fragile]{Парсер}
         \vspace{-0.5em}
         \begin{itemize}
-            \item[\defi] Компонента, преобразующая менее структурированные данных в более структурированные
+            \item[\defi] Преобразует менее структурированные данных в более структурированные
             \item[\eg] Текст на языке программирования $\to$ дерево абстрактного синтаксиса
             \item[\eg] Байты из сети $\to$ структура данных запроса пользователя
             \item[\eg] Опции командной строки $\to$ объект конфигурации программы
@@ -94,14 +94,14 @@
         \begin{itemize}
             \item Руками
             \begin{itemize}
-                \item[\eg] Рекурсивный спуск, shift reduce...
+                \item[\eg] Рекурсивный спуск, shift reduce\ldots
                 \item[\positive] Очень быстрые, кастомизируемые, хорошие сообщения об ошибках
                 \item[\negative] Долго, сложно, противно писать и поддерживать
                 \item Хороший выбор для промышленных парсеров сложных языков
             \end{itemize}
             \item Генерируют по описанию на специальном языке
             \begin{itemize}
-                \item[\eg] Antlr, yacc, bison, tree-sitter, protobuf...
+                \item[\eg] Antlr, yacc, bison, tree-sitter, protobuf\ldots
                 \item[\positive] Просто описать грамматику в приятном синтаксисе
                 \item[\negative] Для сложных языков либо медленные, либо нужна уродливая специальная грамматика
                 \item[\negative] Должна быть реализация для мета-языка и интеграция с его системой сборки
@@ -125,8 +125,8 @@
         \begin{itemize}
             \item[\todo] Реализуйте парсер цифр \mintinline{haskell}|Parser Char|
             \item[\todo] На его основе реализуйте парсер \mintinline{haskell}|Parser Int|
-            \item[\todo] Реализуйте парсер номера домашки как пару цифр \mintinline{haskell}|"09" ~> (0,9)|
-            \item[\todo] Реализуйте парсер пар цифр \mintinline{haskell}|"(0,9)" ~> (0,9)|
+            \item[\todo] Реализуйте парсер номера домашки как пару цифр \mintinline{haskell}|"09" -> (0,9)|
+            \item[\todo] Реализуйте парсер пар цифр \mintinline{haskell}|"(0,9)" -> (0,9)|
             \item[\answer] \pause
             \begin{minted}{haskell}
                 digitC = Parser \s -> case s of
@@ -149,8 +149,168 @@
         \end{itemize}
     \end{frame}
     
-    \begin{frame}[fragile]{}
-        kek
+    \begin{frame}[fragile]{Альтернатива}
+        \begin{minted}{haskell}
+            class Applicative f => Alternative f where
+              empty :: f a
+              (<|>) :: f a -> f a -> f a
+        \end{minted}
+        \begin{itemize}
+            \item[\todo] Реализуйте комбинатор \mintinline{haskell}|some|
+            \item[\todo] Реализуйте парсер чисел
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                some, many :: Alternative f => f a -> f [a]
+                many p = (:) <$> p <*> many p <|> pure []
+                some p = (:) <$> p <*> many p
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                number :: Parser Int
+                number = read <$> some digit
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{Parsec}
+
+    \begin{frame}[fragile]{Поток токенов}
+        \begin{minted}{haskell}
+            class Stream s m t | s -> t
+        \end{minted}
+        \begin{itemize}
+            \itemСпособ получать токены типа $t$ из оставшегося потока типа $s$
+            \item Оперирует в аппликативном функторе $m$ (не очень важно для нас)
+            \itemОбладает единственной операцией \mintinline{haskell}|uncons :: s -> m (Maybe (t, s))|
+            \item$s$ уникально определяет $t$ (для потока \mintinline{haskell}|[Token]| это \mintinline{haskell}|Token|)\footnote{\href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/functional\_dependencies.html}{\color{blue} FunctionalDependencies.}}
+            \item[\eg] \mintinline{haskell}|instance Stream String Identity Char| ~--- способ получать символы из строки
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Парсер}
+        \vspace{-0.5em}
+        Тип \mintinline{haskell}|ParsecT s u m a|:
+        \begin{itemize}
+            \item Принимает на вход источник типа \texttt{s}
+            \item Поддерживает внутри пользовательское состоянием типа \texttt{u}
+            \item Оперирует в аппликативном функторе \texttt{m}
+            \item Парсит экземпляр \texttt{a}
+            \item[\eg] \mintinline{haskell}|ParsecT String () Identity Int| --- парсит \mintinline{haskell}|Int| из \mintinline{haskell}|String| без доп. состояния и эффекта
+            \item \mintinline{haskell}|type Parsec s u a = ParsecT s u Identity a|
+            \item Тестирование в GHCi:
+            \begin{minted}{haskell}
+                parseTest :: (Stream s Identity t, Show a) => Parsec s () a -> s -> IO ()
+            \end{minted}
+        \end{itemize}
+        \pause
+        Далее в слайдах используем \texttt{type Parser a = Parsec String () a}.
+    \end{frame}
+
+    \begin{frame}[fragile]{Примеры комбинаторов Parsec\footnote{\href{https://hackage.haskell.org/package/parsec-3.1.15.1/docs/Text-Parsec.html}{\color{blue}Parsec documentation.}}}
+        \vspace{-0.5em}
+        \begin{minted}{haskell}
+            eof :: (Stream s m t, Show t) => ParsecT s u m ()
+            spaces :: Stream s m Char => ParsecT s u m ()
+            alphaNum :: Stream s m Char => ParsecT s u m Char
+            char :: Stream s m Char => Char -> ParsecT s u m Char
+            between
+              :: Stream s m t
+              => ParsecT s u m open
+              -> ParsecT s u m close
+              -> ParsecT s u m a
+              -> ParsecT s u m a
+            ...
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Семантика парсера как представителя \mintinline{haskell}|Functor|}
+        \vspace{-0.5em}
+        \begin{itemize}
+            \item Сделать дополнительные действия с результатом парсинга
+            \item[\eg]
+            \begin{minted}{haskell}
+                isDigit :: Char -> Bool
+                satisfy :: (Char -> Bool) -> Parser Char
+                digit :: Parser Int
+                digit = digitToInt <$> satisfy isDigit
+                --                     ^ Парсит цифру и возвращает символ
+                --      ^ Превращает символ в число
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Семантика парсера как представителя \mintinline{haskell}|Applicative|}
+        \vspace{-0.5em}
+        %! suppress = Quote
+        \begin{itemize}
+            \item \mintinline{haskell}|pure x :: Parser A| --- не потребляет строку, возвращает значение
+            \item \mintinline{haskell}|(<*>)| --- сначала парсит левым парсером, потом правым
+            \item[\eg]
+            \begin{minted}{haskell}
+                digit' :: Parser Int
+                digit' = pure digitToInt <*> satisfy isDigit
+            \end{minted}
+            \item[\eg] Парсит две цифры подряд (\mintinline{haskell}|"34" -> (3, 4)|)
+            \begin{minted}{haskell}
+                digit2 :: Parser (Int, Int)
+                digit2 = (,) <$> digit <*> digit
+            \end{minted}
+            \item[\eg] Парсит цифры через запятую \mintinline{haskell}|"(2,3)" -> (2, 3)|
+            \begin{minted}{haskell}
+                pair :: Parser (Int, Int)
+                pair = between (char '(') (char ')')
+                  $   (,)      -- :: Int -> Int -> (Int, Int)
+                  <$> digit    -- :: Parser (Int -> (Int, Int))
+                  <*  char ',' -- :: Parser (Int -> (Int, Int))
+                  <*> digit    -- :: Parser (Int, Int)
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Семантика парсера как представителя \mintinline{haskell}|Alternative|}
+        \vspace{-0.5em}
+        \pause
+        Семантика \texttt{(<|>)} (пусть \texttt{p = p1 <|> p2})
+        \begin{itemize}
+            \item Запускает левый парсер \texttt{p1}
+            \item[\then] Если \texttt{p1} падает {\color{red} на первом же токене}, запускает \texttt{p2} на том же входе
+            \item[\then] Если \texttt{p1} падает {\color{red} не на первом токене}, весь парсер \texttt{p} завершается неудачей (\texttt{p2} не запускается)
+            \item Заставляет писать однопроходные парсеры
+            \item Семантика с лекции позволяет легко написать экспоненциальный парсер
+        \end{itemize}
+        \pause
+        \vspace{1em}
+        Семантика \mintinline{haskell}|try|:
+        \begin{itemize}
+            \item[\defi] \mintinline{haskell}|try :: ParsecT s u m a -> ParsecT s u m a|
+            \item Парсер \texttt{try p1}, упав не на первом токене, притворяется, что упал на первом
+            \item Запись \texttt{try p1 <|> p2} в семантике Parsec ведёт себя так же, как и \texttt{p1 <|> p2} на лекции
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Грабли при использовании Alternative}
+        \vspace{-0.5em}
+        \begin{itemize}
+            \item Будем парсить параметры функции, передаваемые через пробел:
+            \begin{minted}{haskell}
+                param :: Parser Term
+                param = between (char '(') (char ')') term <|> var
+                params :: Parser [Term]
+                params = many $ spaces *> param
+            \end{minted}
+            \item На строчке \texttt{"x y !"} \texttt{params} говорит: Unexpected symbol \texttt{'!'}. Вмосто того, чтобы распарсить префикс и вернуть хвост (\texttt{"!"}). В чем беда?
+            \item Вспомним как реализуется \texttt{many}:
+            \begin{minted}{haskell}
+                many :: Parser a -> Parser [a]
+                many p = ((:) <$> p <*> many p) <|> pure []
+            \end{minted}
+            \item Альтернатива! Наш парсер съедает пробел перед \texttt{'!'}, а дальше встречает неожиданный символ и весь завершается с ошибкой, потому что этот символ уже не первый
+            \item Как исправить? \pause Парсить сначала параметр, а потом пробел\footnote{Лучше всего избавиться от пробелов на фазе лексического анализа.}.
+            \begin{minted}{haskell}
+            params' :: Parser [Term]
+            params' = spaces *> many (param <* spaces)
+            \end{minted}
+        \end{itemize}
     \end{frame}
 
     \sectionplan{Материалы}
