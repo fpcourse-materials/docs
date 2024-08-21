@@ -38,25 +38,115 @@
                 <<Computations of type $\alpha$ correspond to values of type $f\ap\alpha$>>
             \end{center}
         \end{block}
+        \vspace{0.5em}
         \begin{minted}{haskell}
             class Applicative m => Monad m where
               (>>=) :: m a -> (a -> m b) -> m b
         \end{minted}
         \begin{itemize}
+            \item Средство последовательной композиции вычислений
             \item[\todo] Реализуйте \mintinline{haskell}|liftA2| через \mintinline{haskell}|(>>=)|
+            \item[\todo] Реализуйте \mintinline{haskell}|(>>=)| через \mintinline{haskell}|join :: m (m a) -> m a|
             \item[\answer] \pause \mintinline{haskell}|liftA2 op mx my = mx >>= \x -> my >>= \y -> pure (x + y)|
-            \item Аппликативы --- обобщают чистые выражения и выражения с эффектами
-            \item[\eg] \mintinline{haskell}|f x y| и \mintinline{haskell}|liftA2 f (pure x) (pure y)|
-            \item Монады ---
-%            \item Аппликативы --- вычисления над значениями в коробочках
-%            \begin{minted}{haskell}
-%                liftA2 :: (a -> b -> c) -> f a -> f b -> f c
-%            \end{minted}
-%            \item Монады --- последовательная композиция вычислений коробочек
-%            \begin{minted}{haskell}
-%                (<=<) :: (b -> m c) -> (a -> m b) -> m a -> m c
-%            \end{minted}
+            \item[\answer] \pause Bind часто называют \texttt{flatMap}
+            \begin{minted}{haskell}
+                m >>= k = join $ k <$> m
+            \end{minted}
         \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Монада \mintinline{haskell}|Either|}
+        \begin{minted}{haskell}
+            class Applicative m => Monad m where
+              (>>=) :: m a -> (a -> m b) -> m b
+        \end{minted}
+        \begin{itemize}
+            \item[\todo] Сделайте \mintinline{haskell}|Either| монадой
+            \item[\todo] Реализуйте \mintinline{haskell}|join| для \mintinline{haskell}|Either|
+            \item[\todo] Распечатайте имена всех котов человека, если База Котов отвечает
+            \begin{minted}{haskell}
+                data Person { personName :: String, personCats :: [CatId] }
+                getPerson :: Db -> PersonId -> Either DbError Person
+                getCat :: Db -> CatId -> Either DbError Person
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                instance Monad (Either e) where
+                  (>>=) :: Either e a -> (a -> Either e b) -> Either e b
+                   m >>= k = case m of Left e -> Left e; Right x -> k x
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                catsOf :: Db -> PersonId -> Either DbError [Cat]
+                catsOf db pid = getPerson db pid >>= \person ->
+                                traverse (getCat db) (personCats person)
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Монада списка}
+        \begin{itemize}
+            \item[\todo] Реализуйте монаду списка
+            \item[\todo] Реализуйте \mintinline{haskell}|join| для монады списка
+            \item[\todo] Реализуйте \mintinline{haskell}|filter|, используя монаду списка
+            \item[\todo] Функция \mintinline{haskell}|next :: Board -> [Board]| выдаёт всевозможные состояния шахматной доски после следующего хода, может ли игра закончиться за \texttt{n} ходов (\mintinline{haskell}|finished :: Board -> Bool|)?
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                (>>=) = flip concatMap
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                filter p xs = xs >>= \x -> if p x then [x] else []
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                canFinish :: Int -> Board -> Bool
+                canFinish nSteps board = any finished $ allOutcomes nSteps board where
+                  allOutcomes nSteps board
+                    | nSteps <= 0 = board
+                    | otherwise = next board >>= allOutcomes (nSteps - 1)
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+    
+    \begin{frame}[fragile]{``Консоль'' и \mintinline{haskell}|do|-нотация}
+        \begin{itemize}
+            \item[\todo] Два числа с ``консоли'', поделите одно на другое нацело и распечатайте результат, если остаток не нулевой, распечатайте его тоже
+            \item[\answer] \pause
+        \end{itemize}
+        \vspace{-1.7em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \pause
+                \begin{block}{Через явное связывание}
+                    \begin{minted}{haskell}
+                        main :: MyIO ()
+                        main =
+                          readInt >>= \n ->
+                          readInt >>= \k ->
+                          let (d, m) = n `divMod` k in
+                          writeInt d
+                          if m == 0 then pure () else
+                            writeInt m
+                    \end{minted}
+                \end{block}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \pause
+                \begin{block}{Синтаксический сахар}
+                    \begin{minted}{haskell}
+                        main :: MyIO ()
+                        main = do
+                          n <- readInt
+                          k <- readInt
+                          let (d, m) = n `divMod` k
+                          writeInt d
+                          if m == 0 then pure () else
+                            writeInt m
+                    \end{minted}
+                \end{block}
+            \end{column}
+        \end{columns}
     \end{frame}
 
 \end{document}
