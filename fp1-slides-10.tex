@@ -101,10 +101,11 @@
             \item[\answer] \pause
             \begin{minted}{haskell}
                 canFinish :: Int -> Board -> Bool
-                canFinish nSteps board = any finished $ allOutcomes nSteps board where
-                  allOutcomes nSteps board
-                    | nSteps <= 0 = board
-                    | otherwise = next board >>= allOutcomes (nSteps - 1)
+                canFinish nSteps board = any finished $ allOutcomes nSteps board
+                  where
+                    allOutcomes nSteps board
+                      | nSteps <= 0 = board
+                      | otherwise = next board >>= allOutcomes (nSteps - 1)
             \end{minted}
         \end{itemize}
     \end{frame}
@@ -147,6 +148,140 @@
                 \end{block}
             \end{column}
         \end{columns}
+        \vspace{0.5em}
+        \begin{itemize}
+            \item Не нужно использовать \mintinline{haskell}|do|-нотацию без причины\\ {\color{blue} \url{https://wiki.haskell.org/Do_notation_considered_harmful}}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Иначе говоря,}
+        \begin{center}
+            \includegraphics[width=0.5\textwidth]{figs/nomatrix}
+        \end{center}
+    \end{frame}
+
+    \sectionplan{Монады в дикой природе \popslide}
+
+    \subsection{Обработка ошибок}
+
+    \begin{frame}[fragile]{\subsecname}
+        \vspace{-0.5em}
+        Открываем документацию \texttt{java.util.Optional<T>} и видим\footnote{Из типов убраны wildcards для простоты.}:
+        \begin{itemize}
+            \item \mintinline{java}|<U> Optional<U> map(Function<T, U> mapper)|
+            \item[\then] Да это же функтор!
+            \begin{minted}{haskell}
+                map :: forall u. Optional t -> (t -> u) -> Optional u
+            \end{minted}
+            \item \begin{minted}{java}
+                static <T> Optional<T> of(T value)
+                <U> Optional<U> flatMap(Function<T, Optional<U>> mapper)
+            \end{minted}
+            \item[\then] Да это же монада!
+            \begin{minted}{haskell}
+                of :: forall t. t -> Optional t
+                flatMap :: forall u. Optional t -> (t -> Optional u) -> Optional u
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Ненатуральный пример из дикой природы}
+        \vspace{-0.5em}
+        \begin{block}{Java}
+            \begin{minted}{java}
+                Optional<Integer> secureSum(Long uid, AuthDb auth, Db1 db1, Db2 db2) {
+                  return
+                    auth.check(uid).flatMap(_ ->
+                    db1.lookup(uid).flatMap(res1 ->
+                    db2.lookup(uid).flatMap(res2 ->
+                    Optional.of(res1 + res2)))));
+                }
+            \end{minted}
+        \end{block}
+        \begin{block}{Haskell}
+            \begin{minted}{haskell}
+                secureSum :: UserId -> AuthDb -> Db1 -> Db2 -> Maybe Int
+                secureGet uid auth db1 db2 = do
+                  check auth user
+                  res1 <- db1 `Db.find` user
+                  res2 <- db2 `Db.find` user
+                  pure (res1 + res2)
+            \end{minted}
+        \end{block}
+    \end{frame}
+
+    \subsection{Работа с последовательностями}
+
+    \begin{frame}[fragile]{\subsecname}
+        \vspace{-0.5em}
+        Открываем документацию \texttt{java.util.stream.Stream<T>} и видим:
+        \begin{itemize}
+            \item \mintinline{java}|<R> Stream<R> map(Function<T, R> mapper)|
+            \item \mintinline{java}|<R> Stream<R> flatMap(Function<T, Stream<R>> mapper)|
+        \end{itemize}
+        \vspace{1em}
+        Более того, \texttt{Stream'}ы являются ленивыми:
+        \begin{itemize}
+            \item Применение операции порождает объект, запоминающий новое преобразование
+            \item Чтобы форсировать вычисление нужно воспользоваться свёрткой \texttt{java.util.stream.Collector}
+        \end{itemize}
+    \end{frame}
+
+    \subsection{Асинхронное программирование}
+
+    \begin{frame}[fragile]{\subsecname}
+        \vspace{-0.5em}
+        \begin{itemize}
+            \item Оператор ``точка с запятой'' --- дождаться выполнения предыдущей инструкции и перейти к следующей
+            \item ``Дождаться'' --- обычно заблокировать нативный поток --- мб очень дорого
+            \item Нужно чтобы ``точка с запятой'' запоминала, что сделать по готовности результата вместо блокирования потока исполнения
+            \item ``Перегружаем'' оператор ``точка с запятой''!
+            \item[\then] \pause Заводим объект: коробочка, в которой потом появится значение\footnote{Такие объекты называют Future, Promise или Deferred (или ещё десяток минорных вариаций).}
+            \item[\then] \pause Заводим операцию для него: запомни, что сделать по готовности результата
+        \end{itemize}
+        \vspace{-1.7em}
+        \begin{columns}
+            \begin{column}[t]{0.45\textwidth}
+                \begin{block}{Блокирующий код}
+                    \begin{minted}{java}
+                                                            -
+                        var c = fetch("config");
+                        var res = apiRequest1(c);
+                        return apiRequest2(res);
+                    \end{minted}
+                \end{block}
+            \end{column}
+            \begin{column}[t]{0.45\textwidth}
+                \begin{block}{Асинхронный код}
+                    \begin{minted}{java}
+                        return
+                          fetch("config").then((c   =>
+                          apiRequest1(c)).then((res) =>
+                          apiRequest2(res))
+                    \end{minted}
+                \end{block}
+            \end{column}
+        \end{columns}
+        \begin{itemize}
+            \item Если запросы независимы, то их можно исполнить параллельно --- аппликативы
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{Материалы}
+
+    \begin{frame}[fragile]{Что посмотреть в транспорте}
+        \begin{itemize}
+            \item \href{https://youtu.be/n3H_YipBDrY?si=FDJRw5M4hD7a1SKh}{\color{blue}  Vitaly Bragilevsky - The clear path to Haskell complexities }
+            \item \href{https://youtu.be/IkXg_mjNgG4?si=5EG8RHG3nH-kDuUa}{\color{blue} Виталий Брагилевский — Монады - не приговор}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Серьёзные материалы}
+        \begin{itemize}
+            \item Moggi, Eugenio. \textit{Computational lambda-calculus and monads}. University of Edinburgh, Department of Computer Science, Laboratory for Foundations of Computer Science, 1988.
+            \item Wadler, Philip. "Comprehending monads." \textit{Proceedings of the 1990 ACM Conference on LISP and Functional Programming}. 1990.
+            \item Wadler, Philip. "The essence of functional programming." \textit{Proceedings of the 19th ACM SIGPLAN-SIGACT symposium on Principles of programming languages}. 1992.
+        \end{itemize}
     \end{frame}
 
 \end{document}
