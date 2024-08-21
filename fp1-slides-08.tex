@@ -84,18 +84,23 @@
     \end{frame}
 
     \begin{frame}[fragile]{Аппликативные функторы для вычислений над содержимым коробочек}
-        \begin{itemize}
-            \item Применяя функции вида $a \to f \ap b$ получаем значения вида $f \ap b$
-            \item Хотим продолжать вычисления над значениями в коробочках
-            \item Нужен специальный код для каждого $f$
-        \end{itemize}
-        \pause
-        \vspace{0.5em}
         \begin{minted}{haskell}
             class Applicative f where
               pure :: a -> f a
               liftA2 :: (a -> b -> c) -> f a -> f b -> f c
         \end{minted}
+        \vspace{0.5em}
+        \begin{itemize}
+            \item Применяя функции вида $a \to f \ap b$ получаем значения вида $f \ap b$
+            \item Хотим продолжать вычисления над значениями в коробочках
+            \item Нужен специальный код для каждого $f$
+            \item[\todo] Реализуйте \mintinline{haskell}|liftA3| через \mintinline{haskell}|liftA2|
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                liftA3 :: Applicative f => (a -> b -> c -> d) -> f a -> f b -> f c -> f d
+                liftA2 f x y z = liftA2 ($) (liftA2 f x y) z
+            \end{minted}
+        \end{itemize}
     \end{frame}
     
     \begin{frame}[fragile]{Аппликатив \mintinline{haskell}|Either|}

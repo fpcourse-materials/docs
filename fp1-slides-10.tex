@@ -18,4 +18,45 @@
     \setcounter{framenumber}{-1}
     \maketitle
 
+    \begin{frame}[fragile]{В предыдущих сериях}
+        \begin{itemize}
+            \item Классы типов \mintinline{haskell}|Functor| и \mintinline{haskell}|Applicative|
+            \item[\newtopic] Класс типов \mintinline{haskell}|Monad|
+            \item[\newtopic] Стандартные представители: \mintinline{haskell}|Identity|, \mintinline{haskell}|Maybe| и \mintinline{haskell}|[]|
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \sectionplan{Работа с монадами}
+
+    \begin{frame}[fragile]{Монады}
+        \begin{block}{Moggi's principle}
+            \begin{center}
+                <<Computations of type $\alpha$ correspond to values of type $f\ap\alpha$>>
+            \end{center}
+        \end{block}
+        \begin{minted}{haskell}
+            class Applicative m => Monad m where
+              (>>=) :: m a -> (a -> m b) -> m b
+        \end{minted}
+        \begin{itemize}
+            \item[\todo] Реализуйте \mintinline{haskell}|liftA2| через \mintinline{haskell}|(>>=)|
+            \item[\answer] \pause \mintinline{haskell}|liftA2 op mx my = mx >>= \x -> my >>= \y -> pure (x + y)|
+            \item Аппликативы --- обобщают чистые выражения и выражения с эффектами
+            \item[\eg] \mintinline{haskell}|f x y| и \mintinline{haskell}|liftA2 f (pure x) (pure y)|
+            \item Монады ---
+%            \item Аппликативы --- вычисления над значениями в коробочках
+%            \begin{minted}{haskell}
+%                liftA2 :: (a -> b -> c) -> f a -> f b -> f c
+%            \end{minted}
+%            \item Монады --- последовательная композиция вычислений коробочек
+%            \begin{minted}{haskell}
+%                (<=<) :: (b -> m c) -> (a -> m b) -> m a -> m c
+%            \end{minted}
+        \end{itemize}
+    \end{frame}
+
 \end{document}
