@@ -20,7 +20,7 @@
 
     \begin{frame}[fragile]{В предыдущих сериях}
         \begin{itemize}
-            \item Полиморфные \mintinline{haskell}|data| и \mintinline{haskell}|type|
+            \item Полиморфные \mintinline{haskell}|data| и \mintinline{haskell}|type|, \mintinline{haskell}|Compose|
             \item Стандартные монады
             \item[\newtopic] Трансформеры монад
         \end{itemize}
@@ -38,8 +38,8 @@
             \item[\eg] АТД стек: операции \texttt{push(elem)} и \texttt{pop -> elem}
             \item Интерфейс конструирования обитателей некоторого множества: списков, массивов\ldots
             \item АТД \mintinline{haskell}|Monad|: операции \mintinline{haskell}|pure| и \mintinline{haskell}|>>=|
-            \item[\eg] \mintinline{haskell}|[]|, \mintinline{haskell}|Maybe|, \mintinline{haskell}|Either e|
-            \item[\eg] \mintinline{haskell}|newtype State s a = State (s -> (a, s))|
+            \item[\eg] Множества: \mintinline{haskell}|[]|, \mintinline{haskell}|Maybe|, \mintinline{haskell}|Either e|
+            \item[\eg] Даже множества функций: \mintinline{haskell}|newtype State s a = State (s -> (a, s))|
             \item[\todo] Как сконструировать с помощью \mintinline{haskell}|Monad|?
             \begin{minted}{haskell}
                 computation :: s -> (a, s)
@@ -166,16 +166,17 @@
                 class MonadTrans (t :: (* -> *) -> * -> *) where
                   lift :: Monad m => m a -> t m a
             \end{minted}
-            \item[\eg]
-            \begin{minted}{haskell}
-                instance MonadTrans (StateT s) where
-                  lift :: Monad m => m a -> StateT m a
-                  lift ma = StateT \s -> (,s) <$> ma
-            \end{minted}
+            \item[\todo] Реализуйте \mintinline{haskell}|instance MonadTrans (StateT s)|
             \item[\todo] Сконструируйте в терминах трансформеров следующее вычисление
             \begin{minted}{haskell}
                 computation :: Int -> (Int, String)
                 computation = \e -> (e + 2, show e ++ show (e + 1))
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                instance MonadTrans (StateT s) where
+                  lift :: Monad m => m a -> StateT m a
+                  lift ma = StateT \s -> (,s) <$> ma
             \end{minted}
             \item[\answer] \pause
             \begin{minted}{haskell}
