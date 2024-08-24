@@ -250,7 +250,7 @@
             \end{minted}
             \item[\todo] \pause
             \begin{minted}{haskell}
-                GHCi> length <\$> Compose [Just [42]]
+                GHCi> length <$> Compose [Just [42]]
             \end{minted}
             \item[\answer] \pause \mintinline{haskell}|Compose [Just 1] :: Compose [] Maybe Int|
         \end{itemize}
@@ -279,7 +279,6 @@
     \begin{frame}[fragile]{Что посмотреть в транспорте}
         \begin{itemize}
             \item \href{https://youtu.be/n3H_YipBDrY?si=bsR5Fj56GEAIpAGE}{\color{blue} Vitaly Bragilevsky - The clear path to Haskell complexities}
-            \item \href{https://youtu.be/MbFqJ2NHS8M?si=LamIrSnrjbwCYrt2}{\color{blue}  Tagless-Final Style}
         \end{itemize}
     \end{frame}
 

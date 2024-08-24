@@ -18,4 +18,234 @@
     \setcounter{framenumber}{-1}
     \maketitle
 
+    \begin{frame}[fragile]{В предыдущих сериях}
+        \begin{itemize}
+            \item Полиморфные \mintinline{haskell}|data| и \mintinline{haskell}|type|
+            \item Стандартные монады
+            \item[\newtopic] Трансформеры монад
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \sectionplan{Recall: monads}
+
+    \begin{frame}[fragile]{Абстрактный тип данных --- \mintinline{haskell}|Monad|}
+        \vspace{-0.5em}
+        \begin{itemize}
+            \item[\eg] АТД стек: операции \texttt{push(elem)} и \texttt{pop -> elem}
+            \item Интерфейс конструирования обитателей некоторого множества: списков, массивов\ldots
+            \item АТД \mintinline{haskell}|Monad|: операции \mintinline{haskell}|pure| и \mintinline{haskell}|>>=|
+            \item[\eg] \mintinline{haskell}|[]|, \mintinline{haskell}|Maybe|, \mintinline{haskell}|Either e|
+            \item[\eg] \mintinline{haskell}|newtype State s a = State (s -> (a, s))|
+            \item[\todo] Как сконструировать с помощью \mintinline{haskell}|Monad|?
+            \begin{minted}{haskell}
+                computation :: s -> (a, s)
+                computation s = let s' = f s in (g s, s')
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                computation = runState do
+                  s <- get   -- get    ::              s -> (s , s)
+                  modify f   -- modify :: (s -> s) -> (s -> ((), s))
+                  pure (g s) -- pure   :: a ->        (s -> (a , s))
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Вычисления из сложных множеств (доменов)}
+        \begin{itemize}
+            \item[\todo] Хотим в вычислении иметь две глобальных переменных, оно из какого множества?
+            \item[\answer] \pause \texttt{s -> s' -> ((a, s), s')}
+            \item[\todo] Что надо, чтобы с этим множеством удобно работать?
+            \item[\answer] \pause
+            \begin{itemize}
+                \item Удобный способ конструирования обитателей: \mintinline{haskell}|Monad|
+                \item Функции \mintinline{haskell}|get|, \mintinline{haskell}|put|, \mintinline{haskell}|modify| для \texttt{s}
+                \item Те же функции \mintinline{haskell}|get2|, \mintinline{haskell}|put2|, \mintinline{haskell}|modify2| для \texttt{s'}\ldots
+            \end{itemize}
+            \item[\NB] Приходится переопределять всё каждый раз для новых доменов!
+            \item Можно делать Super Monad сразу со всем необходимым \mintinline{haskell}|newtype Super env err a = Super { runSuper :: env -> IO (Either err a) }|
+            \begin{itemize}
+                \item[\negative] Медленно работает, не zero-cost abstraction\footnote{Zero-cost не значит бесплатно, а значит --- если не используешь, то не платишь за её присутствие.}
+                \item[\negative] Не модульно --- сложно поддерживать и использовать частями
+            \end{itemize}
+            \item Проблема известна как expression problem, stable denotations, extensible interpreters\footnote{\color{blue} \url{https://okmij.org/ftp/Computation/having-effect.html}.}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Монады не композируются}
+        \vspace{-0.5em}
+        \begin{itemize}
+            \item \mintinline{haskell}|join :: (Monad m, Monad n) => Compose m n (Compose m n a) -> Compose m n a|
+            \item Запишем без обёрток для наглядности: \pause
+            \begin{minted}{haskell}
+                join :: (Monad m, Monad n) => m (n (m (n a))) -> m (n a)
+            \end{minted}
+            \item Можно попробовать переставить \texttt{m} и \texttt{n} местами и свести к двум \texttt{join}
+            \item[\NB] Но монады в общем случае не коммутируют
+            \item[\eg] Попробуем переставить \mintinline{haskell}|Reader| и \mintinline{haskell}|Writer|
+            \begin{itemize}
+                \item[1.] \mintinline{haskell}|Reader e (Writer w a)| имеет движок \mintinline{haskell}|e -> (w, a)|
+                \item[2.] \mintinline{haskell}|Writer w (Reader e a)| имеет движок \mintinline{haskell}|(w, e -> a)|
+                \item[\advanced] Алгебраически видно, что это не изоморфные типы: $(w * a)^e \neq w * a ^ e$
+                \item Разумной реализации тоже не получается, перестановка от 1 к 2 теряет лог:
+                \begin{minted}{haskell}
+                    dist :: Monoid w => (e -> (w, a)) -> (w, e -> a)
+                    dist q = (mempty, \e -> fst (q e))
+                \end{minted}
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{Love. Death. Transformers}
+
+    \begin{frame}[fragile]{Обобщаем до семейства множеств вычислений}
+        \begin{itemize}
+            \item Программа с одной глобальной переменной задаёт функцию \texttt{s -> (a, s)}
+            \item А если глобальных переменных две --- \texttt{s -> s' -> ((a, s), s')}
+            \item Оба варианта представимы как частные случаи семейства \texttt{s -> m (a, s)}
+            \item[\todo] Выберите подходящие \texttt{m}
+            \item[\answer] \pause Первый: \texttt{m a = Identity a}, второй: \texttt{m a = s' -> (a, s')}
+            \item Объявляем всё необходимое для всех множеств из семейства (индексированных \texttt{m})
+            \begin{minted}{haskell}
+                newtype StateT s (m :: * -> *) a = StateT { runStateT :: s -> m (a, s) }
+            \end{minted}
+            \begin{itemize}
+                \item \mintinline{haskell}|instance Monad m => Monad (StateT s m)|
+                \item \mintinline{haskell}|get :: StateT s m s|, \mintinline{haskell}|put :: s -> State s m ()|
+            \end{itemize}
+            \item[\todo] Как сконструировать с помощью \mintinline{haskell}|Monad (StateT s m)|?
+            \begin{minted}{haskell}
+                computation :: s -> (a, s); computation s = let s' = f s in (g s, s')
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                computation = runIdentity . runStateT do
+                  s <- get   -- get    ::              s -> Identity (s , s)
+                  modify f   -- modify :: (s -> s) -> (s -> Identity ((), s))
+                  pure (g s) -- pure   :: a ->        (s -> Identity (a , s))
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Работа с вложенным состоянием}
+        \begin{minted}{haskell}
+            newtype StateT s (m :: * -> *) a = StateT { runStateT :: s -> m (a, s) }
+        \end{minted}
+        \begin{itemize}
+            \item[\todo] Как прошмыгнуть мимо \texttt{s} и сделать вычисление с \texttt{s'}?
+            \mintinline{haskell}|StateT s (StateT s' Identity) a -- s -> s' -> ((a, s), s')|
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                liftState :: (s' -> (a, s')) -> (s -> s' -> ((a, s), s')
+                liftState comp = \s -> \s' -> let (x, new) = comp s' in ((x, s), new)
+            \end{minted}
+            \item Можно обобщить до произвольной внутренней монады \texttt{m}
+            \begin{minted}{haskell}
+                liftState :: Monad m => m a -> (s -> m (a, s))
+                liftState ma = \s -> (,s) <$> ma
+            \end{minted}
+            \item Или то же самое в терминах \mintinline{haskell}|StateT|
+            \begin{minted}{haskell}
+                liftState :: Monad m => m a -> StateT s m a
+                liftState ma = StateT \s -> (,s) <$> ma
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Lifting}
+        \begin{minted}{haskell}
+            newtype StateT s (m :: * -> *) a = StateT { runStateT :: s -> m (a, s) }
+        \end{minted}
+        \begin{itemize}
+            \item Для каждого трансформера нужно отдельно сказать, как поработать во внутренней монаде незаметно для него
+            \begin{minted}{haskell}
+                class MonadTrans (t :: (* -> *) -> * -> *) where
+                  lift :: Monad m => m a -> t m a
+            \end{minted}
+            \item[\eg]
+            \begin{minted}{haskell}
+                instance MonadTrans (StateT s) where
+                  lift :: Monad m => m a -> StateT m a
+                  lift ma = StateT \s -> (,s) <$> ma
+            \end{minted}
+            \item[\todo] Сконструируйте в терминах трансформеров следующее вычисление
+            \begin{minted}{haskell}
+                computation :: Int -> (Int, String)
+                computation = \e -> (e + 2, show e ++ show (e + 1))
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                computation = runWriterT . runReaderT do -- ReaderT Int (WriterT String) Int
+                  x <- ask; lift (tell x)
+                  y <- asks (+ 1); lift (tell y)
+                  pure (y + 1)
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Неявный lifting (библиотека mtl)}
+        \vspace{-0.5em}
+        \begin{itemize}
+            \item[\negative] Нужно постоянно руками писать \mintinline{haskell}|lift|
+            \item[1.] Вынесем функции стандартных монад в интерфейсы (классы типов)
+            \item[\todo] Интерфейс \mintinline{haskell}|Reader|?
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                class MonadReader e m | m -> e where
+                  ask :: m e
+            \end{minted}
+            \item[2.] Всех трансформеров заставим эти интерфейсы реализовать
+            \item[\todo]  Реализация \mintinline{haskell}|MonadReader| для \mintinline{haskell}|StateT|
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                instance MonadReader e m => MonadReader e (StateT s m) where
+                  ask = lift ask
+            \end{minted}
+            \item[3.] Теперь можно даже абстрагироваться по башне, главное чтобы она умела всё нужное
+            \begin{minted}{haskell}
+                computation :: (MonadReader String m, MonadState Int m) => m a
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Анализ трансформеров}
+        \begin{center}
+            \includegraphics[width=0.5\textwidth]{figs/transformers}
+        \end{center}
+        \begin{itemize}
+            \item[\positive] Позволяют инкрементально и модульно реализовывать функциональность eDSLs
+            \item[\positive] Можно делать код полиморфным по стеку трансформеров, требуя интерфейсы
+            \item[\negative] Сложны в программировании и изучении (no chances mainstream)
+            \item[\negative] Башни существенно замедляют программу, особенно если стек абстрагирован
+            \item[\negative] Требуют существенного количества языковых фич для реализации и использования
+            \item[\negative] FunDeps ограничивают каждый слой в стеке одним экземпляром
+            \item[\negative] Каждый эффект сам по себе, нельзя описать их взаимодействие (interleaved effects)
+            \item[\negative] Порядок трансформеров играет роль, её можно понять только из реализации трансформера, множество упорядочений бесполезны
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{Материалы}
+
+    \begin{frame}[fragile]{Что посмотреть в транспорте}
+        \begin{itemize}
+            \item \href{https://markkarpov.com/post/the-monads}{\color{blue}(post) The monads of Haskell --- Mark Karpov}
+            \item \href{https://youtu.be/qgfCmQ-2tW0?si=6BjvijRPU2hEmk49}{\color{blue}  Keynote: Daniel Spiewak - The Case For Effect Systems }
+            \item \href{https://www.youtube.com/live/0jI-AlWEwYI?si=KzgcHDgZ4GseytRA}{\color{blue} Alexis King - ``Effects for Less'' ZuriHac 2020}
+            \item \href{https://youtu.be/vfDazZfxlNs?si=Sjfitsfe33jpbMth}{\color{blue}  ``Building Haskell Programs with Fused Effects'' by Patrick Thomson}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Серьёзные материалы}
+        \begin{itemize}
+            \item \href{https://okmij.org/ftp/Computation/having-effect.html}{\color{blue} Oleg Kiselyev Blog --- Having an Effect}
+            \item \href{https://dl.acm.org/doi/pdf/10.1145/199448.199528}{\color{blue} Liang, S., Hudak, P. and Jones, M., 1995, January. Monad transformers and modular interpreters. In Proceedings of the 22nd ACM SIGPLAN-SIGACT symposium on Principles of programming languages (pp. 333-343).}
+            \item \href{https://scholar.google.com/scholar?hl=en&as_sdt=0%2C5&q=Monad+Transformers+and+Modular+Algebraic+Effects&btnG=}{\color{blue}Schrijvers, T., Piróg, M., Wu, N. and Jaskelioff, M., 2019, August. Monad transformers and modular algebraic effects: what binds them together. In Proceedings of the 12th ACM SIGPLAN International Symposium on Haskell (pp. 98-113).}
+            \item \href{https://www.youtube.com/playlist?list=PLt7hcIEdZLAkebYy70DdBDm2qLrw7ptfp}{\color{blue}  OPLSS 2018 -- Andrej Bauer -- Algebraic Effects and Handlers}
+        \end{itemize}
+    \end{frame}
+
 \end{document}
