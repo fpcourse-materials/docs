@@ -138,12 +138,13 @@
         \begin{itemize}
             \item[\todo] Как прошмыгнуть мимо \texttt{s} и сделать вычисление с \texttt{s'}?
             \mintinline{haskell}|StateT s (StateT s' Identity) a -- s -> s' -> ((a, s), s')|
+            \item[\todo] Проделайте это для произвольной внутренней монады
             \item[\answer] \pause
             \begin{minted}{haskell}
                 liftState :: (s' -> (a, s')) -> (s -> s' -> ((a, s), s')
                 liftState comp = \s -> \s' -> let (x, new) = comp s' in ((x, s), new)
             \end{minted}
-            \item Можно обобщить до произвольной внутренней монады \texttt{m}
+            \item[\answer] \pause
             \begin{minted}{haskell}
                 liftState :: Monad m => m a -> (s -> m (a, s))
                 liftState ma = \s -> (,s) <$> ma
@@ -234,6 +235,7 @@
     \begin{frame}[fragile]{Что посмотреть в транспорте}
         \begin{itemize}
             \item \href{https://markkarpov.com/post/the-monads}{\color{blue}(post) The monads of Haskell --- Mark Karpov}
+            \item \href{https://youtu.be/m821Vz8N_bo?si=f-2cR0QExCWZr-BK}{\color{blue} [Haskell'23] The Evolution of Effects }
             \item \href{https://youtu.be/qgfCmQ-2tW0?si=6BjvijRPU2hEmk49}{\color{blue}  Keynote: Daniel Spiewak - The Case For Effect Systems }
             \item \href{https://www.youtube.com/live/0jI-AlWEwYI?si=KzgcHDgZ4GseytRA}{\color{blue} Alexis King - ``Effects for Less'' ZuriHac 2020}
             \item \href{https://youtu.be/vfDazZfxlNs?si=Sjfitsfe33jpbMth}{\color{blue}  ``Building Haskell Programs with Fused Effects'' by Patrick Thomson}
