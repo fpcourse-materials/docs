@@ -1,0 +1,370 @@
+%! suppress = EscapeHashOutsideCommand
+%! suppress = Quote
+%! suppress = MissingImport
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+
+\title[13. Вывод типов]{Практика 13. Вывод типов}
+\date{осень 2024}
+
+\begin{document}
+
+    \setcounter{framenumber}{-1}
+    \maketitle
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \sectionplan{Вспоминаем типы}
+
+    \begin{frame}{Вспомнить всё}
+%        \vspace{-0.5em}
+        \pause
+        \begin{block}{Синтаксис типов в $\lambda_{\rightarrow}$}
+            \pause
+            \begin{description}
+                \item[Типовые переменные] \pause \vspace{-1em} $\alpha, \beta, \ldots \in \mathbb{T}$
+                \pause
+                \hspace{2em}
+                \begin{tikzpicture}
+                    \node [expr] (a) {$\alpha$};
+                \end{tikzpicture}
+                \item[Стрелочные типы] \pause \vspace{-2em} $\sigma, \tau \in \mathbb{T} \Rightarrow (\sigma\rightarrow\tau)\in\mathbb{T}$\footnote{Стрелочка --- правоассоциативный оператор: $\tau \to (\sigma \to \zeta) \eqt \tau \to \sigma \to \zeta$.}
+                \hspace{2em}
+                \pause
+                \begin{tikzpicture}
+                    \node [expr] (arr) {$\to$};
+                    \node [subtree] (t) [below left= of arr] {$\sigma$};
+                    \node [subtree] (s) [below right= of arr] {$\tau$};
+                    \draw[->] (t.north) -- (arr);
+                    \draw[->] (s.north) -- (arr);
+                \end{tikzpicture}
+            \end{description}
+        \end{block}
+        \pause
+        \begin{block}{Утверждение типизации}
+            \pause
+            \begin{itemize}
+                \item \pause Синтаксис: $\Gamma$ --- контекст, $M \in \Lambda, \sigma \in \mathbb{T}$, то \pause $\Gamma \vdash M : \sigma$ --- утверждение типизации
+                \item \pause Синтаксическая категория, увязывающая вместе термы и типы с контекстом
+                \item \pause Утверждает, что в контексте $\Gamma$ терм $M$ имеет тип $\sigma$
+            \end{itemize}
+        \end{block}
+        \pause
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \pause
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \pause \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \pause \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \pause \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+    \end{frame}
+
+    \sectionplan{Пример вывода типа комбинатора $\comb{B}$}
+
+    %! suppress = TrimWhitespace
+    \newcommand{\btypename}{Вывод типа для комбинатора $\term{B}$ }
+
+    \begin{frame}[t]{\btypename (0)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        \[{\color{red}\emptyset \vdash \lambda f~g~x.~f~(g~x) :~ ?_0}\]
+        \vspace{-1em}
+        \begin{itemize}
+            \item Требуется вывести тип терма
+            \item Внешней информации нет, типизируем в пустом контексте
+            \item Пока для неизвестного типа используем мета-переменную $?_0$
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (1)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) :~ ?_1 \to ?_2}
+            {\color{red}\{f :~ ?_1\} \vdash \lambda g~x.~f~(g~x) :~ ?_2}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item Видим абстракцию на верхнем уровне: правило $intro\to$
+            \item Правило требует стрелочной структуры типа, запоминаем $?_0 =~ ?_1\to ?_2$
+            \item Обогащаем контекст переменной типа аргумента функции
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (2)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) : ?_1 \to \color{red} ?_3 \to ?_4}{
+                \color{red}\infer[intro\to]{\color{black}\{f :~ ?_1\} \vdash \lambda g~x.~f~(g~x) :~ \color{red}?_3 \to ?_4}{
+                        {\{f :~ ?_1, g :~ ?_3\} \vdash \lambda x.~f~(g~x) :~ ?_4 }
+                }}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item Снова абстракция на верхнем уровне: $intro\to$
+            \item Тип $?_2$ должен иметь стрелочную структуру, запоминаем $?_2 =~ ?_3 \to ?_4$
+            \item Обогащаем контекст
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (3)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) :~ ?_1 \to ?_3 \to \color{red}?_5 \to ?_6}{
+                \infer[intro\to]{\{f:~ ?_1\} \vdash \lambda g~x.~f~(g~x) :~ ?_3 \to \color{red}?_5 \to ?_6}{
+                    \color{red}\infer[intro\to]{\color{black}\{f:~ ?_1, g:~ ?_3\} \vdash \lambda x.~f~(g~x) :~ \color{red}?_5 \to ?_6 }{
+                            {\{f:~ ?_1, g:~ ?_3, x:~ ?_5\} \vdash f~(g~x) :~ ?_6 }
+                    }}}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item Снова абстракция на верхнем уровне: $intro\to$
+            \item Запоминаем: $?_4 =~ ?_5 \to ?_6$
+            \item Обогащаем контекст
+            \item Обозначим для краткости $\Gamma = \{f:~ ?_1, g:~ ?_3, x:~ ?_5\}$
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (4)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        %! suppress = EscapeAmpersand
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) : ?_1 \to ?_3 \to ?_5 \to ?_6}{
+                \infer[intro\to]{\{f: ?_1\} \vdash \lambda g~x.~f~(g~x) : ?_3 \to ?_5 \to ?_6}{
+                    \infer[intro\to]{\{f: ?_1, g: ?_3\} \vdash \lambda x.~f~(g~x) : ?_5 \to ?_6 }{
+                        \color{red}\infer[elim\to]{\color{black}\{f: ?_1, g: ?_3, x: ?_5\} \vdash f~(g~x) :~ ?_6}{
+                            \Gamma \vdash f : ?_7 \to ?_6 &
+                            \Gamma \vdash g~x : ?_7
+                        }}}}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item Аппликация на верхнем уровне: правило $elim\to$
+            \item Тип аргумента неизвестен, заводим мета-переменную $?_7$
+            \item Типы аргумента и параметра должны совпадать
+            \item Тип результата функции равен типу аппликации
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (5)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        %! suppress = EscapeAmpersand
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) : {\color{red}(?_7 \to ?_6)} \to ?_3 \to ?_5 \to ?_6}{
+                \infer[intro\to]{\{f: {\color{red}?_7 \to ?_6}\} \vdash \lambda g~x.~f~(g~x) : ?_3 \to ?_5 \to ?_6}{
+                    \infer[intro\to]{\{f: {\color{red}?_7 \to ?_6}, g: ?_3\} \vdash \lambda x.~f~(g~x) : ?_5 \to ?_6 }{
+                        \infer[elim\to]{\{f: {\color{red}?_7 \to ?_6}, g: ?_3, x: ?_5\} \vdash f~(g~x) }{
+                            \color{red}
+                            \infer[1]{\color{black}\Gamma \vdash f : {\color{red}?_7 \to ?_6}}{} &
+                            \Gamma \vdash g~x : ?_7
+                        }}}}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item В левой ветке правило типизации $ctx$
+            \item Получаем, что $?_1 =~ ?_7 \to ?_6$
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (6)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        %! suppress = EscapeAmpersand
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) : (?_7 \to ?_6) \to ?_3 \to ?_5 \to ?_6}{
+                \infer[intro\to]{\{f: ?_7 \to ?_6\} \vdash \lambda g~x.~f~(g~x) : ?_3 \to ?_5 \to ?_6}{
+                    \infer[intro\to]{\{f: ?_7 \to ?_6, g: ?_3\} \vdash \lambda x.~f~(g~x) : ?_5 \to ?_6 }{
+                        \infer[elim\to]{\{f: ?_7 \to ?_6, g: ?_3, x: ?_5\} \vdash f~(g~x) }{
+                            \infer[ctx]{\Gamma \vdash f : ?_7 \to ?_6}{} &
+                            \color{red}\infer[elim\to]{\color{black}\Gamma \vdash g~x : ?_7}{
+                                \Gamma \vdash g : ?_8 \to ?_7 &
+                                \Gamma \vdash x : ?_8
+                            }}}}}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item В правой ветке снова видим аппликацию: $elim\to$
+            \item Заводим мета-переменную $?_8$
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (7)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        %! suppress = EscapeAmpersand
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) : (?_7 \to ?_6) \to ({\color{red} ?_8 \to ?_7}) \to ?_5 \to ?_6}{
+                \infer[intro\to]{\{f: ?_7 \to ?_6\} \vdash \lambda g~x.~f~(g~x) : ({\color{red} ?_8 \to ?_7}) \to ?_5 \to ?_6}{
+                    \infer[intro\to]{\{f: ?_7 \to ?_6, g: {\color{red} ?_8 \to ?_7}\} \vdash \lambda x.~f~(g~x) : ?_5 \to ?_6 }{
+                        \infer[elim\to]{\Gamma \vdash f~(g~x) }{
+                            \infer[ctx]{\Gamma \vdash f : ?_7 \to ?_6}{} &
+                            \infer[elim\to]{\Gamma \vdash g \ap x : ?_7}{
+                                \color{red}\infer[ctx]{\color{black}\Gamma \vdash g : {\color{red} ?_8 \to ?_7}}{} &
+                                \Gamma \vdash x : ?_8
+                            }}}}}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item В левой ветке первое правило: $ctx$
+            \item Получаем $?_3 = ?_8 \to ?_7$
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[t, noframenumbering]{\btypename (8)}
+        \begin{block}{Правила вывода утверждений типизации в $\lambda_{\rightarrow}$}
+            \vspace{-1em}
+            \begin{center}
+                \[
+                    \begin{array}{l c r}
+                        \infer[ctx]{\Gamma \vdash x: \sigma}{(x: \sigma) \in \Gamma}
+                        &
+                        \infer[elim\to]{\Gamma \vdash M\;N : \tau}{\Gamma \vdash M : \sigma \to \tau & \Gamma \vdash N : \sigma}
+                        &
+                        \infer[intro\to]{\Gamma \vdash \lambda x^{\color{red} \sigma}\ldotp M : \sigma \to \tau}{\{x : \sigma\} \cup \Gamma \vdash M : \tau}
+                    \end{array}
+                \]
+            \end{center}
+        \end{block}
+        %! suppress = EscapeAmpersand
+        \[
+            \infer[intro\to]{\emptyset \vdash \lambda f~g~x.~f~(g~x) : (?_7 \to ?_6) \to ({\color{red} ?_5} \to ?_7) \to ?_5 \to ?_6}{
+                \infer[intro\to]{\{f: ?_7 \to ?_6\} \vdash \lambda g~x.~f~(g~x) : ({\color{red} ?_5} \to ?_7) \to ?_5 \to ?_6}{
+                    \infer[intro\to]{\{f: ?_7 \to ?_6, g: {\color{red}?_5} \to ?_7\} \vdash \lambda x.~f~(g~x) : ?_5 \to ?_6 }{
+                        \infer[elim\to]{\{f: ?_7 \to ?_6, g: {\color{red}?_5} \to ?_7, x: ?_5\} \vdash f~(g~x) }{
+                            \infer[ctx]{\Gamma \vdash f : ?_7 \to ?_6}{} &
+                            \infer[elim\to]{\Gamma \vdash g \ap x : ?_7}{
+                                \infer[ctx]{\Gamma \vdash g : {\color{red}?_5} \to ?_7}{} &
+                                \color{red} \infer[ctx]{\color{black} \Gamma \vdash x : {\color{red} ?_5}}{}
+                            }}}}}
+        \]
+        \vspace{-1em}
+        \begin{itemize}
+            \item В правой ветке снова срабатывает первое правило: $ctx$
+            \item Получаем $?_8 = ?_5$
+            \item[\answer] Заменяем мета-переменные на типовые $(\beta \to \gamma) \to (\alpha \to \beta) \to \alpha \to \gamma$
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{Материалы}
+
+    \begin{frame}[fragile]{Материалы}
+        См. 3ю пару.
+    \end{frame}
+
+\end{document}
