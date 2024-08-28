@@ -147,13 +147,13 @@
             \item[\then] Любую рекурсивную структуру данных можно закодировать просто как функцию
             \item Возьмём форму списка и преобразуем
             \begin{minted}{haskell}
-                data Shape e rec = FNil | FCons e rec
+                data LShape e rec = FNil | FCons e rec
             \end{minted}
-            \item[\then] Экспонента суммы равна произведению экспонент \[a^{1 + e\times a} \simeq a^1\times a^{e\times a} \simeq a^1\times a^{a^e}\]
+            \item[\then] Экспонента суммы равна произведению экспонент \[a^{1 + e\times a} \simeq a^1\times a^{e\times a} \simeq a\times a^{a^e}\]
             \item[\todo] Что-нибудь напоминает?
             \item[\answer] \pause Да это же наше ``кодирование наоборот'' из лямбда-исчисления!
             \begin{minted}{haskell}
-                [e] #$\simeq$# Fix (Shape e) #$\simeq$# (forall a. a -> (e -> a -> a) -> a)
+                [e] #$\simeq$# Fix (LShape e) #$\simeq$# (forall a. a -> (e -> a -> a) -> a)
             \end{minted}
         \end{itemize}
     \end{frame}
