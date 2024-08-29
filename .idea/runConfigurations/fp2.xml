@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Notes" type="LATEX_RUN_CONFIGURATION" factoryName="LaTeX configuration factory">
+  <configuration default="false" name="fp2" type="LATEX_RUN_CONFIGURATION" factoryName="LaTeX configuration factory">
     <texify>
       <compiler>PDFLATEX</compiler>
       <compiler-path />
