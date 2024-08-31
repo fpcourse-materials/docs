@@ -92,7 +92,10 @@
 
 % Bibliography
 \usepackage{csquotes}
-
+% https://tex.stackexchange.com/questions/3802/how-to-get-doi-links-in-bibliography
+\usepackage{natbib}
+\bibliographystyle{unsrtnat}
+%\bibliographystyle{apalike}
 %\bibliography{bib}
 %\usepackage[backend=bibtex]{biblatex}
 %\addbibresource{bib.bib}
@@ -652,15 +655,27 @@
     Значит, если мы научимся писать интерпретаторы, мы научимся писать любые программы и решать любые задачи.
     И основные наши усилия будут направлены на изучение средств построения интерпретаторов встроенных языков.
 
+    % todo power of possibility makiing own language
+    % todo vocab
+
     \subsubsection{Интерпретаторы и семантика языков программирования}
 
-    Семантика языков программирования --- это наука о том, как формально изучать поведение программ при исполнении, и как собственно описать, что значат те или иные конструкции в языке.
+    Семантика языков программирования\footnote{\url{https://en.wikipedia.org/wiki/Semantics_(computer_science)}\label{note:sema-wiki}}\footnote{\url{https://www.cs.nmsu.edu/~jcook/posts/pl-semantics-of-pl/}} --- это наука, формально изучающая смысл программ --- поведение программ при исполнении\footnote{Различают статическую и динамическую семантики программы. Мы говорим про вторую.}, а так же способы его описания.
 
+    Существует множество стилей описания семантики языковых конструкций и программ\footref{note:sema-wiki}.
+    Так, операционная семантика задаёт смысл конструкций языка, в терминах некоторого более простого языка.
+    Обычно таким языком выступает некоторый математический формализм.
+    Звучит как интерпретация!
+    Только язык реализации интерпретатора~--- математика.
 
+    Мы также можем реализовывать интерпретатор на каком-нибудь реальном языке и он тоже будет задавать семантику определяемого языка.
+    Однако формальность такого определения будет зависеть от формальности описания семантики самого языка реализации интерпретатора~--- мета-языка.
+    Такие интерпретаторы называют ``определяющими'', они задают семантику языка, жертвуя эффективностью ради наглядности.
+    Взаимоотношения определяемого языка и мета-языка изучаются в классических статьях~\cite{reynolds1972definitional},\cite{reynolds1998definitional}.
 
-    \cite{reynolds1972definitional}
+    % todo denotational semantics
 
-
+    % todo link to Oleg's a case for semantics
 
     % todo domain theory и семантика вообще, базовые интерпретаторы
 
@@ -668,9 +683,7 @@
 
     \subsection{Инициальные интерпретаторы: с тегами и без}
 
-    % todo дефункционализация
-
-    % todo симуляция наличия higher-kinded типов
+    % todo meta-circular interpreter
 
     % todo crafting interpreters site
 
@@ -678,7 +691,13 @@
 
     \subsection{Реализация функций высших порядков}
 
+    % todo mention peter landin
+
     % todo дефункционализация
+
+    % todo симуляция наличия higher-kinded типов
+
+    % todo higher-order abstract syntax
 
     % todo
 
@@ -716,32 +735,32 @@
 
     \section{Дерайвинги и специализация}
 
-    \subsection{Template Haskell}
-
-    % todo порядок на коде для поддержания реификации
-
-    % todo
-
-    \subsection{Рефлексия и реификация}
-
-    % TODO
-
-    \subsection{Zig-generics}
-
-    % todo
-
-    \subsection{GHC.Generics}
-
-    % todo
-
-    \subsection{Uniplate}
-
-    % todo
-
-
-    \section{Оптика}
-
-    % todo
+%    \subsection{Template Haskell}
+%
+%    % todo порядок на коде для поддержания реификации
+%
+%    % todo
+%
+%    \subsection{Рефлексия и реификация}
+%
+%    % TODO
+%
+%    \subsection{Zig-generics}
+%
+%    % todo
+%
+%    \subsection{GHC.Generics}
+%
+%    % todo
+%
+%    \subsection{Uniplate}
+%
+%    % todo
+%
+%
+%    \section{Оптика}
+%
+%    % todo
 
 
     \section{Интерпретаторы зазеркалья} \label{sec:wonder-interpreters}
@@ -770,6 +789,8 @@
 
     % todo монады не композируются, но фримонады - композируются
 
+    % todo semantic domains have monad structure
+
     % todo
 
 
@@ -791,6 +812,7 @@
     % todo стратегии компиляции, связь с codata
     % todo эффекты высших порядков
     % todo full vs shallow embeddings
+    % todo abstracting definitional interpreters & github semantics
 
     % todo
 
@@ -809,9 +831,12 @@
 
     % todo
 
+    \section{Оптика}
+
+    % todo
 
 
-    \bibliographystyle{apalike}
+    \newpage
     \bibliography{bib}
 
 \end{document}
