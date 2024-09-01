@@ -76,6 +76,7 @@
 % Custom commands
 \newcommand{\vocab}[1]{\textbf{#1}} % new word for vocabulary
 \newcommand{\point}[1]{{\color{blue}\textit{#1}}} % point out something in text
+\newcommand{\sembr}[1]{\llbracket{#1}\rrbracket} % semantic brackets
 \newcommand{\comb}[1]{\mathbf{#1}}
 \newcommand{\step}{\rightsquigarrow}
 \newcommand{\term}[1]{\mathbf{#1}}
@@ -663,7 +664,7 @@
     Семантика языков программирования\footnote{\url{https://en.wikipedia.org/wiki/Semantics_(computer_science)}\label{note:sema-wiki}}\footnote{\url{https://www.cs.nmsu.edu/~jcook/posts/pl-semantics-of-pl/}} --- это наука, формально изучающая смысл программ --- поведение программ при исполнении\footnote{Различают статическую и динамическую семантики программы. Мы говорим про вторую.}, а так же способы его описания.
 
     Существует множество стилей описания семантики языковых конструкций и программ\footref{note:sema-wiki}.
-    Так, операционная семантика задаёт смысл конструкций языка, в терминах некоторого более простого языка.
+    Так, \vocab{операционная семантика} задаёт смысл конструкций языка, в терминах некоторого более простого языка.
     Обычно таким языком выступает некоторый математический формализм.
     Звучит как интерпретация!
     Только язык реализации интерпретатора~--- математика.
@@ -672,6 +673,20 @@
     Однако формальность такого определения будет зависеть от формальности описания семантики самого языка реализации интерпретатора~--- \vocab{мета-языка}.
     Такие интерпретаторы называют ``определяющими'', они задают семантику языка, жертвуя эффективностью ради наглядности.
     Взаимоотношения определяемого языка и мета-языка изучаются в классических статьях~\cite{reynolds1972definitional,reynolds1998definitional}\footnote{Активно используемое автором понятие продолжения будет рассмотрено далее в этом курсе (раздел \ref{sec:continuations}).}.
+    Мы будем использовать этот подход для задания семантики новых языков и в качестве мета-языка будем использовать Haskell.
+
+    Нас интересует ещё один стиль описания семантики.
+    \vocab{Денотационная семантика}\footnote{\url{https://en.wikipedia.org/wiki/Denotational_semantics}} описывает значение программ путём сопоставления им объектов некоторого множества, \vocab{семантического домена}, которое мы понимаем лучше.
+    Обычно домен --- это некоторый математический объект: множество функций, игры\ldots
+    Иначе говоря, денотационная семантика языка $L$ --- это функция из программы на этом языке в элемент домена $D$:
+    \[
+        \sembr{\bullet} : L \to D
+    \]
+
+    % todo  Dana S. Scott. Outline of a mathematical theory of computation. Technical Monograph PRG-2, Oxford University Computing Laboratory, Oxford, England, November 1970.
+    % todo Dana Scott and Christopher Strachey. Toward a mathematical semantics for computer languages Oxford Programming Research Group Technical Monograph. PRG-6. 1971.
+
+    % todo categorical semantics
 
     % todo denotational semantics
 
@@ -700,6 +715,9 @@
     % todo симуляция наличия higher-kinded типов
 
     % todo higher-order abstract syntax
+
+    % todo closure conversion closure conversion
+    \cite{reynolds1998definitional}
 
     % todo
 
@@ -732,10 +750,21 @@
 
     \section{Специальный полиморфизм}
 
+    % todo existential types, different vtable implementations
+    % todo scala type classes
+    % todo type inhabitation
+    % todo доклад SPJ
+
     % todo
 
 
     \section{Дерайвинги и специализация}
+
+    % todo streams and fusion
+    % todo CPS
+
+    % todo staged computations and modal types
+    % todo Haskell papers about fusion
 
 %    \subsection{Template Haskell}
 %
@@ -767,6 +796,8 @@
 
     \section{Интерпретаторы зазеркалья} \label{sec:wonder-interpreters}
 
+    % todo isomorphism proof
+
     % todo теоретические основы
 
     % todo church encoding
@@ -776,6 +807,8 @@
     % todo codata
 
     % todo fusion и дефорестация
+
+    % todo наверное после континуэйшенов
 
     % todo
 
@@ -806,6 +839,20 @@
 
     % todo delimited continuations
 
+    % todo sicp
+
+    % todo raynolds The Discoveries of Continuations
+
+    % todo correspondence to negation in intuitionistic logic?
+
+    % todo CPS correspond to double negation in logic reynolds1998definitional
+
+    % todo defuctionalized continuations, pepers from gibbons talk
+
+    % todo difference lists
+
+    \cite{reynolds1972definitional, reynolds1998definitional}
+
 
     \section{Хендлеры эффектов}
 
@@ -815,6 +862,7 @@
     % todo эффекты высших порядков
     % todo full vs shallow embeddings
     % todo abstracting definitional interpreters & github semantics
+    % todo fused effects and CPS
 
     % todo
 
