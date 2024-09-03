@@ -600,6 +600,9 @@
     Чтобы получить новый язык, мы строим программный интерпретатор.
     \vocab{Программный интерпретатор} $U_M^N$ --- это программа на языке $M$\footnote{Под языком мы тут понимаем множество программ на этом языке, иначе говоря, множество деревьев определённого вида.}, получающая на вход программу на языке $N$ и вход для неё --- данные из $D$, и возвращающая результат выполнения этой программы на этих данных: \[U_M^N : N\times D\to D\]
 
+    Про интерпретатор можно интуитивно думать следующим образом: это понятное мета-языку объяснение того, что значат конструкции определяемого языка.
+    Иными словами, какие инструкции мета-языка нужно исполнить, чтобы получить нужную семантику инструкций определяемого языка.
+
     Например, у нас есть программа $p_N$ и данные для неё $d_{in}$, результат исполнения этой программы $d_{out}$ можно получить как \[d_{out} = U_M^N\left( \underbrace{\langle p_N, d_{in} \rangle}_{\in N\times D} \right)\]
 
     Но интерпретатор это тоже программа.
@@ -638,6 +641,7 @@
     Как выглядит классический рекурсивный интерпретатор?
     Он получает программу в виде некоторого дерева и рекурсивно обходит его, считая результаты поддеревьев.
     Когда он посещает вершину дерева, он определяет её тип и понимает, какие действия нужно исполнить.
+    То есть тип вершины диспатчит, навигирует, исполнение интерпретатора на нужный код.
     Так, простой интерпретатор некоторого языка Лалаланг мог бы выглядеть примерно следующим образом:
     \begin{minted}{haskell}
         eval :: LaProgram -> Int
@@ -650,7 +654,7 @@
     Или на обработку запроса REST-сервера --- определяем ручку на которую пришел запрос, выполняем соответствующее действие.
     То есть не так редко мы в реальной жизни пишем интерпретаторы.
     Мы просто не видим, что то, что мы пишем --- это на самом деле интерпретатор некоторого языка.
-    В общем случае, свёртку некоторой структуры данных уже можно рассматривать как интерпретацию.
+    В общем случае, свёртку некоторой структуры данных уже можно рассматривать как интерпретацию некоторого языка.
 
     Более того, как мы убедимся в разделе~\ref{sec:wonder-interpreters}, написание любой функции --- это уже задание нового языка.
     Вот был язык, в котором нельзя было пользователя в приложение добавить.
@@ -674,7 +678,7 @@
 
     Мы также можем реализовывать интерпретатор на каком-нибудь реальном языке и он тоже будет задавать семантику определяемого языка.
     Однако формальность такого определения будет зависеть от формальности описания семантики самого языка реализации интерпретатора~--- \vocab{мета-языка}.
-    Такие интерпретаторы называют ``определяющими'', они задают семантику языка, жертвуя эффективностью ради наглядности.
+    Такие интерпретаторы называют ``\vocab{определяющими}'', они задают семантику языка, жертвуя эффективностью ради наглядности.
     Взаимоотношения определяемого языка и мета-языка изучаются в классических статьях~\cite{reynolds1972definitional,reynolds1998definitional}\footnote{Активно используемое автором понятие продолжения будет рассмотрено далее в этом курсе (раздел \ref{sec:continuations}).}.
     Мы будем использовать этот подход для задания семантики новых языков и в качестве мета-языка будем использовать Haskell.
 
@@ -694,9 +698,19 @@
     И интерпретировать программу не в множество функций между натуральными числами, а, скажем, в множество значений функционального типа \mintinline{haskell}|Nat -> Nat| в языке Haskell\footnote{\url{https://okmij.org/ftp/Denotational.html}}\footnote{Любому интересующемуся языками программирования предлагается провести на сайте Олега Киселёва не один месяц жизни: \url{https://okmij.org/ftp/README.html}.}.
 
     Для задания самой функции $\sembr{\bullet}$ тоже можно использовать Haskell\footref{note:sema-cook}, это будет определяющий интерпретатор этого языка, отправляющий синтаксическое дерево программы в семантический домен, заданный типом языка Haskell.
-    Например: \mintinline{haskell}|eval :: Prog -> Nat -> Nat|.
+    Например:
+    \begin{minted}{haskell}
+        eval :: Prog -> Nat -> Nat
+    \end{minted}
 
     \subsection{Инициальные интерпретаторы}
+
+    Итак, мы определили, что интерпретаторы --- это основа основ, потому что главная задача программиста --- борьба со сложностью, а главный инструмент этой борьбы --- использование подходящих доменно-специфичных языков, позволяющих думать только о важном, абстрагируя несущественные детали.
+
+    В течение этого курса мы будем учиться писать интерпретаторы.
+    В этом разделе --- классические, которые принимают деревья на вход и интерпретируют их в семантический домен.
+    Далее мы научимся миновать этап построения дерева определяемого языка, напрямую расширяя мета-язык новыми конструкциями (раздел~\ref{sec:wonder-interpreters}).
+    И наконец, постараемся приблизиться к священного Граалю этой науки~--- расширяемым интерпретаторам (раздел~\ref{sec:effect-handlers}).
 
     % todo нормальное объяснение, откуда тут слово инициальный
 
@@ -717,25 +731,58 @@
           ...
     \end{minted}
 
-    Свойства мета-языка в таком случае во многом определяют свойства объектного\cite{reynolds1972definitional,reynolds1998definitional}.
-    Мы будем в этом курсе стремиться как можно более переиспользовать возможности мета-языка, при этом добавляя новые конструкции.
+    Свойства мета-языка в таком случае во многом определяют свойства объектного~\cite{reynolds1972definitional,reynolds1998definitional}.
+    Мы будем в этом курсе стремиться как можно более переиспользовать возможности мета-языка.
 
     \subsubsection{Untyped tagless interpreters}
 
     Рассмотрим некоторый нетипизированный язык.
-    Его синтаксис зададим следующим образом:
+    Под нетипизированностью понимаем отсутствие проверки типов как до исполнения программы, так и во время.
+    Абстрактный синтаксис этого языка зададим следующим образом:
     \begin{minted}{haskell}
         data Term = Const Int | IsZero Term | If Term Term Term
     \end{minted}
 
+    Значения, возникающие во время исполнения программ на этом языке будем представлять значениями типов \mintinline{haskell}|Bool| и \mintinline{haskell}|Int| языка Haskell\footnote{На самом деле эти значения сами по себе в Haskell несут типовую информацию в runtime, но пока опустим эту деталь для простоты.}.
+    Соответственно, семантическим доменом программы на этом языке является либо \mintinline{haskell}|Bool|, либо \mintinline{haskell}|Int|, в зависимости от самой программы.
+    \begin{minted}{haskell}
+        interpretUnsafe :: forall res . Term -> res
+        interpretUnsafe term = case term of
+          Const val -> unsafeCoerce val
+          IsZero cond -> unsafeCoerce $ interpretUnsafe @Int cond == 0
+          If c t e -> if interpretUnsafe c then interpretUnsafe t else interpretUnsafe e
+    \end{minted}
+
+    Здесь \texttt{unsafeCoerce} используется, чтобы обмануть статическую систему типов Haskell, чтобы исполнять программы на нашем нетипизированном языке.
+    Неверное написание программы на этом языке или выбор неправильного домена интерпретации приводят к падению программы.
+
+    \subsubsection{Typed tagged interpreters}
+
+    Чтобы добиться некоторой безопасности исполнения, будем приписывать значениям некоторые теги, которые будут доступны во время исполнения.
+    Заведём следующий алгебраический тип:
+    \begin{minted}{haskell}
+        data RtValue = RtBool Bool | RtInt Int
+    \end{minted}
+
+    Теперь семантическим доменов у нас будет тип \mintinline{haskell}|RtValue|, а интерпретатор сможет проверять типы во время исполнения:
+    \begin{minted}{haskell}
+        interpretRt :: Term -> RtValue
+        interpretRt (IsZero term) = case eval term of
+          RtBool value -> error "Type error"
+          RtInt value -> value == 0
+        -- ...
+    \end{minted}
+
+    Ситуация с безопасностью программы определённо стала лучше, однако проверка типов во время исполнения~--- это уже поздно: требует дополнительных расходов производительности и удорожает тестирование.
+
+    \subsubsection{Equality constraints, GADTs}
 
 
 
+    % todo equality constraints paper
+    % todo GADTs paper
 
-
-
-
-    % todo meta-circular interpreter
+    \subsubsection{Typed tagless initial interpreters}
 
     % todo crafting interpreters site
 
@@ -755,6 +802,8 @@
 
     % todo closure conversion closure conversion
     \cite{reynolds1998definitional}
+
+    % todo Higher-Order Type-Level Programming in Haskell
 
     % todo
 
@@ -789,21 +838,28 @@
 
     % todo existential types, different vtable implementations
     % todo scala type classes
-    % todo type inhabitation
+    % todo type inhabitation, system FC, Symon's talk
     % todo доклад SPJ
     % todo open unions, data a la carte
     % todo roles and coertions
+    % todo typeable & reflection
+    % todo reflecrtion https://www.tweag.io/blog/2017-12-21-reflection-tutorial/
+    % todo How to make ad-hoc polymorphism less ad-hoc
 
     % todo
 
 
     \section{Дерайвинги и специализация}
 
+    % todo specilization, deforestation, metaprogramming
+
     % todo streams and fusion
     % todo CPS
 
     % todo staged computations and modal types
     % todo Haskell papers about fusion
+
+    % todo fist class specialization to beat type families
 
 %    \subsection{Template Haskell}
 %
@@ -843,7 +899,8 @@
 
     % todo Tagless-final интерпретаторы
 
-    % todo codata
+    % todo codata, pattern-matching
+    % todo custom patterns
 
     % todo fusion и дефорестация
 
@@ -895,7 +952,7 @@
     \cite{reynolds1972definitional, reynolds1998definitional}
 
 
-    \section{Хендлеры эффектов}
+    \section{Хендлеры эффектов} \label{sec:effect-handlers}
 
     % todo алгебраические эффекты
     % todo связь с delimited continuations
@@ -927,12 +984,17 @@
 
     % todo http://www.timphilipwilliams.com/posts/2019-07-25-minecraft.html
 
+    % todo profunctor optics
+    % todo van laarhoven CPS optics
+
     % todo
 
 
     % todo куда-нибудь запихнуть algebra driven design, quick check и доклад про проперти-тесты
     % todo expression problem somewhere
-    % todo где-то должно быть содержание книжки про типы Sandy Maguire
+    % todo где-то должно быть содержание книжки про типы Sandy Maguire, data femilies
+    % todo Perhaps Not The Answer You Were Expecting But You Asked For It
+    % todo link to SICP
 
 
     \newpage
