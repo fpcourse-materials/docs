@@ -841,6 +841,13 @@
         id @Int :: Int -> Int
     \end{minted}
 
+    % todo higher-rank polymorphism
+    % todo impredicative applications
+    % todo first-class polymorphism
+    % todo quick lookup
+    % todo bidirectional typing
+    % todo алгоритмы вывода для first-class polymorphism
+
     \subsection{Реализация параметрического полиморфизма}
 
     \vocab{Конвенция вызова}\footnote{\url{https://en.wikipedia.org/wiki/Calling_convention}} представляет собой набор соглашений между тем, как функция компилируется и как должна вызываться.
@@ -855,9 +862,9 @@
     Таким образом, реализация параметрического полиморфизма в языке --- это не тривиальная задача.
     Разные языки используют различные подходы, все со своими достоинствами и недостатками.
 
-    \subsubsection{Инстанциация}
+    \subsubsection{Инстанциация (мономорфизация)}
 
-    \vocab{Инстанциирование} --- самый прямолинейный подход, компилируем функцию отдельно для каждого набора типовых аргументов.
+    \vocab{Инстанциирование (мономорфизация)} --- самый прямолинейный подход, компилируем функцию отдельно для каждого набора типовых аргументов.
     Так, если различных наборов типовых аргументов, с которыми эта функция вызывается, например, 100 (что запросто может быть), то её код будет компилироваться сто раз и занимать в бинарнике в сто раз больше места.
     Так делают, например, C++ и Rust.
 
@@ -880,33 +887,40 @@
 
     \subsubsection{Стирание типа}
 
+    Можно всё сделать наоборот, унифицировав значения, которые приходят на вход полиморфным функциям, вместо того, чтобы компилировать код под каждый тип.
+
+    Пусть каждое значение будет аллоцировано в куче и передаваться по указателю.
+    Тогда мы сможем переиспользовать один и тот же код для разных типовых аргументов, но просто будет ожидать указатели.
+
+    \begin{itemize}
+        \item[\positive] Каждая функция компилируется ровно один раз --- быстро
+        \item[\positive] Можно динамически загружать новые полиморфные функции и типы и использовать их друг с другом
+        \item[\negative] Аллокация в куче и разыменование указателя может очень сильно замедлить код, особенно работающий с ``примитивными типами''
+    \end{itemize}
+
+    Такого подхода придерживаются Java и, по умолчанию Haskell.
+    Конечно, компиляторы стараются оптимизировать накладные расходы на боксинг путём инстанциации.
+
+    \subsubsection{}
+
+    \subsubsection{Гибридные подходы}
+
+
+
     % todo
 
-    \subsubsection{Гибридный подход}
 
-    % todo
+    \subsection{Higher-kinded polymorphism}
 
-
-
-
-    % todo алгоритмы вывода для first-class polymorphism
-
-    % todo
-    % todo kind polymorphism
     % todo эмуляция higher-kinded plymorphism через дефункционализацию
-
-    \subsection{Полиморфизм высшего ранга}
 
     % TODO
 
-    \subsection{Реализация параметрического полиморфизма}
-
-    % todo
-
-    \subsection{Полиморфизм по runtime-представлению}
+    \subsection{Полиморфизм по конвенции вызова (levity polymorphism)}
 
     %todo
 
+    % todo nim
     % todo first-class polymorphism & quick look & impredicativity
 
 
@@ -922,14 +936,15 @@
     % todo reflecrtion https://www.tweag.io/blog/2017-12-21-reflection-tutorial/
     % todo How to make ad-hoc polymorphism less ad-hoc
 
-
-
     % todo
 
 
     \section{Метапрограммирование и специализация}
 
     % todo specilization, deforestation, metaprogramming
+    % todo staged programming
+    % todo modal types for staged programming
+    % todo type roles
 
     % todo streams and fusion
     % todo CPS
@@ -969,6 +984,31 @@
 %    % todo
 
 
+    \section{Продолжения (continuations)} \label{sec:continuations}
+
+    % todo
+
+    % todo связь с монадами
+
+    % todo монада Cont
+
+    % todo delimited continuations
+
+    % todo sicp
+
+    % todo raynolds The Discoveries of Continuations
+
+    % todo correspondence to negation in intuitionistic logic?
+
+    % todo CPS correspond to double negation in logic reynolds1998definitional
+
+    % todo defuctionalized continuations, pepers from gibbons talk
+
+    % todo difference lists
+
+    \cite{reynolds1972definitional, reynolds1998definitional}
+
+
     \section{Интерпретаторы зазеркалья} \label{sec:wonder-interpreters}
 
     % todo isomorphism proof
@@ -1005,31 +1045,6 @@
     % todo https://github.com/lampepfl/monadic-reflection/blob/main/TUTORIAL.md
 
     % todo
-
-
-    \section{Продолжения (continuations)} \label{sec:continuations}
-
-    % todo
-
-    % todo связь с монадами
-
-    % todo монада Cont
-
-    % todo delimited continuations
-
-    % todo sicp
-
-    % todo raynolds The Discoveries of Continuations
-
-    % todo correspondence to negation in intuitionistic logic?
-
-    % todo CPS correspond to double negation in logic reynolds1998definitional
-
-    % todo defuctionalized continuations, pepers from gibbons talk
-
-    % todo difference lists
-
-    \cite{reynolds1972definitional, reynolds1998definitional}
 
 
     \section{Хендлеры эффектов} \label{sec:effect-handlers}
