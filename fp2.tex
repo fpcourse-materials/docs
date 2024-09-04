@@ -865,8 +865,6 @@
     Таким образом, реализация параметрического полиморфизма в языке --- это не тривиальная задача.
     Разные языки используют различные подходы, все со своими достоинствами и недостатками.
 
-    % todo виды значений
-
     \subsubsection{Инстанциация (мономорфизация)}
 
     \vocab{Инстанциирование (мономорфизация)} --- самый прямолинейный подход, компилируем функцию отдельно для каждого набора типовых аргументов.
@@ -914,6 +912,8 @@
 
     Haskell также поддерживает value-типы (unboxed) и написание функций, полиморфных по конвенции вызова.
     См.~\ref{subsec:levity-polymorphism}.
+
+    % todo мономорфизация в хаскеле и полиморфная рекурсия
 
     \subsubsection{Гибридный подход}
     
@@ -1002,7 +1002,7 @@
 
     И наконец мы можем писать функции над произвольными монадами:
     \begin{minted}{haskell}
-        fun <M> Monad<M>.doMonad(x: Apply<M, Int>): Apply<M, Int> =
+        fun <M> Monad<M>.test(x: Apply<M, Int>): Apply<M, Int> =
             x bind { pure(it + 1) } bind { pure(it + 2) }
     \end{minted}
 
@@ -1018,6 +1018,8 @@
     А если код не полагается на конкретную конвенцию вызова, его можно по ней абстрагировать, и писать один код для boxed и unboxed значений~\cite{eisenberg2017levity}.
 
 
+
+    % todo data kinds
 
     %todo
 
@@ -1036,6 +1038,10 @@
     % todo typeable & reflection
     % todo reflecrtion https://www.tweag.io/blog/2017-12-21-reflection-tutorial/
     % todo How to make ad-hoc polymorphism less ad-hoc
+
+    % todo C. V. Hall, K. Hammond, S. L. Peyton Jones, and P. L. Wadler. Type classes in haskell
+
+    % todo S. Peyton Jones, S. Weirich, R. A. Eisenberg, and D. Vytiniotis. A reflection on types. In A list of successes that can change the world,
 
     % todo
 
@@ -1104,7 +1110,11 @@
 
     % todo difference lists
 
-    \cite{reynolds1972definitional, reynolds1998definitional}
+    % todo he Essence of Cornpiling with Continuations
+
+    \cite{reynolds1972definitional, reynolds1998definitional, defunctionalization-slides}
+
+    % todo jeremy gibbons papers, review the talk
 
 
     \section{Интерпретаторы зазеркалья} \label{sec:wonder-interpreters}
@@ -1188,7 +1198,7 @@
 
     % todo куда-нибудь запихнуть algebra driven design, quick check и доклад про проперти-тесты
     % todo expression problem somewhere
-    % todo где-то должно быть содержание книжки про типы Sandy Maguire, data femilies
+    % todo где-то должно быть содержание книжки про типы Sandy Maguire, data families
     % todo Perhaps Not The Answer You Were Expecting But You Asked For It
     % todo link to SICP
 
@@ -1198,7 +1208,7 @@
 
     % todo зависимые типы в Haskell
 
-    % todo где-то нужно про систему кайндов, константы, полиморфизм...
+    % todo где-то нужно про систему кайндов, константы, полиморфизм... Походу Haskell types 101.
 
 
     \newpage
