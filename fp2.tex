@@ -69,7 +69,7 @@
 % https://tex.stackexchange.com/questions/99475/how-to-invoke-latex-with-the-shell-escape-flag-in-texstudio-former-texmakerx
 % Colored, requires --shell-escape compiling option
 \usepackage{minted}
-\setminted{xleftmargin=\parindent, autogobble, escapeinside=\#\#}
+\setminted{xleftmargin=\parindent, autogobble, escapeinside=??}
 \usepackage{listings}
 % ------------------------------------------------
 
@@ -1002,8 +1002,10 @@
 
     И наконец мы можем писать функции над произвольными монадами:
     \begin{minted}{haskell}
-        fun <M> Monad<M>.test(x: Apply<M, Int>): Apply<M, Int> =
+        fun <M> Monad<M>.go(x: Apply<M, Int>): Apply<M, Int> =
             x bind { pure(it + 1) } bind { pure(it + 2) }
+
+        fun test(xs: List<Int>): List<Int> = ListMonad.go(xs.to()).from()
     \end{minted}
 
     Не лишним будет отметить, что результирующий код выглядит несколько чудовищно.
@@ -1012,11 +1014,29 @@
 
     \subsection{Полиморфизм по конвенции вызова (levity polymorphism)} \label{subsec:levity-polymorphism}
 
-    Как мы уже обсуждали выше~\ref{subsubsec:type-erasure}, параметрический полиморфизм в Haskell реализуется следующим образом: все значения хранятся в куче и передаются в полиморфные функции по ссылке.
+    Как мы уже обсуждали выше~\ref{subsubsec:type-erasure}, параметрический полиморфизм в Haskell реализуется следующим образом: все значения хранятся в куче и передаются в полиморфные функции по указателю.
     Однако, если для вычислительного кода важна производительность, такой подход не годится ввиду большой нагрузки на подсистему управления памятью и множества индирекций.
     Поэтому Haskell позволяет также писать код с использованием unboxed значений.
     А если код не полагается на конкретную конвенцию вызова, его можно по ней абстрагировать, и писать один код для boxed и unboxed значений~\cite{eisenberg2017levity}.
 
+    \begin{figure}[h]
+        \centering
+        \includegraphics[width=0.5\textwidth]{/home/yukio/Diary/projs/fpcourse/fp-2024/docs/figs/haskell-value-kinds}
+        \caption{Виды значений в Haskell с примерами~\cite{eisenberg2017levity}.}
+        \label{fig:haskell-value-kinds}
+    \end{figure}
+
+    На рисунке~\ref{fig:haskell-value-kinds} можно увидеть классификацию значений в Haskell с примерами типов.
+    \vocab{Unboxed типы} --- их значения удерживаются и передаются по значению.
+    \vocab{Boxed}, соответственно, наоборот, передаются по указателю и хранятся в куче.
+    Обычный \mintinline{haskell}|Int| является просто декларацией следующего вида, где \mintinline{haskell}|I#| --- это обычный конструктор, содержащий unboxed значение.
+    \begin{minted}{haskell}
+        data Int = I# Int#
+    \end{minted}
+
+    % todo levity
+
+    \# в именах типов и функций --- это конвенция, показывающая, что где-то рядом происходит работа с unlifted значениями\footnote{Нужно подключить расширение MagicHash, чтобы пользоваться \# в идентификаторах.}.
 
 
     % todo data kinds
