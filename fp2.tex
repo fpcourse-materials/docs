@@ -692,7 +692,7 @@
 
     Нас интересует ещё один стиль описания семантики.
     \vocab{Денотационная семантика}\footnote{\url{https://en.wikipedia.org/wiki/Denotational_semantics}} описывает значение программ путём сопоставления им объектов некоторого множества, \vocab{семантического домена}, которое мы понимаем лучше.
-    Обычно домен --- это некоторый математический объект: множество функций из входа в выход, игры между термом и контекстом исполнения\ldots % todo link to game semantics
+    Обычно домен --- это некоторый математический объект: множество функций из входа в выход, игры между термом и контекстом исполнения\footnote{\url{https://en.wikipedia.org/wiki/Game_semantics}}\ldots
     Иначе говоря, денотационная семантика языка $L$ --- это функция из программы на этом языке в элемент домена $D$:
     \[
         \sembr{\bullet} : L \to D
@@ -725,12 +725,8 @@
     Слово ``инициальный'' тут относится к теор-категорной концепции инициальных алгебр, которая используется для кодирования рекурсивный структур данных в теории категорий.
     Всё что нам нужно понимать, --- что инициальные интерпретаторы работают с деревом программы, заданным классически с помощью \mintinline{haskell}|data| (да, деревья можно задавать и по-другому).
 
-    % todo mb meta-circular move somewhere
-    % todo link to meta-circular origins
-    % todo синхронизировать с объяснением eDSL'ей
-
     Введём также ещё одно важное понятие.
-    \vocab{Meta-circular} интерпретатор~--- это интерпретатор, определяющий конструкции определяемого языка через конструкции мета-языка.
+    \vocab{Meta-circular интерпретатор}\footnote{\url{https://en.wikipedia.org/wiki/Meta-circular_evaluator}}~--- это интерпретатор, определяющий конструкции определяемого языка через конструкции мета-языка~\cite{reynolds1972definitional}.
     Например:
     \begin{minted}{haskell}
         interpret term = case term of
@@ -744,7 +740,7 @@
 
     \subsubsection{Untyped tagless interpreters}
 
-    Рассмотрим некоторый нетипизированный язык.
+    Для начала рассмотрим некоторый тривиальный нетипизироватный язык.
     Под нетипизированностью понимаем отсутствие проверки типов как до исполнения программы, так и во время.
     Абстрактный синтаксис этого языка зададим следующим образом:
     \begin{minted}{haskell}
@@ -761,7 +757,7 @@
           If c t e -> if interpretUnsafe c then interpretUnsafe t else interpretUnsafe e
     \end{minted}
 
-    Здесь \texttt{unsafeCoerce} используется, чтобы обмануть статическую систему типов Haskell, чтобы исполнять программы на нашем нетипизированном языке.
+    Здесь \texttt{unsafeCoerce} используется, чтобы обмануть статическую систему типов Haskell и просто исполнять программы на нашем нетипизированном языке.
     Неверное написание программы на этом языке или выбор неправильного домена интерпретации приводят к падению программы.
 
     \subsubsection{Typed tagged interpreters}
@@ -783,8 +779,13 @@
 
     Ситуация с безопасностью программы определённо стала лучше, однако проверка типов во время исполнения~--- это уже поздно: требует дополнительных расходов производительности и удорожает тестирование.
 
+    Этот подход часто называют динамической типизацей, когда мы атрибутируем значения некоторой типовой информацией для использования во время исполнения.
+
     \subsubsection{Equality constraints, GADTs}
 
+    % todo gadts syntax
+
+    \cite{sulzmann2007system}
 
 
     % todo equality constraints paper
@@ -817,6 +818,8 @@
     % todo 700 PLs
 
     % todo links in defunctionalization slides
+
+    % todo higher-order abstract syntax
 
     % todo
 
@@ -916,7 +919,7 @@
     % todo мономорфизация в хаскеле и полиморфная рекурсия
 
     \subsubsection{Гибридный подход}
-    
+
     С\# реализует гибридный подход\footnote{\href{https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/generics/generics-in-the-run-time}{Generics in the runtime (C\# programming guide).}}.
     Они различают значения, хранимые в куче --- \vocab{reference types}, и значения, хранимые на стеке --- \vocab{value types}.
     Для первых они генерируют одну специализацию, работающую с указателями.
@@ -929,7 +932,7 @@
         \item[\positive] Доступна рефлексия по дженерикам
         \item[\positive] Небольшое время компиляции
         \item[\negative] Инстанциация в рантайме замедляет исполнение
-        % todo слышал от михаила, что в шарпах какие-то дорогие структуры в рантайме используются чтобы проверять подтипизацию. Или это в контексте варианса было?
+            % todo слышал от михаила, что в шарпах какие-то дорогие структуры в рантайме используются чтобы проверять подтипизацию. Или это в контексте варианса было?
     \end{itemize}
 
     \subsubsection{Использование виртуальной таблицы свойств типов}
@@ -1008,6 +1011,8 @@
         fun test(xs: List<Int>): List<Int> = ListMonad.go(xs.to()).from()
     \end{minted}
 
+    % todo можно без Any обойтись
+
     Не лишним будет отметить, что результирующий код выглядит несколько чудовищно.
     Скорее всего, использование этой техники не окупает себя и нужно выбирать другой стиль программирования.
     Однако иметь этот инструмент в ящике не будет лишним.
@@ -1051,6 +1056,10 @@
 
     \section{Специальный полиморфизм} \label{sec:ad-hoc}
 
+    % todo constraints and decidability
+
+    % todo https://chrisdone.com/posts/haskell-constraint-trick/
+
     % todo existential types, different vtable implementations, value types support
     % todo scala type classes
     % todo type inhabitation, system FC, Symon's talk
@@ -1065,7 +1074,10 @@
 
     % todo S. Peyton Jones, S. Weirich, R. A. Eisenberg, and D. Vytiniotis. A reflection on types. In A list of successes that can change the world,
 
+    % todo functional dependencies & associated types
+
     % todo
+
 
     \section{Продолжения (continuations)} \label{sec:continuations}
 
@@ -1096,7 +1108,31 @@
     % todo jeremy gibbons papers, review the talk
 
 
+    \section{Интерпретаторы зазеркалья} \label{sec:wonder-interpreters}
+
+    % todo isomorphism proof
+
+    % todo теоретические основы
+
+    % todo church encoding
+
+    % todo Tagless-final интерпретаторы
+
+    % todo codata, pattern-matching
+    % todo custom patterns
+
+    % todo fusion и дефорестация
+    % todo Oleg about fusion and streams
+    % todo fused effects
+
+    % todo наверное после континуэйшенов
+
+    % todo
+
+
     \section{Метапрограммирование и специализация}
+
+    % todo split intro several topics
 
     % todo specilization, deforestation, metaprogramming
     % todo staged programming
@@ -1115,6 +1151,8 @@
     % todo SOP & variadics
 
     % todo ghc inlining paper
+
+    % todo https://ora.ox.ac.uk/objects/uuid:cd041aa0-8d69-4f18-bce2-6d75244b69b9/files/m7fd9779b27fcb70ae734e66bcd3ee79f
 
 %    \subsection{Template Haskell}
 %
@@ -1137,26 +1175,6 @@
 %    \subsection{Uniplate}
 %
 %    % todo
-
-
-    \section{Интерпретаторы зазеркалья} \label{sec:wonder-interpreters}
-
-    % todo isomorphism proof
-
-    % todo теоретические основы
-
-    % todo church encoding
-
-    % todo Tagless-final интерпретаторы
-
-    % todo codata, pattern-matching
-    % todo custom patterns
-
-    % todo fusion и дефорестация
-
-    % todo наверное после континуэйшенов
-
-    % todo
 
 
     \section{Дополнительные главы монад}
@@ -1189,6 +1207,10 @@
     % todo full vs shallow embeddings
     % todo abstracting definitional interpreters & github semantics
     % todo fused effects and CPS
+
+    % todo expression problem
+
+    % todo compare open type families & extensible interpreters
 
     % todo
 
@@ -1233,6 +1255,13 @@
     % todo где-то нужно про систему кайндов, константы, полиморфизм... Походу Haskell types 101.
 
     % todo рассовать упражнений по конспекту
+
+
+    \begin{center}
+        \vspace{2em}
+        \textit{\LARGE To be continued...}
+        \vspace{2em}
+    \end{center}
 
 
     \newpage
