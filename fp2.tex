@@ -781,21 +781,83 @@
 
     Этот подход часто называют динамической типизацей, когда мы атрибутируем значения некоторой типовой информацией для использования во время исполнения.
 
-    \subsubsection{Equality constraints, GADTs}
+    \subsubsection{Equality coercions, GADTs}
 
-    % todo gadts syntax
+    Как мы знаем, конструкторы данных в Haskell --- это обычные функции с той лишь разницей, что их реализация генерируется компилятором (аллокация памяти, размещение полей\ldots).
+    У функций есть сигнатура.
+    Например, \mintinline{haskell}|IsZero :: Term -> Term|.
 
-    \cite{sulzmann2007system}
+    В Haskell есть синтаксис определения \mintinline{haskell}|data| через задание типов конструкторов.
+    Он совершенно аналогичен рассмотренному ранее, только гораздо более удобен для сложно организованных структур данных.
+    Рассмотренный ранее тип термов \mintinline{haskell}|Term| будет выглядеть следующим образом:
+    \begin{minted}{haskell}
+        data Term where
+          Const :: Int -> Term
+          IsZero :: Term -> Term
+          If :: Term -> Term -> Term -> Term
+    \end{minted}
 
+    Современный Haskell является синтаксически богатым языком, который, однако, несмотря не многообразие конструкций, транслируется в маленький типизированный внутренний язык.
+    Это язык $System~F_C$, основанный на $System~F$.
+    Он описан в работе~\cite{sulzmann2007system}.
 
-    % todo equality constraints paper
-    % todo GADTs paper
+    $System~F_C$ расширяет $System~F$ наличием сложных несинтаксических эквивалентностей типов.
+    Оказывается, этого достаточно, чтобы поддержать такие возможности Haskell как обобщённые алгебраические типы, ассоциированные семейства типов, функциональные зависимости\ldots
+
+    Синтаксический сахар для типовых эквивалентностей выглядит следующим образом:
+    \begin{minted}{haskell}
+        f :: forall a b . a ?$\sim$? b => a -> b
+        f = id
+    \end{minted}
+    На самом деле это функция от четырёх параметров: двух типовых параметров, коерции, аргумента.
+    Коерция --- это тип, автоматически выводимый компилятором, который является свидетельством того, что два типа, записанный в кайнде этого типа, эквивалентны.
+    \begin{minted}{haskell}
+        f :: forall (a :: *) (b :: *) . forall (co :: a ?$\sim$? b) . a -> b
+    \end{minted}
+
+    Воспользуемся типовой эквивалентностью следующим образом.
+    Добавим типу термов фантомный типовой параметр, который будет маркировать тип результата терма.
+    \begin{minted}{haskell}
+        data Term (ty :: Type) where
+          Const :: forall ty . ty ?$\sim$? Int => Int -> Term ty
+          IsZero :: forall ty . ty ?$\sim$? Bool => Term Int -> Term ty
+          If :: forall ty . Term Bool -> Term ty -> Term ty -> Term ty
+    \end{minted}
+    Или можно воспользоваться синтаксическим сахаром, который и называется \vocab{обобщёнными алгебраическими типами данных}, чтобы скрыть явные эквивалентности:
+    \begin{minted}{haskell}
+        data Term (ty :: Type) where
+          Const :: Int -> Term Int
+          IsZero :: Term Int -> Term Bool
+          If :: Term Bool -> Term ty -> Term ty -> Term ty
+    \end{minted}
+
+    Теперь мы можем написать безопасный типизированный интерпретатор.
+    Обратите внимание, что при сопоставлении с образцами конструкторов, в скоуп попадают и коерции, которые использовались при применении соответствующих конструкторов.
+    \begin{minted}{haskell}
+        interpret :: Term ty -> ty
+        interpret = \case
+          Const x  -> x              -- ty ?$\sim$? Int
+          IsZero t -> interpret == 0 -- ty ?$\sim$? Bool
+          If c t e -> if interpret c then interpret t else interpret e
+    \end{minted}
 
     \subsubsection{Typed tagless initial interpreters}
 
-    % todo crafting interpreters site
+    Опишем систему типов нашего маленького языка.
+    %! suppress = EscapeAmpersand
+    \begin{equation*}{}
+        \infer[Const]{Const~n : int}{n : Int}
+        \quad
+        \infer[IsZero]{IsZero~n : bool}{n : int}
+        \quad
+        \infer[If]{If~c~t~e : \alpha}{c : bool & t : \alpha & e : \alpha}
+    \end{equation*}
+    Можем в качестве типовых тегов переиспользовать типы Haskell: \[int \rightsquigarrow Int, bool \rightsquigarrow Bool, \alpha \rightsquigarrow \alpha\]
 
-    % todo
+    Заметим, что с помощью обобщённого алгебраического типа данных \mintinline{haskell}|Term ty| выше, мы как раз закодировали эти правила вывода.
+    Иначе говоря, мы получили типизированный язык программирования, переиспользовав систему типов Haskell.
+
+    Таким образом, мы бесплатно получили статически типизированный язык, не нуждающийся в типовых тегах времени исполнения (отсюда слово tagless).
 
     \subsection{Реализация функций высших порядков}
 
@@ -1043,6 +1105,7 @@
 
     \# в именах типов и функций --- это конвенция, показывающая, что где-то рядом происходит работа с unlifted значениями\footnote{Нужно подключить расширение MagicHash, чтобы пользоваться \# в идентификаторах.}.
 
+    % todo \chapter*{Valhalla - Where Are We?}
 
     % todo data femilies for representation polymorphism
 
