@@ -87,6 +87,7 @@
 \newcommand{\subst}[3]{\left[#2 \mapsto #3 \right] #1}
 \newcommand{\eqbeta}{=_\beta}
 \newcommand{\eqeta}{=_\eta}
+\newtheorem{task}{Упражнение}
 % ------------------------------------------------
 
 % Head
@@ -377,6 +378,21 @@
           | otherwise = n * factorial (n - 1)
     \end{minted}
 
+    \begin{task}
+        Что выведет запрос \mintinline{haskell}|ghci> :t uncurry (flip const)|?
+    \end{task}
+
+    \begin{task}
+        Что выведет запрос \mintinline{haskell}|ghci> :t first . first| при
+        \begin{minted}{haskell}
+            first :: (a -> a') -> (a, b) -> (a', b)
+        \end{minted}
+    \end{task}
+
+    \begin{task}
+        Реализуйте факториал с помощью техники аккумулирующего параметра.
+    \end{task}
+
     \subsection{Данные в Haskell}
 
     В Haskell есть встроенная возможность объявлять свои типы данных, а так же создавать их экземпляры.
@@ -472,6 +488,13 @@
         newtype ModuleId = ModuleId Int64
     \end{minted}
 
+    \begin{task}
+        Определите кайнд конструктора типа
+        \begin{minted}{haskell}
+            data Free f a = Pure a | Free (f (Free f a))
+        \end{minted}
+    \end{task}
+
     \subsection{Классы типов в Haskell}
 
     Рассмотренные ранее полиморфные функции ничего не могли делать со своими аргументами, кроме как возвращать их в качестве результата или передавать в другие полиморфные функции.
@@ -500,6 +523,14 @@
           [] == [] = True
           x:xs == y:ys = x == y && xs == ys
     \end{minted}
+
+    \begin{task}
+        Реализуйте инстанс полугруппы для функций.
+    \end{task}
+
+    \begin{task}
+        Реализуйте проверку равенства функций.
+    \end{task}
 
     \subsection{Монады в Haskell}
 
@@ -589,6 +620,18 @@
           y <- get
           pure (x + y)
     \end{minted}
+
+    \begin{task}
+        Реализуйте \mintinline{haskell}|liftA3| через \mintinline{haskell}|liftA2|.
+    \end{task}
+
+    \begin{task}
+        Реализуйте \mintinline{haskell}|>>=| через \mintinline{haskell}|join| и наоборот.
+    \end{task}
+
+    \begin{task}
+        Два числа с “консоли”, поделите одно на другое нацело и распечатайте результат, если остаток не нулевой, распечатайте его тоже.
+    \end{task}
 
 
     \section{Классические интерпретаторы}
