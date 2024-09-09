@@ -1,3 +1,4 @@
+%! suppress = MissingImport
 %! suppress = MissingLabel
 %! suppress = LineBreak
 
@@ -31,7 +32,7 @@
 
     \sectionplan{Метаинформация о курсе}
 
-    \begin{frame}{Отчётность} % TODO
+    \begin{frame}{Отчётность}
         \begin{itemize}
             \item Оценка за курс --- оценка за экзамен (успеваемость по практике тоже учитывается)
             \item Допуск на экзамен --- зачёт по всем домашкам и летучкам, кроме, может быть, двух
@@ -350,7 +351,7 @@
             \item[\todo] $x \stackrel{?}{\eqt} x$ --- \pause синтаксическое равенство
             \item[\todo] $x \stackrel{?}{\eqt} y$ --- \pause нет
             \item[\todo] $\lambda x. ~ x \stackrel{?}{\eqt} \lambda y. ~ y$ --- \pause $\alpha$-эквивалентность
-            \item[\todo] $\lambda x. ~ x \stackrel{?}{\eqt} (\lambda y. ~ y) (\lambda x. ~ x)$ --- \pause $\beta$-эквивалентность
+            \item[\todo] $\lambda x. ~ x \stackrel{?}{\eqt} (\lambda y. ~ y) \ap (\lambda x. ~ x)$ --- \pause $\beta$-эквивалентность
             \item[\todo] $\lambda x ~ y. ~ x ~ y \stackrel{?}{\eqt} \lambda x. ~ x$ --- \pause $\eta$-эквивалентность
         \end{itemize}
     \end{frame}
@@ -671,8 +672,8 @@
         \pause
         \begin{block}{Элиминаторы}
             \begin{itemize}
-                \item $\term{fst} \termdef \pause \lambda c \ldotp c \ap \term{K}$
-                \item $\term{snd} \termdef \pause \lambda c \ldotp c \ap \term{K}^*$
+                \item $\term{fst} \termdef \pause \lambda p \ldotp p \ap \term{K}$
+                \item $\term{snd} \termdef \pause \lambda p \ldotp p \ap \term{K}^*$
             \end{itemize}
         \end{block}
     \end{frame}
@@ -1067,16 +1068,16 @@
             \item \href{https://youtu.be/oiUO1L4TOLI}{\color{blue} Функциональное программирование как предмет и метод теоретической информатики.}
             \item \href{https://youtu.be/YWelsG4mbik}{\color{blue} Podlodka \#279 --- Тьюринг-полнота | Виталий Брагилевский.}
             \item \href{https://elizarov.medium.com/immutability-we-can-afford-10c0dcb8351d}{\color{blue} Blogpost: Roman Elizarov: Immutability we can afford.}
-            \item \href{https://youtu.be/sWEtnq0ReZA?si=98-MR2DbAc_LFWV1}{\color{blue} Олег Нижников --- Современное ФП с Tagless Final}
+            \item \href{https://compscicenter.notion.site/compscicenter/b6dddf00bc7d497298179a3bdbdda375}{\color{blue}Памятка с полезностями от Computer Science Center}
         \end{itemize}
     \end{frame}
 
     \begin{frame}{Серьёзные материалы}
         \begin{itemize}
             \item \href{https://www.youtube.com/playlist?list=PL-_cKNuVAYAVX_q9XOKoFm95234G6YfOj}{\color{blue} Записи лекций Дениса Николаевича на МКН}
-            \item \href{https://compscicenter.notion.site/compscicenter/b6dddf00bc7d497298179a3bdbdda375}{\color{blue}Памятка с полезностями от Computer Science Center}
             \item Книга: Ламбда-исчисление, Барендрегт
             \item \href{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}{\color{blue} Beyond Church encoding: Boehm-Berarducci isomorphism of algebraic data types and polymorphic lambda-terms}
+            \item \href{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}{\color{blue} Church-boehm-berarducci encoding}
         \end{itemize}
     \end{frame}
 

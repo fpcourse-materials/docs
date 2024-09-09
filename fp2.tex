@@ -679,6 +679,8 @@
 
     \subsubsection{Интерпретаторы и семантика языков программирования}
 
+    % todo semantics by example & примеры спек промышленных языков
+
     Семантика языков программирования\footnote{\url{https://en.wikipedia.org/wiki/Semantics_(computer_science)}\label{note:sema-wiki}}\footnote{\url{https://www.cs.nmsu.edu/~jcook/posts/pl-semantics-of-pl/}\label{note:sema-cook}} --- это наука, формально изучающая смысл программ --- поведение программ при исполнении\footnote{Различают статическую и динамическую семантики программы. Мы говорим про вторую.}, а так же способы его описания.
 
     Существует множество стилей описания семантики языковых конструкций и программ\footref{note:sema-wiki}.
@@ -949,6 +951,8 @@
     % todo Стабильное аби
     % todo Динамическая линковка
 
+    % todo koka language generics implementation
+
     \vocab{Конвенция вызова}\footnote{\url{https://en.wikipedia.org/wiki/Calling_convention}} представляет собой набор соглашений между тем, как функция компилируется и как должна вызываться.
     Например, функция принимает два аргумента, каждый размером в машинное слово, и возвращает один результат размером в машинное слово.
     Тогда сгенерированный низкоуровневый код этой функции может, например, ожидать, что оба аргумента передаются через специальную пару регистров, а складывать результат он будет в третий.
@@ -1006,10 +1010,12 @@
         {-# RULES "genericLookup/Int" genericLookup = intLookup #-}
     \end{minted}
 
+    % todo что это за специализация такая, если все равно зачения забокшенные
+
     Haskell также поддерживает value-типы (unboxed) и написание функций, полиморфных по конвенции вызова.
     См.~\ref{subsec:levity-polymorphism}.
 
-    % todo мономорфизация в хаскеле и полиморфная рекурсия
+    % todo мономорфизация в хаскеле и полиморфная рекурсия (вики)
 
     \subsubsection{Гибридный подход}
 
@@ -1252,6 +1258,8 @@
     % todo ghc inlining paper
 
     % todo https://ora.ox.ac.uk/objects/uuid:cd041aa0-8d69-4f18-bce2-6d75244b69b9/files/m7fd9779b27fcb70ae734e66bcd3ee79f
+
+    % todo Oleg's finally tagless partially evaluated paper
 
 %    \subsection{Template Haskell}
 %
