@@ -298,13 +298,27 @@
                 \end{cases}
             \end{equation}
         \end{block}
-        \begin{itemize}
-            \item[\todo] $[x \mapsto y] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause y ~ (\lambda y. ~ y ~ z)$
-            \item[\todo] $[x \mapsto y ~ z] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause y ~ z ~ (\lambda y. ~ y ~ z)$
-            \item[\todo] $[y \mapsto x] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause x ~ (\lambda y. ~ y ~ z)$
-            \item[\todo] $[z \mapsto x] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause x ~ (\lambda y. ~ y ~ x)$
-            \item[\todo] $[z \mapsto x ~ y] ~ x ~ (\lambda y. ~ y ~ z) \equiv \pause x ~ (\lambda y'. ~ y' ~ (x ~ y))$
-        \end{itemize}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{itemize}
+                    \item[\todo] $[x \mapsto y] ~ x ~ (\lambda y. ~ y ~ z)$
+                    \item[\todo] $[x \mapsto y ~ z] ~ x ~ (\lambda y. ~ y ~ z)$
+                    \item[\todo] $[y \mapsto x] ~ x ~ (\lambda y. ~ y ~ z)$
+                    \item[\todo] $[z \mapsto x] ~ x ~ (\lambda y. ~ y ~ z)$
+                    \item[\todo] $[z \mapsto x ~ y] ~ x ~ (\lambda y. ~ y ~ z)$
+                \end{itemize}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{itemize}
+                    \item[\answer] \pause $y ~ (\lambda y. ~ y ~ z)$
+                    \item[\answer] \pause $y ~ z ~ (\lambda y. ~ y ~ z)$
+                    \item[\answer] \pause $x ~ (\lambda y. ~ y ~ z)$
+                    \item[\answer] \pause $x ~ (\lambda y. ~ y ~ x)$
+                    \item[\answer] \pause $x ~ (\lambda y'. ~ y' ~ (x ~ y))$
+                \end{itemize}
+            \end{column}
+        \end{columns}
     \end{frame}
 
     \begin{frame}{$\beta$-редукция --- применение функций}
@@ -347,13 +361,27 @@
 
     \begin{frame}[fragile]{Эквивалентности}
         Эквивалентны ли следующие термы?
-        \begin{itemize}
-            \item[\todo] $x \stackrel{?}{\eqt} x$ --- \pause синтаксическое равенство
-            \item[\todo] $x \stackrel{?}{\eqt} y$ --- \pause нет
-            \item[\todo] $\lambda x. ~ x \stackrel{?}{\eqt} \lambda y. ~ y$ --- \pause $\alpha$-эквивалентность
-            \item[\todo] $\lambda x. ~ x \stackrel{?}{\eqt} (\lambda y. ~ y) \ap (\lambda x. ~ x)$ --- \pause $\beta$-эквивалентность
-            \item[\todo] $\lambda x ~ y. ~ x ~ y \stackrel{?}{\eqt} \lambda x. ~ x$ --- \pause $\eta$-эквивалентность
-        \end{itemize}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.4\textwidth}
+                \begin{itemize}
+                    \item[\todo] $x \eqt_{?} x$
+                    \item[\todo] $x \eqt_{?} y$
+                    \item[\todo] $\lambda x. ~ x \eqt_{?} \lambda y. ~ y$
+                    \item[\todo] $\lambda x. ~ x \eqt_{?} (\lambda y. ~ y) \ap (\lambda x. ~ x)$
+                    \item[\todo] $\lambda x ~ y. ~ x ~ y \eqt_{?} \lambda x. ~ x$
+                \end{itemize}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{itemize}
+                    \item[\answer] \pause синтаксическое равенство
+                    \item[\answer] \pause нет
+                    \item[\answer] \pause $\alpha$-эквивалентность
+                    \item[\answer] \pause $\beta$-эквивалентность
+                    \item[\answer] \pause $\eta$-эквивалентность
+                \end{itemize}
+            \end{column}
+        \end{columns}
     \end{frame}
 
     \subsectionplan{Сопутствующие концепции}
@@ -565,7 +593,7 @@
 
     \begin{frame}[fragile]{Моделируем котиков}
         \pause
-        Фактически нужно научиться задавать пары:
+        Фактически нужно научиться задавать пары (имя + мурлычность):
         \begin{block}{API пар}
             \begin{itemize}
                 \item Терм-конструктор $\term{pair}$
