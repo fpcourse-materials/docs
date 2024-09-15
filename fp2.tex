@@ -818,7 +818,16 @@
 
     \subsubsection{Пример: библиотека Accelerate}
 
-    % todo java code reflection link
+    Интересным примером встроенного языка, находящегося где-то между deep и shallow является библиотека Accelerate\footnote{\url{https://hackage.haskell.org/package/accelerate}}~\cite[chapter 6]{marlow2011parallel}.
+    Она позволяет на Haskell описать вычисления, которые будут исполняться на GPU\footnote{Другой подход: \href{https://youtu.be/6c0DB2kwF_Q?si=-nB7AkCsDWB_Q-hy}{Java code reflection}, чтобы в рантайме извлекать модель кода. Однако, такой подход не предоставляет статически гарантий программисту и требует глубогоко внедрения в мета-язык.}.
+
+    Чтобы исполнить что-то на GPU нужно породить и скомпилировать код на Cuda.
+    Таким образом, Accelerate должен быть deep embedding, чтобы иметь дерево вычисления, чтобы его транслировать в Cuda наиболее эффективным образом.
+    
+    В то же время описывать численные вычисления как дерево крайне неудобно.
+    Неплохо было бы иметь привычные операторы и функции высших порядков для работы с массивами на GPU\@.
+    Поэтому Accelerate предоставляет на самом деле shallow интерфейс для построения деревьев.
+
     % todo
 
     \subsection{Инициальные интерпретаторы}
@@ -963,6 +972,11 @@
     В этом параграфе мы рассмотрим техники и понятия, относящиеся к реализации функций первого класса.
     Эти понятия оказываются крайне полезны и продуктивны, как мы увидим далее.
 
+    Те же рассуждения справедливы и для описания \mintinline{haskell}|let|-связываний, поскольку их можно представлять следующим образом:
+    \[
+        \term{let} \ap x \termdef N \ap \term{in} \ap M \equiv (\lambda x\ldotp M) \ap N
+    \]
+
     \subsubsection{Связывание имён}
 
     \vocab{Динамическое связывание (dynamic scoping)} --- значение свободных переменных функции зависит от области видимости в месте вызова.
@@ -1000,20 +1014,19 @@
     Рассмотрим пример такого представления --- \vocab{locally nameless}.
 
     \begin{minted}{haskell}
-        data Lam var
+        data Term var
           = Var var
-          | App (Lam var) (Lam var)
-          | Lam (Lam (Maybe var))
+          | App (Term var) (Term var)
+          | Lam (Term (Maybe var))
     \end{minted}
 
     В этом представлении можно выбирать любой тип для именования свободных переменных:
     \begin{minted}{haskell}
-        example :: Lam String
+        example :: Term String
         example = Var "x" `App` Var "y" -- x y
     \end{minted}
     Добавление каждой связанной переменной добавляет типу переменных нового обитателя \mintinline{haskell}|Nothing| для обращения к ближайшей связанной переменной:
     \begin{minted}{haskell}
-        example1, example2 :: Lam String
         example1 = Lam $ Nothing `App` Just "y"                                 -- ?$\lambda x\ldotp x \ap y$?
         example2 = Lam $ Lam $ Nothing `App` Just Nothing `App` Just (Just "z") -- ?$\lambda x \ap y\ldotp x \ap y \ap z$?
     \end{minted}
@@ -1021,8 +1034,8 @@
     Удивительно, но монадический bind является реализацией подстановки для таких термов.
 
     \begin{minted}{haskell}
-        instance Monad Lam where
-          (>>=) :: Lam var -> (var -> Lam var') -> Lam var'
+        instance Monad Term where
+          (>>=) :: Term var -> (var -> Term var') -> Term var'
           Var idx >>= k = k idx
           App l r >>= k = App (l >>= k) (r >>= k)
           Lam t >>= k = Lam $ t >>= \case
@@ -1030,35 +1043,86 @@
             Just idx -> Just <$> k idx
     \end{minted}
 
+    Соответственно, call-by-name интерпретатор такого лямбда-исчисления будет выглядеть следующим образом:
+
+    \begin{minted}{haskell}
+        eval :: Term var -> Term var
+        eval = \case
+          Var var -> Var var
+          App f arg -> case eval f of
+            Lam body -> eval body >>= maybe arg Var
+            t -> App t (eval arg)
+          Lam t -> Lam (eval t)
+    \end{minted}
+
+    \subsubsection{Окружение}
+
+    Более классической реализацией является использование явной передачи окружения.
+
+    \begin{minted}{haskell}
+        data Term = Var String | App Term Term | Lam String Term
+        type Env = Map String Term
+
+        eval :: Term -> (Env -> Term)
+        eval term env = case term of
+          Var name -> env ! name
+          App f arg -> case eval f env of
+            Lam name body -> eval body (Map.insert name arg env)
+            t -> App t (eval arg env)
+          Lam name t -> Lam name (eval t)
+    \end{minted}
+
+    \subsubsection{DataKinds}
+
+    % todo
+
+    \subsubsection{Синтаксис высшего порядка}
+
+    Крайне не хотелось бы для eDSL самостоятельно реализовывать связывания и функции первого класса.
+    Построим meta-circular tagless interpreter.
+
+
+
+    \begin{minted}{haskell}
+        data Term env ty where
+          Var :: InCtx env ty -> Term env ty
+          App :: Term env (arg -> res) -> Term env arg -> Term env res
+          Lam :: (Term env arg -> Term env res) -> Term env (arg -> res)
+
+
+
+        data InCtx env ty where
+          Here :: Var (ty, env) ty
+          There :: Var env ty -> Var (ty', env) ty
+    \end{minted}
+
+    \cite{kiselyov2012typed}
+
+    % todo link to Oleg's notes
+
+    % todo link
+    % todo
+
     \subsubsection{Замыкания} \label{subsubsec:closures}
 
     Мы можем свести работу с вложенными функциями к работе с глобальными с помощью \vocab{lambda lifting}: вместо каждой вложенной функции заводим по глобальной.
-    Если вложенная функция имела свободные переменные, ссылающиеся на локалы, добавляем глобальной функции аргументов по их числу.
+    Если вложенная функция имела свободные переменные, ссылающиеся на локалы, добавляем глобальной функции аргумент контекста содержащего значения для этих переменных.
     \begin{minted}{kotlin}
         fun f(x) {
             fun g(y) = x + y
             return g
         }
         // lambda lifting породит декларацию
-        fun g_glob(x, y) = x + y
+        fun g_glob(ctx: GCtx, y) = ctx.x + y
     \end{minted}
 
-    Теперь мы можем функциональные объекты представлять как пару
-
-    % todo
+    Теперь мы можем функциональные объекты представлять как пару из контекста и указателя на глобальную функцию --- то есть как \vocab{замыкание (closure)}.
 
     \subsubsection{Дефункционализация} \label{subsubsec:defunctionalization}
 
     % todo
 
-    \subsubsection{Башня скоупов}
 
-    % todo
-
-    \subsubsection{Синтаксис высшего порядка}
-
-    % todo link
-    % todo
 
 
 
