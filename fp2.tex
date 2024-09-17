@@ -706,7 +706,9 @@
     Или похоже на обработку запроса WEB-сервером --- определяем ручку на которую пришел запрос, выполняем соответствующее действие.
     То есть не так редко мы в реальной жизни пишем интерпретаторы.
     Мы просто не видим, что то, что мы пишем --- это на самом деле интерпретатор некоторого языка.
-    В общем случае, свёртку структуры данных уже можно рассматривать как интерпретацию некоторого языка~\cite{gibbons2014folding}.
+    В общем случае, свёртку структуры данных уже можно рассматривать как интерпретацию~\cite{gibbons2014folding}.
+
+    % todo композиционность и её восстановление через эксплицирование контекстных зывисимостей.
 
     Более того, как мы убедимся в разделе~\ref{sec:wonder-interpreters}, написание любой функции --- это уже задание нового языка.
     Вот был язык, в котором нельзя было пользователя в приложение добавить.
@@ -754,6 +756,11 @@
     \begin{minted}{haskell}
         eval :: Prog -> Nat -> Nat
     \end{minted}
+
+    \begin{task}
+        В какой домен разумно проинтерпретировать программы на языке с целочисленными мутабельными переменными?
+        А для недетерминированного языка?
+    \end{task}
 
     \subsubsection{Встроенные доменно-специфичные языки (eDSL)}
 
@@ -828,7 +835,10 @@
     Неплохо было бы иметь привычные операторы и функции высших порядков для работы с массивами на GPU\@.
     Поэтому Accelerate предоставляет на самом деле shallow интерфейс для построения деревьев.
 
-    % todo
+    Так, для деревьев выражений определена реализация численных классов типов, например, \mintinline{haskell}|Num|, где операции просто достраивают дерево.
+    Функции высших порядков реализованы примерно с помощью техники, которую мы будем обсуждать в~\ref{subsec:first-class-functions}.
+
+    % todo investigate actual HOF implementation
 
     \subsection{Инициальные интерпретаторы}
 
@@ -1027,8 +1037,10 @@
     \end{minted}
     Добавление каждой связанной переменной добавляет типу переменных нового обитателя \mintinline{haskell}|Nothing| для обращения к ближайшей связанной переменной:
     \begin{minted}{haskell}
-        example1 = Lam $ Nothing `App` Just "y"                                 -- ?$\lambda x\ldotp x \ap y$?
-        example2 = Lam $ Lam $ Nothing `App` Just Nothing `App` Just (Just "z") -- ?$\lambda x \ap y\ldotp x \ap y \ap z$?
+        -- ?$\lambda x\ldotp x \ap y$?
+        example1 = Lam $ Nothing `App` Just "y"
+        -- ?$\lambda x \ap y\ldotp x \ap y \ap z$?
+        example2 = Lam $ Lam $ Nothing `App` Just Nothing `App` Just (Just "z")
     \end{minted}
 
     Удивительно, но монадический bind является реализацией подстановки для таких термов.
@@ -1072,35 +1084,60 @@
           Lam name t -> Lam name (eval t)
     \end{minted}
 
-    \subsubsection{DataKinds}
+    Можно заметить, что такой интерпретатор не является безопасным, в окружении может запросто не оказаться нужной переменной.
 
-    % todo
+    \subsubsection{Верифицированный контекст}
+
+    Рассмотрим кодирование, описанное в~\cite{kiselyov2012typed}.
+
+    Для начала научимся с помощью системы типов Haskell проверять валидность обращения к окружению.
+    Представим окружение как список типов, закодированный с помощью вложенных пар:
+    \begin{minted}{haskell}
+        (4, (4.0, "hello")) :: (Int, (Double, String))
+    \end{minted}
+
+    Обращение к окружению будем кодировать числом в унарной записи.
+    Тип числа (типизированной ссылки внутрь контекста) пусть задаёт множество окружений, из которых на такой позиции можно извлечь нужный тип.
+    \begin{minted}{haskell}
+        data Ref env ty where
+          Here :: Ref (ty, env) ty
+          There :: Ref env ty -> Ref (ty', env) ty
+    \end{minted}
+    Например, тип числа 1 утверждает, что с его помощью можно извлечь значение типа \texttt{ty} из контекста, в котором значение соответствующего типа находится на первой позиции:
+    \begin{minted}{haskell}
+        There Here :: Ref (ty', (ty, env)) ty
+    \end{minted}
+
+    Теперь мы можем закодировать типизированное безопасное обращение к контексту:
+    \begin{minted}{haskell}
+        envLookup :: env -> Ref env ty -> ty
+        envLookup env ref = case (ref, env) of
+          (Here, (x, _)) -> x
+          (There ref', (_, env')) -> envLookup env' ref'
+    \end{minted}
+
+    \subsubsection{Meta-circular интерпретация}
+
+    Крайне не хотелось бы для eDSL самостоятельно реализовывать связывания и функции первого класса.
+    Построим meta-circular tagless interpreter, который будет переиспользовать функции первого класса мета-языка для реализации их в определяемом языке.
+
+    % todo meta-circular application
 
     \subsubsection{Синтаксис высшего порядка}
 
-    Крайне не хотелось бы для eDSL самостоятельно реализовывать связывания и функции первого класса.
-    Построим meta-circular tagless interpreter.
 
-
+    Для это мы будем прямо в дереве синтаксиса хранить функции мета-языка.
 
     \begin{minted}{haskell}
         data Term env ty where
-          Var :: InCtx env ty -> Term env ty
+          Var :: Ref env ty -> Term env ty
           App :: Term env (arg -> res) -> Term env arg -> Term env res
           Lam :: (Term env arg -> Term env res) -> Term env (arg -> res)
-
-
-
-        data InCtx env ty where
-          Here :: Var (ty, env) ty
-          There :: Var env ty -> Var (ty', env) ty
     \end{minted}
 
-    \cite{kiselyov2012typed}
 
-    % todo link to Oleg's notes
 
-    % todo link
+
     % todo
 
     \subsubsection{Замыкания} \label{subsubsec:closures}
@@ -1118,6 +1155,10 @@
 
     Теперь мы можем функциональные объекты представлять как пару из контекста и указателя на глобальную функцию --- то есть как \vocab{замыкание (closure)}.
 
+    % todo
+    \cite{reynolds1998definitional}
+    \cite{defunctionalization-slides}
+
     \subsubsection{Дефункционализация} \label{subsubsec:defunctionalization}
 
     % todo
@@ -1126,25 +1167,15 @@
 
 
 
-% todo   Таким образом, разрешение имён, resolve, нужно произвести статически один раз, ускорив дальнейшее исполнение программы.
-
     % todo stable pointers
 
-    % todo подстановка
-
     % todo mention peter landin, closures
-
-    % todo higher-order abstract syntax
 
     % todo closure conversion
     \cite{reynolds1998definitional}
     \cite{defunctionalization-slides}
 
-    % todo scope tower & resolve
-
     % todo 700 PLs
-
-    % todo ссылка на Саймона
 
 
     \section{Параметрический полиморфизм}
@@ -1460,6 +1491,8 @@
 
     \section{Интерпретаторы зазеркалья} \label{sec:wonder-interpreters}
 
+    % todo are custom patretns in haskell connected to this?
+
     % todo initial and final - isomorphism proof
 
     % todo теоретические основы
@@ -1638,6 +1671,8 @@
     % todo call-by-push value and how it is related to effects
 
     % todo Higher-Order Type-Level Programming in Haskell
+
+    % todo как полиморфные кайнды связаны с levity-полиморфизмом
 
 
 
