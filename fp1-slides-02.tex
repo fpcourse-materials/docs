@@ -1,3 +1,4 @@
+%! suppress = MissingImport
 %! suppress = MissingLabel
 %! suppress = LineBreak
 
@@ -122,9 +123,7 @@
         \begin{block}{Свойство примитивной рекурсии}
             \vspace{-0.5em}
 
-            \[\term{rec}~f~ini~n \eqbeta \pause f~(n-1)~(f~(n-2)~(\cdots~(f~1~(f~0~ini))\cdots))\]
-
-            \vspace{-1.5em}
+            \[\term{rec}~f~ini~n \eqbeta f~(n-1)~(f~(n-2)~(\cdots~(f~1~(f~0~ini))\cdots))\]
         \end{block}
         \vspace{1em}
         \begin{itemize}
@@ -135,9 +134,9 @@
             \item[\answer] \pause $\term{fac} \ap n
             \termdef
             \term{rec}
-            \ap (\lambda \pause i \ap res \ldotp \term{mult} \ap (\term{suc} \ap i) \ap res)
+            \ap (\lambda i \ap res \ldotp \term{mult} \ap (\term{suc} \ap i) \ap res)
             \ap \term{1} \ap n$
-            \item[\answer] $\term{pred} \ap n \termdef \pause \term{rec}~\term{K}~\term{0} \ap n$
+            \item[\answer] \pause $\term{pred} \ap n \termdef \term{rec}~\term{K}~\term{0} \ap n$
             \item Во всех случаях можно сделать $\eta$-редукцию
         \end{itemize}
     \end{frame}
@@ -311,10 +310,10 @@
         \vspace{1em}
         Хотим, чтобы в зависимости от её вида, сущность обрабатывал разный код:
         \begin{minted}{python}
-            def eval(node): #\pause#
-                if is_const(node): #\pause#
+            def eval(node):
+                if is_const(node):
                     return node.value  # У константы должно быть значение
-                elif is_plus(node): #\pause#
+                elif is_plus(node):
                     return eval(node.left) + eval(node.right)  # У плюса - операнды
         \end{minted}
     \end{frame}
@@ -331,11 +330,10 @@
         \pause
         \begin{block}{Законы вариантов}
             \begin{enumerate}
-                \item $\forall f~g~x \pause \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta f \ap x$
+                \item $\forall f~g~x \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta f \ap x$
                 \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap y) \eqbeta g \ap y$
             \end{enumerate}
         \end{block}
-        \pause
         \begin{itemize}
             \item[\todo] Что если нужно закодировать больше двух вариантов?
         \end{itemize}
@@ -344,7 +342,7 @@
     \begin{frame}[fragile]{Тегированное представление вариантов}
         \begin{block}{Законы вариантов}
             \begin{enumerate}
-                \item $\forall f~g~x \pause \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta \pause f \ap x$
+                \item $\forall f~g~x \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta f \ap x$
                 \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap y) \eqbeta g \ap y$
             \end{enumerate}
         \end{block}
@@ -368,7 +366,7 @@
     \begin{frame}[fragile]{Кодирование вариантов ``наоборот''}
         \begin{block}{Законы вариантов}
             \begin{enumerate}
-                \item $\forall f~g~x \pause \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta \pause f \ap x$
+                \item $\forall f~g~x \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta f \ap x$
                 \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap y) \eqbeta g \ap y$
             \end{enumerate}
         \end{block}
@@ -410,7 +408,7 @@
             \begin{itemize}
                 \item $\term{nil}$ --- пустой список
                 \item $\term{cons} \ap x \ap t$ --- список из элемента $x$ в голове и списка-хвоста $t$
-                \item[\eg] $\tlist{\term{1}, \term{2}, \term{3}} \eqt \pause \term{cons} \ap \term{1} \ap (\term{cons} \ap \term{2} \ap (\term{cons} \ap \term{3} \ap \term{nil}))$
+                \item[\eg] $\tlist{\term{1}, \term{2}, \term{3}} \eqt \term{cons} \ap \term{1} \ap (\term{cons} \ap \term{2} \ap (\term{cons} \ap \term{3} \ap \term{nil}))$
                 \item Элиминатор, аккумулирующий элементы: $\term{fold}$
                 \item[\eg] $\term{fold} \ap \tlist{\term{1}, \term{2}, \term{3}} \ap f \ap ini \eqbeta f \ap \term{1} \ap (f \ap \term{2} \ap (f \ap \term{3} \ap ini))$
             \end{itemize}
@@ -418,8 +416,8 @@
         \pause
         \begin{block}{Законы списков}
             \begin{enumerate}
-                \item \pause $\forall f~ini\ldotp \term{fold} \ap \term{nil} \ap f \ap ini \eqbeta \pause ini$
-                \item \pause $\forall x~t~f~ini\ldotp \term{fold} \ap (\term{cons} \ap x \ap t) \ap f \ap ini \eqbeta \pause f \ap x \ap (\term{fold} \ap t \ap f \ap ini)$
+                \item $\forall f~ini\ldotp \term{fold} \ap \term{nil} \ap f \ap ini \eqbeta ini$
+                \item $\forall x~t~f~ini\ldotp \term{fold} \ap (\term{cons} \ap x \ap t) \ap f \ap ini \eqbeta f \ap x \ap (\term{fold} \ap t \ap f \ap ini)$
             \end{enumerate}
         \end{block}
     \end{frame}
@@ -442,23 +440,23 @@
     \begin{frame}[fragile]{Списки на вариантах}
         \begin{block}{Законы списков}
             \begin{enumerate}
-                \item \pause $\forall f~ini\ldotp \term{fold} \ap \term{nil} \ap f \ap ini \eqbeta \pause ini$
-                \item \pause $\forall x~t~f~ini\ldotp \term{fold} \ap (\term{cons} \ap x \ap t) \ap f \ap ini \eqbeta \pause f \ap x \ap (\term{fold} \ap t \ap f \ap ini)$
+                \item $\forall f~ini\ldotp \term{fold} \ap \term{nil} \ap f \ap ini \eqbeta ini$
+                \item $\forall x~t~f~ini\ldotp \term{fold} \ap (\term{cons} \ap x \ap t) \ap f \ap ini \eqbeta f \ap x \ap (\term{fold} \ap t \ap f \ap ini)$
             \end{enumerate}
         \end{block}
         \pause
         \begin{block}{Конструкторы}
             \begin{itemize}
                 \item Вершина либо пустая, либо пара из элемента и хвоста
-                \item $\term{nil} \termdef \pause \term{inl} \ap \term{0}\footnote{Произвольный терм, чтобы удовлетворить интерфейсу вариантов.}$
-                \item $\term{cons} \ap x \ap t \termdef \pause \term{inr} \ap (\term{pair} \ap x \ap t)$
+                \item $\term{nil} \termdef \term{inl} \ap \term{0}\footnote{Произвольный терм, чтобы удовлетворить интерфейсу вариантов.}$
+                \item $\term{cons} \ap x \ap t \termdef \term{inr} \ap (\term{pair} \ap x \ap t)$
             \end{itemize}
         \end{block}
         \pause
         \begin{block}{Элиминатор}
             \[
                 \begin{array}{l}
-                    \term{fold} \ap xs \ap f \ap ini \termdef \pause \term{either} \ap \pause (\term{K} \ap ini) \ap \pause (\lambda (\term{pair} \ap x \ap t)\ldotp f \ap x \ap (\term{fold} \ap t \ap f \ap ini)) \ap \pause xs
+                    \term{fold} \ap xs \ap f \ap ini \termdef \term{either} \ap (\term{K} \ap ini) \ap (\lambda (\term{pair} \ap x \ap t)\ldotp f \ap x \ap (\term{fold} \ap t \ap f \ap ini)) \ap xs
                 \end{array}
             \]
         \end{block}
@@ -467,8 +465,8 @@
     \begin{frame}[fragile]{Списки Чёрча (``наоборот'')}
         \begin{block}{Законы списков}
             \begin{enumerate}
-                \item \pause $\forall f~ini\ldotp \term{fold} \ap \term{nil} \ap f \ap ini \eqbeta \pause ini$
-                \item \pause $\forall x~t~f~ini\ldotp \term{fold} \ap (\term{cons} \ap x \ap t) \ap f \ap ini \eqbeta \pause f \ap x \ap (\term{fold} \ap t \ap f \ap ini)$
+                \item $\forall f~ini\ldotp \term{fold} \ap \term{nil} \ap f \ap ini \eqbeta ini$
+                \item $\forall x~t~f~ini\ldotp \term{fold} \ap (\term{cons} \ap x \ap t) \ap f \ap ini \eqbeta f \ap x \ap (\term{fold} \ap t \ap f \ap ini)$
             \end{enumerate}
         \end{block}
         \pause
@@ -476,7 +474,7 @@
             \begin{itemize}
                 \item По аналогии с числами Чёрча $\term{k} = \lambda s~z\ldotp \underbrace{s~(s~(\cdots (s~(}_{\textstyle k} z\underbrace{)\cdots ))}_{\textstyle k}$
                 \item $\term{nil} \termdef \lambda s~z \ldotp z$
-                \item $\term{cons} \ap x \ap t \termdef \pause \lambda s~z\ldotp \pause s~x~(t~s~z)$
+                \item $\term{cons} \ap x \ap t \termdef \lambda s~z\ldotp s~x~(t~s~z)$
             \end{itemize}
         \end{block}
         \pause
@@ -516,7 +514,7 @@
                     \vspace{-1.5em}
                 \end{column}\hfill\pause%
                 \begin{column}{0.485\textwidth}
-                    \[\term{headOrDefault} \ap xs \termdef \pause xs \ap \mathbf{K}  \text{ или } \pause \textbf{fst}\]
+                    \[\term{headOrDefault} \ap xs \termdef xs \ap \mathbf{K}  \text{ или } \textbf{fst}\]
                     \vspace{-1.5em}
                 \end{column}
             \end{columns}
