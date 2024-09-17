@@ -708,8 +708,6 @@
     Мы просто не видим, что то, что мы пишем --- это на самом деле интерпретатор некоторого языка.
     В общем случае, свёртку структуры данных уже можно рассматривать как интерпретацию~\cite{gibbons2014folding}.
 
-    % todo композиционность и её восстановление через эксплицирование контекстных зывисимостей.
-
     Более того, как мы убедимся в разделе~\ref{sec:wonder-interpreters}, написание любой функции --- это уже задание нового языка.
     Вот был язык, в котором нельзя было пользователя в приложение добавить.
     Написали функцию \texttt{registerUser}~--- появилась новая команда в языке~--- добавить пользователя.
@@ -1142,20 +1140,33 @@
 
     \subsubsection{Синтаксис высшего порядка}
 
+    Ещё чем мы ещё занимаемся вручную --- определяем связыватели (да ещё и в унарной записи).
+    Хотим переиспользовать языковые идентификаторы.
+    Для это мы будем прямо в дереве синтаксиса хранить функции мета-языка --- использовать \vocab{синтаксис высшего порядка (higher order abstract syntax)}.
 
-    Для это мы будем прямо в дереве синтаксиса хранить функции мета-языка.
-
+    Теперь мы ссылаемся не на переменные, а на значения, нода абстракции содержит честную функцию:
     \begin{minted}{haskell}
-        data Term env ty where
-          Var :: Ref env ty -> Term env ty
-          App :: Term env (arg -> res) -> Term env arg -> Term env res
-          Lam :: (Term env arg -> Term env res) -> Term env (arg -> res)
+        data Term2 ty where
+          Val2 :: ty -> Term2 ty
+          Plus :: Term2 Int -> Term2 Int -> Term2 Int
+          App2 :: Term2 (arg -> res) -> Term2 arg -> Term2 res
+          Lam2 :: (Term2 arg -> Term2 res) -> Term2 (arg -> res)
+
+        example2 :: Term2 Int
+        example2 = (Lam2 \x -> x `Plus` Val2 41) `App2` Val2 1
     \end{minted}
 
+    Интерпретация очень простая и абсолютно meta-circular:
+    \begin{minted}{haskell}
+        eval2 :: Term2 ty -> ty
+        eval2 term = case term of
+          Val2 x -> x
+          Plus l r -> eval2 l + eval2 r
+          App2 f arg -> (eval2 f) (eval2 arg)
+          Lam2 f -> \arg -> eval2 (f (Val2 arg))
+    \end{minted}
 
-
-
-    % todo
+    % todo https://en.wikipedia.org/wiki/Higher-order_abstract_syntax
 
     \subsubsection{Замыкания} \label{subsubsec:closures}
 
@@ -1531,6 +1542,8 @@
     % todo call-pattern specialization for Haskell programs
 
     % todo наверное после континуэйшенов
+
+    % todo композиционность и её восстановление через эксплицирование контекстных зывисимостей.
 
     \cite{gibbons2013functional, gibbons2014folding}
 
