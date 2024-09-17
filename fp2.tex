@@ -1121,7 +1121,24 @@
     Крайне не хотелось бы для eDSL самостоятельно реализовывать связывания и функции первого класса.
     Построим meta-circular tagless interpreter, который будет переиспользовать функции первого класса мета-языка для реализации их в определяемом языке.
 
-    % todo meta-circular application
+    Термы теперь будут не только аннотированы результирующими типами, но и типами необходимых для интерпретации окружений.
+    Абстрагированному терму доступно большее окружение.
+
+    \begin{minted}{haskell}
+        data Term1 env ty where
+          Var1 :: Ref env ty -> Term1 env ty
+          App1 :: Term1 env (arg -> res) -> Term1 env arg -> Term1 env res
+          Lam1 :: Term1 (arg, env) res -> Term1 env (arg -> res)
+    \end{minted}
+
+    Теперь абстракцию можем проинтерпретировать в функцию Haskell, а аппликацию --- в аппликацию:
+    \begin{minted}{haskell}
+        eval1 :: Term1 env ty -> env -> ty
+        eval1 term env = case term of
+          Var1 ref -> env `envLookup` ref
+          App1 f arg -> (eval1 f env) (eval1 arg env)
+          Lam1 t -> \arg -> eval1 t (arg, env)
+    \end{minted}
 
     \subsubsection{Синтаксис высшего порядка}
 
