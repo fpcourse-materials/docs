@@ -69,7 +69,7 @@
 % https://tex.stackexchange.com/questions/99475/how-to-invoke-latex-with-the-shell-escape-flag-in-texstudio-former-texmakerx
 % Colored, requires --shell-escape compiling option
 \usepackage{minted}
-\setminted{xleftmargin=\parindent, autogobble, escapeinside=??}
+\setminted{xleftmargin=\parindent, autogobble, escapeinside=??, linenos}
 \usepackage{listings}
 % ------------------------------------------------
 
@@ -821,6 +821,10 @@
     Свойства мета-языка в таком случае во многом определяют свойства объектного~\cite{reynolds1972definitional,reynolds1998definitional}.
     Мы будем в этом курсе стремиться как можно более переиспользовать возможности мета-языка.
 
+    \begin{task}
+        Предположите, какие свойства наследует определяемый язык.
+    \end{task}
+
     \subsubsection{Пример: библиотека Accelerate}
 
     Интересным примером встроенного языка, находящегося где-то между deep и shallow является библиотека Accelerate\footnote{\url{https://hackage.haskell.org/package/accelerate}}~\cite[chapter 6]{marlow2011parallel}.
@@ -1053,6 +1057,10 @@
             Just idx -> Just <$> k idx
     \end{minted}
 
+    \begin{task}
+        Подумайте, зачем нужен \texttt{fmap Just} в последней строчке.
+    \end{task}
+
     Соответственно, call-by-name интерпретатор такого лямбда-исчисления будет выглядеть следующим образом:
 
     \begin{minted}{haskell}
@@ -1084,9 +1092,13 @@
 
     Можно заметить, что такой интерпретатор не является безопасным, в окружении может запросто не оказаться нужной переменной.
 
+    \begin{task}
+        Предложите способы сделать реализацию более безопасной.
+    \end{task}
+
     \subsubsection{Верифицированный контекст}
 
-    Рассмотрим кодирование, описанное в~\cite{kiselyov2012typed}.
+    Рассмотрим кодирование, описанное, например, в~\cite{kiselyov2012typed}.
 
     Для начала научимся с помощью системы типов Haskell проверять валидность обращения к окружению.
     Представим окружение как список типов, закодированный с помощью вложенных пар:
@@ -1114,6 +1126,11 @@
           (There ref', (_, env')) -> envLookup env' ref'
     \end{minted}
 
+    \begin{task}
+        Можно ли разобрать пару сразу на строчке 2?
+        Поясните.
+    \end{task}
+
     \subsubsection{Meta-circular интерпретация}
 
     Крайне не хотелось бы для eDSL самостоятельно реализовывать связывания и функции первого класса.
@@ -1138,11 +1155,15 @@
           Lam1 t -> \arg -> eval1 t (arg, env)
     \end{minted}
 
+    \begin{task}
+        Как так получилось, что в последней строчке нужно принять ещё один аргумент?
+    \end{task}
+
     \subsubsection{Синтаксис высшего порядка}
 
     Ещё чем мы ещё занимаемся вручную --- определяем связыватели (да ещё и в унарной записи).
     Хотим переиспользовать языковые идентификаторы.
-    Для это мы будем прямо в дереве синтаксиса хранить функции мета-языка --- использовать \vocab{синтаксис высшего порядка (higher order abstract syntax)}.
+    Для это мы будем прямо в дереве синтаксиса хранить функции мета-языка --- использовать \vocab{синтаксис высшего порядка (higher order abstract syntax)}\footnote{\url{https://en.wikipedia.org/wiki/Higher-order_abstract_syntax}}\footnote{\href{https://cstheory.stackexchange.com/questions/20071/what-is-higher-order-in-higher-order-abstract-syntax}{What is higher-order in higher-order abstract syntax?}}~\cite{pfenning1988higher}.
 
     Теперь мы ссылаемся не на переменные, а на значения, нода абстракции содержит честную функцию:
     \begin{minted}{haskell}
@@ -1166,7 +1187,12 @@
           Lam2 f -> \arg -> eval2 (f (Val2 arg))
     \end{minted}
 
-    % todo https://en.wikipedia.org/wiki/Higher-order_abstract_syntax
+    \begin{task}
+        Можно ли было объявить \mintinline{haskell}|Lam| как
+        \begin{minted}{haskell}
+            Lam2 :: (arg -> Term2 res) -> Term2 (arg -> res)
+        \end{minted}
+    \end{task}
 
     \subsubsection{Замыкания} \label{subsubsec:closures}
 
@@ -1181,30 +1207,32 @@
         fun g_glob(ctx: GCtx, y) = ctx.x + y
     \end{minted}
 
-    Теперь мы можем функциональные объекты представлять как пару из контекста и указателя на глобальную функцию --- то есть как \vocab{замыкание (closure)}.
+    Теперь мы можем функциональные объекты представлять как пару из контекста и указателя на глобальную функцию --- то есть как \vocab{замыкание (closure)}\footnote{\url{https://en.wikipedia.org/wiki/Closure_(computer_programming)}}\footnote{Термин closure был предложен Piter Landin, вместе с кучей других вещей.}.
 
-    % todo
-    \cite{reynolds1998definitional}
-    \cite{defunctionalization-slides}
+    % todo cloud haskell, stable pointers
 
     \subsubsection{Дефункционализация} \label{subsubsec:defunctionalization}
 
-    % todo
+    \vocab{Дефункционализация (defunctionalization)} --- техника избавление от функций высших порядков в программе\footnote{\url{https://en.wikipedia.org/wiki/Defunctionalization}}~\cite{defunctionalization-slides}.
+    Впервые предложена в работе~\cite{reynolds1972definitional}.
 
+    Идея заключается в том, чтобы заменить каждую лямбда-функцию вызовом конструктора некоторого алгебраического типа данных.
+    А каждый call-cite функции заменить на вызов специальной first-order функции \texttt{apply}, интерпретирующей данный алгебраический тип.
+    Рассмотрим пример.
 
+    \begin{minted}{haskell}
+        example = (\x -> isRed x) $ (\b -> mkColor 10 50 b) 120
+        -- перепишется на
+        data Fun = IsRed | MkColor r g
+        apply IsRed x = isRed x
+        apply (MkColor r g) b -> mkColor r g b
+        example = apply IsRed $ apply (MkColor 10 50) 120
+    \end{minted}
 
+    Различия между дефункционализацией и замыканиями обсуждаются в~\cite{reynolds1998definitional, defunctionalization-slides}.
 
-
-    % todo stable pointers
-
-    % todo mention peter landin, closures
-
-    % todo closure conversion
-    \cite{reynolds1998definitional}
-    \cite{defunctionalization-slides}
-
-    % todo 700 PLs
-
+    % todo reference to best refactoring
+    % todo refrence co calculate correct compilers and stuff
 
     \section{Параметрический полиморфизм}
 
@@ -1544,6 +1572,8 @@
     % todo наверное после континуэйшенов
 
     % todo композиционность и её восстановление через эксплицирование контекстных зывисимостей.
+
+    % todo threaded code
 
     \cite{gibbons2013functional, gibbons2014folding}
 
