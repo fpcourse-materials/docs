@@ -893,7 +893,7 @@
         interpretRt :: Term -> RtValue
         interpretRt (IsZero term) = case eval term of
           RtBool value -> error "Type error"
-          RtInt value -> value == 0
+          RtInt value -> RtBool (value == 0)
         -- ...
     \end{minted}
 
@@ -1050,11 +1050,11 @@
     \begin{minted}{haskell}
         instance Monad Term where
           (>>=) :: Term var -> (var -> Term var') -> Term var'
-          Var idx >>= k = k idx
-          App l r >>= k = App (l >>= k) (r >>= k)
-          Lam t >>= k = Lam $ t >>= \case
+          Var var >>= subst = subst var
+          App l r >>= subst = App (l >>= subst) (r >>= subst)
+          Lam t >>= subst = Lam $ t >>= \case
             Nothing  -> Var Nothing
-            Just idx -> Just <$> k idx
+            Just var -> Just <$> subst var
     \end{minted}
 
     \begin{task}
@@ -1676,6 +1676,8 @@
 
     Languages with \textit{multimethods}, like Common Lisp’s CLOS, Dylan, and Julia do support adding both new types and operations  easily.
     What they typically sacrifice is either static type checking, or separate compilation.
+
+    % todo ZIO, TS Effect
 
 
     % todo
