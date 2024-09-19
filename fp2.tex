@@ -1042,7 +1042,7 @@
         -- ?$\lambda x\ldotp x \ap y$?
         example1 = Lam $ Nothing `App` Just "y"
         -- ?$\lambda x \ap y\ldotp x \ap y \ap z$?
-        example2 = Lam $ Lam $ Nothing `App` Just Nothing `App` Just (Just "z")
+        example2 = Lam $ Lam $ Just Nothing `App` Nothing `App` Just (Just "z")
     \end{minted}
 
     Удивительно, но монадический bind является реализацией подстановки для таких термов.
@@ -1061,7 +1061,7 @@
         Подумайте, зачем нужен \texttt{fmap Just} в последней строчке.
     \end{task}
 
-    Соответственно, call-by-name интерпретатор такого лямбда-исчисления будет выглядеть следующим образом:
+    Соответственно, call-by-value интерпретатор такого лямбда-исчисления будет выглядеть следующим образом:
 
     \begin{minted}{haskell}
         eval :: Term var -> Term var
