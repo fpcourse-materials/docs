@@ -424,7 +424,7 @@
           Dog name -> "This is dog " ++ name
     \end{minted}
 
-    В Haskell если специальный синтаксис для объявления полей с именованными метками.
+    В Haskell есть специальный синтаксис для объявления полей с именованными метками.
     \begin{minted}{haskell}
         data Penguin = Penguin { getName :: String, getAge :: Int }
         penguin = Penguin { getName = "Andrey", getAge = 500 }
@@ -1061,39 +1061,39 @@
         Подумайте, зачем нужен \texttt{fmap Just} в последней строчке.
     \end{task}
 
-    Соответственно, call-by-value интерпретатор такого лямбда-исчисления будет выглядеть следующим образом:
+    Соответственно, call-by-name интерпретатор такого лямбда-исчисления будет выглядеть следующим образом:
 
     \begin{minted}{haskell}
         eval :: Term var -> Term var
         eval = \case
           Var var -> Var var
           App f arg -> case eval f of
-            Lam body -> eval body >>= maybe arg Var
+            Lam body -> eval $ body >>= maybe arg Var
             t -> App t (eval arg)
           Lam t -> Lam (eval t)
     \end{minted}
 
     \subsubsection{Окружение}
 
-    Более классической реализацией является использование явной передачи окружения.
+    Можно делать подстановку значений переменных лениво, распространяя окружение, которое ставит в соответствие свободным переменным термы.
 
     \begin{minted}{haskell}
-        data Term = Var String | App Term Term | Lam String Term
-        type Env = Map String Term
+        data Term1 = Var1 String | App1 Term1 Term1 | Lam1 String Term1
+        type Env = Map String Term1
 
-        eval :: Term -> (Env -> Term)
-        eval term env = case term of
-          Var name -> env ! name
-          App f arg -> case eval f env of
-            Lam name body -> eval body (Map.insert name arg env)
-            t -> App t (eval arg env)
-          Lam name t -> Lam name (eval t)
+        eval1 :: Term1 -> (Env -> Term1)
+        eval1 = \case
+          Var1 name -> \env -> Map.findWithDefault (Var1 name) name env
+          App1 f arg -> \env -> case eval1 f env of
+            Lam1 name body -> eval1 body (Map.insert name arg env)
+            t -> App1 t (eval1 arg env)
+          Lam1 name body -> \env ->
+            let env' = Map.delete name env in
+            Lam1 name (eval1 body env')
     \end{minted}
 
-    Можно заметить, что такой интерпретатор не является безопасным, в окружении может запросто не оказаться нужной переменной.
-
     \begin{task}
-        Предложите способы сделать реализацию более безопасной.
+        Объясните, зачем окружение модифицируется на строчке 11?
     \end{task}
 
     \subsubsection{Верифицированный контекст}
@@ -1140,23 +1140,32 @@
     Абстрагированному терму доступно большее окружение.
 
     \begin{minted}{haskell}
-        data Term1 env ty where
-          Var1 :: Ref env ty -> Term1 env ty
-          App1 :: Term1 env (arg -> res) -> Term1 env arg -> Term1 env res
-          Lam1 :: Term1 (arg, env) res -> Term1 env (arg -> res)
+        data Term2 env ty where
+          Var2 :: Ref env ty -> Term2 env ty
+          App2 :: Term2 env (arg -> res) -> Term2 env arg -> Term2 env res
+          Lam2 :: Term2 (arg, env) res -> Term2 env (arg -> res)
     \end{minted}
 
     Теперь абстракцию можем проинтерпретировать в функцию Haskell, а аппликацию --- в аппликацию:
     \begin{minted}{haskell}
-        eval1 :: Term1 env ty -> env -> ty
-        eval1 term env = case term of
-          Var1 ref -> env `envLookup` ref
-          App1 f arg -> (eval1 f env) (eval1 arg env)
-          Lam1 t -> \arg -> eval1 t (arg, env)
+        eval2 :: Term2 env ty -> env -> ty
+        eval2 term env = case term of
+          Var2 ref -> env `envLookup` ref
+          App2 f arg -> (eval2 f env) (eval2 arg env)
+          Lam2 t -> \arg -> eval2 t (arg, env)
     \end{minted}
 
     \begin{task}
         Как так получилось, что в последней строчке нужно принять ещё один аргумент?
+    \end{task}
+
+    \begin{task}
+        Это call-by-value интерпретатор или call-by-name?
+        От чего это зависит?
+    \end{task}
+
+    \begin{task}
+        Подумайте, какое решение должно быть более производительно, это или предыдущее?
     \end{task}
 
     \subsubsection{Синтаксис высшего порядка}
@@ -1167,37 +1176,37 @@
 
     Теперь мы ссылаемся не на переменные, а на значения, нода абстракции содержит честную функцию:
     \begin{minted}{haskell}
-        data Term2 ty where
-          Val2 :: ty -> Term2 ty
-          Plus :: Term2 Int -> Term2 Int -> Term2 Int
-          App2 :: Term2 (arg -> res) -> Term2 arg -> Term2 res
-          Lam2 :: (Term2 arg -> Term2 res) -> Term2 (arg -> res)
+        data Term3 ty where
+          Val3 :: ty -> Term3 ty
+          Plus :: Term3 Int -> Term3 Int -> Term3 Int
+          App3 :: Term3 (arg -> res) -> Term3 arg -> Term3 res
+          Lam3 :: (Term3 arg -> Term3 res) -> Term3 (arg -> res)
 
-        example2 :: Term2 Int
-        example2 = (Lam2 \x -> x `Plus` Val2 41) `App2` Val2 1
+        example3 :: Term3 Int
+        example3 = (Lam3 \x -> x `Plus` Val3 41) `App3` Val3 1
     \end{minted}
 
     Интерпретация очень простая и абсолютно meta-circular:
     \begin{minted}{haskell}
-        eval2 :: Term2 ty -> ty
-        eval2 term = case term of
-          Val2 x -> x
-          Plus l r -> eval2 l + eval2 r
-          App2 f arg -> (eval2 f) (eval2 arg)
-          Lam2 f -> \arg -> eval2 (f (Val2 arg))
+        eval3 :: Term3 ty -> ty
+        eval3 term = case term of
+          Val3 x -> x
+          Plus l r -> eval3 l + eval3 r
+          App3 f arg -> (eval3 f) (eval3 arg)
+          Lam3 f -> \arg -> eval3 (f (Val3 arg))
     \end{minted}
 
     \begin{task}
         Можно ли было объявить \mintinline{haskell}|Lam| как
         \begin{minted}{haskell}
-            Lam2 :: (arg -> Term2 res) -> Term2 (arg -> res)
+            Lam3 :: (arg -> Term3 res) -> Term3 (arg -> res)
         \end{minted}
     \end{task}
 
     \subsubsection{Замыкания} \label{subsubsec:closures}
 
     Мы можем свести работу с вложенными функциями к работе с глобальными с помощью \vocab{lambda lifting}: вместо каждой вложенной функции заводим по глобальной.
-    Если вложенная функция имела свободные переменные, ссылающиеся на локалы, добавляем глобальной функции аргумент контекста содержащего значения для этих переменных.
+    Если вложенная функция имела свободные переменные, добавляем глобальной функции аргумент контекста содержащего значения для этих переменных.
     \begin{minted}{kotlin}
         fun f(x) {
             fun g(y) = x + y
@@ -1209,12 +1218,10 @@
 
     Теперь мы можем функциональные объекты представлять как пару из контекста и указателя на глобальную функцию --- то есть как \vocab{замыкание (closure)}\footnote{\url{https://en.wikipedia.org/wiki/Closure_(computer_programming)}}\footnote{Термин closure был предложен Piter Landin, вместе с кучей других вещей.}.
 
-    % todo cloud haskell, stable pointers
-
     \subsubsection{Дефункционализация} \label{subsubsec:defunctionalization}
 
     \vocab{Дефункционализация (defunctionalization)} --- техника избавление от функций высших порядков в программе\footnote{\url{https://en.wikipedia.org/wiki/Defunctionalization}}~\cite{defunctionalization-slides}.
-    Впервые предложена в работе~\cite{reynolds1972definitional}.
+    Впервые предложена в работе~\cite{reynolds1972definitional, reynolds1998definitional}.
 
     Идея заключается в том, чтобы заменить каждую лямбда-функцию вызовом конструктора некоторого алгебраического типа данных.
     А каждый call-cite функции заменить на вызов специальной first-order функции \texttt{apply}, интерпретирующей данный алгебраический тип.
@@ -1229,10 +1236,39 @@
         example = apply IsRed $ apply (MkColor 10 50) 120
     \end{minted}
 
-    Различия между дефункционализацией и замыканиями обсуждаются в~\cite{reynolds1998definitional, defunctionalization-slides}.
+    \subsubsection{Сериализация}
 
-    % todo reference to best refactoring
-    % todo refrence co calculate correct compilers and stuff
+    В этом разделе мы говорили о возможных реализациях функций первого класса, то есть функций, которые можно использовать так же гибко, как и данные.
+    Возникает закономерный вопрос: можем ли мы сериализовать функцию первого класса и послать исполняться на другую машину?
+
+    Функция состоит из кода и захваченных свободных переменных в случае статического связывания.
+    Соответственно, если код представлен в сериализуемом виде (например, позиционно-независимый байт-код), то его в принципе можно переслать по сети и исполнить на другом инстансе виртуальной машины.
+    Так, например, делает Erlang.
+    Однако, такой подход невероятно неэффективный, так как байт-код нужно интерпретировать.
+    Таким образом, Erlang жертвует скоростью исполнения ради горизонтальной масштабируемости.
+
+    Существуют забавные работы, которые вместо сериализации функции и отправки её на сервер, отправляют некоторый хендл, по которому сервер может вызвать эту функцию на клиенте и получить результат.
+    Такая разновидность RPC с поддержкой функций высших порядков\footnote{\url{https://github.com/winter-yuki/LambdaRPC.kt}}.
+
+    Если мы гарантируем, что на различных узлах кластера исполняется один и тот же кодЮ, как обычно и бывает на практике, можно добиться более эффективной реализации.
+    Например, используя дефункционализацию~(см.~\ref{subsubsec:defunctionalization}), мы можем сериализовать только объекты алгебраического типа, кодирующие функции.
+    Поскольку на другом узле кластера исполняется такой же код, мы там можем десериализовать объект и исполнить его с помощью \texttt{apply}.
+    Однако этот подход не очень поддерживает модульность (сложно один алгебраический тип разбить на много, вернёмся к этой задаче в разделе~\ref{sec:effect-handlers}), а так же \texttt{apply} каждый раз производит декодирование перед исполнением кода (чем, в прочем, можно пренебречь, учитывая работу с сетью).
+    
+    Подход, реализованный в Haskell\footnote{\url{https://blog.ocharles.org.uk/blog/guest-posts/2014-12-23-static-pointers.html}} позволяет наделить каждую функцию без свободных переменных некоторым статически известным адресом, одинаковым для всех инстансов приложения.
+    Далее можно сконструировать сериализуемое замыкание путём последовательности частичных применений:
+    \begin{minted}{haskell}
+        data Closure a where
+          StaticPtr :: StaticPtr b -> Closure b
+          Encoded :: ByteString -> Closure ByteString
+          Ap :: Closure (b -> c) -> Closure b -> Closure c
+
+        main = send "some-node" $
+          closure (static factorial) `closureAp` closurePure 10
+    \end{minted}
+
+    Подробнее можно прочитать в основополагающей статье про облачный Haskell~\cite{epstein2011towards}.
+    С практической точки зрения --- в книжке~\cite[chapter 16]{marlow2011parallel}.
 
     \section{Параметрический полиморфизм}
 
@@ -1482,6 +1518,8 @@
 
     \section{Специальный полиморфизм} \label{sec:ad-hoc}
 
+    % todo ConstraintKinds
+
     % todo constraints and decidability
 
     % todo https://chrisdone.com/posts/haskell-constraint-trick/
@@ -1538,6 +1576,9 @@
     % todo he Essence of Cornpiling with Continuations
 
     % todo calculating correct compilers
+
+    % todo reference to best refactoring
+    % todo refrence co calculate correct compilers and stuff
 
     \cite{reynolds1972definitional, reynolds1998definitional, defunctionalization-slides}
 
@@ -1648,6 +1689,10 @@
 
     % todo C# expression trees
     % todo F# что-то про монады и forM
+
+    % todo call by push value
+
+    % todo monads in pythong with nice syntax
 
     % todo
 
