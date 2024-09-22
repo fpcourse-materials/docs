@@ -70,7 +70,7 @@
 % https://tex.stackexchange.com/questions/99475/how-to-invoke-latex-with-the-shell-escape-flag-in-texstudio-former-texmakerx
 % Colored, requires --shell-escape compiling option
 \usepackage{minted}
-\setminted{xleftmargin=\parindent, autogobble, escapeinside=??, linenos}
+\setminted{xleftmargin=\parindent, autogobble, escapeinside=??, linenos, numberblanklines=false}
 \usepackage{listings}
 % ------------------------------------------------
 
@@ -1093,8 +1093,9 @@
             Lam1 name (eval1 body env')
     \end{minted}
 
+    %! suppress = UnresolvedReference
     \begin{task}
-        Объясните, зачем окружение модифицируется на строчке 11?
+        Объясните, зачем окружение модифицируется на строчке~10?
     \end{task}
 
     \subsubsection{Верифицированный контекст}
@@ -1346,11 +1347,9 @@
     Haskell позволяет также абстрагироваться по типам произвольных кайндов, не только \mintinline{haskell}|Type|.
     Например, \mintinline{haskell}|f :: forall (m :: Type -> Type) a . a -> m a|.
 
-    Говорят, что функции, возвращающие значение какого-то такого вида \texttt{m a} --- ``too polymorphic''.
+    Говорят, что функции, возвращающие значение какого-то такого вида \texttt{m a} --- слишком полиморфные, ``too polymorphic''.
     Код, использующий такие функции будет сталкиваться с серьёзнами проблемами в производительности, так как компилятор не знает конкретного типа и не может заинлайнить соответствующие вызовы \texttt{fmap}, bind, и т.д.
-    Чтобы обойти эту проблему, рекомендуется пользоваться либо конкретными типами, либо воспользоваться библиотекой kan-extensions\footnote{\url{https://hackage.haskell.org/package/kan-extensions}}~\cite[13.5]{maguire-types}.
-
-    % todo https://bartoszmilewski.com/2017/04/17/kan-extensions/
+    Чтобы обойти эту проблему, рекомендуется пользоваться либо конкретными типами, либо воспользоваться библиотекой kan-extensions\footnote{\url{https://hackage.haskell.org/package/kan-extensions}}\footnote{\url{https://bartoszmilewski.com/2017/04/17/kan-extensions/}}~\cite[13.5]{maguire-types}.
 
     Далеко не во всех языках есть полиморфизм высшего ранга, но иногда он нужен.
     Например, если мы хотим объявить абстрактный тип \mintinline{haskell}|Monad|.
