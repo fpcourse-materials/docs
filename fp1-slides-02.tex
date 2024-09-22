@@ -215,9 +215,9 @@
                 \underbrace{(\lambda rec \ap n \ldotp \term{if} \ap (\term{iszero} \ap \framebox{n}) \ap \term{1} \ap (\term{mult} \ap \framebox{n} \ap (\framebox{rec} \ap (\term{pred} \ap \framebox{n}))))}_{\textstyle \term{fac'}}
                 \ap \term{fac} \ap N
             \]
-            \item \pause Делаем в обеих частях $\eta$-редукцию, так как она не портит аппликативного поведения:
+            \item \pause Поскольку правые аппликанды совпадают ($N \equiv N$), рассмотрим левые части:
             \[
-                \term{fac} \eqt_{\beta\eta} \term{fac'} \ap \term{fac}
+                \term{fac} \eqt_{\beta} \term{fac'} \ap \term{fac}
             \]
             \item \pause То есть $\term{fac}$ --- неподвижная точка отображения $\term{fac'}$!  Найдём её $\comb{Y}$-комбинатором:
             \[

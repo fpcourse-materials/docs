@@ -832,7 +832,7 @@
 
     Чтобы исполнить что-то на GPU нужно породить и скомпилировать код на Cuda.
     Таким образом, Accelerate должен быть deep embedding, чтобы иметь дерево вычисления, чтобы его транслировать в Cuda наиболее эффективным образом.
-    
+
     В то же время описывать численные вычисления как дерево крайне неудобно.
     Неплохо было бы иметь привычные операторы и функции высших порядков для работы с массивами на GPU\@.
     Поэтому Accelerate предоставляет на самом деле shallow интерфейс для построения деревьев.
@@ -1254,7 +1254,7 @@
     Например, используя дефункционализацию~(см.~\ref{subsubsec:defunctionalization}), мы можем сериализовать только объекты алгебраического типа, кодирующие функции.
     Поскольку на другом узле кластера исполняется такой же код, мы там можем десериализовать объект и исполнить его с помощью \texttt{apply}.
     Однако этот подход не очень поддерживает модульность (сложно один алгебраический тип разбить на много, вернёмся к этой задаче в разделе~\ref{sec:effect-handlers}), а так же \texttt{apply} каждый раз производит декодирование перед исполнением кода (чем, в прочем, можно пренебречь, учитывая работу с сетью).
-    
+
     Подход, реализованный в Haskell\footnote{\url{https://blog.ocharles.org.uk/blog/guest-posts/2014-12-23-static-pointers.html}}\footnote{\url{https://hackage.haskell.org/package/distributed-closure}} позволяет наделить каждую функцию без свободных переменных некоторым статически известным адресом, одинаковым для всех инстансов приложения.
     Далее можно сконструировать сериализуемое замыкание путём последовательности частичных применений:
     \begin{minted}{haskell}
@@ -1271,13 +1271,16 @@
     С практической точки зрения --- в книжке~\cite[chapter 16]{marlow2011parallel}.
 
     \begin{task}
-        Почему не нужно явно добавлять в замыкание свободную переменную \texttt{(*)} в реализации факториала?
+        Нужно ли явно добавлять в замыкание свободную переменную \texttt{(*)} (оператор умножения) в реализации факториала?
     \end{task}
+
 
     \section{Параметрический полиморфизм}
 
     Под \vocab{параметрическим полиморфизмом} будем подразумевать возможность единообразно работать с произвольными типами данных.
-    В этом разделе мы рассмотрим различные способы реализации этой возможности.
+
+    В этом разделе мы рассмотрим различные классификации параметрически-полиморфных функций и техники связанные с ними.
+    Также немало внимания будет уделено обсуждению подходов к реализации параметрического полиморфизма в языках программирования.
 
     \subsection{Параметрический полиморфизм в языке}
 
@@ -1288,23 +1291,115 @@
     Чтобы воспользоваться функцией, нужно в первую очередь специализировать её на нужный тип, передав его первым аргументом: $(\Lambda \alpha\ldotp\lambda x\ldotp \lambda y\ldotp x)\ap nat : nat\to\beta\to nat$.
     Применение терма к типу называется \vocab{универсальной аппликацией}.
 
-    В Haskell большая $\Lambda$ всегда неявная.
-    \mintinline{haskell}|forall| тоже обычно неявно приписываются к типам, связывая, по конвенции, все типы, начинающиеся с маленькой буквы.
-    Однако у пользователя есть возможность явно приписывать \mintinline{haskell}|forall|'ы, а также прописывать универсальные аппликации с помощью расширения \mintinline{haskell}|TypeApplications|:
+    В Haskell большая $\Lambda$ приписывается неявно, однако есть экспериментальное расширение, позволяющее её писать --- \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_abstractions.html}{TypeAbstractions}.
+    \mintinline{haskell}|forall| тоже обычно неявно приписываются к типам, связывая, по конвенции, все типы, начинающиеся с маленькой буквы в порядке их вхождения в тип.
+    Однако у пользователя есть возможность явно приписывать \mintinline{haskell}|forall|'ы с помощью расширения \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/explicit_forall.html\#extension-ExplicitForAll}{ExplicitForAll}.
+    Это может понадобиться либо за тем, чтобы изменить порядок автоматических типовых абстракций, либо чтобы иметь возможность сослаться на абстрагированный тип в теле функции (расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/scoped_type_variables.html#extension-ScopedTypeVariables}{ScopedTypeVariables}).
+
+    Haskell также позволяет вручную прописывать типовые аппликации (с помощью расширения \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_applications.html}{TypeApplications}).
+    Это может помочь программированию на уровне типов, когда информации из терма не достаточно, чтобы специализировать тип.
     \begin{minted}{haskell}
         id :: forall a . a -> a
         ghci> :t id @Int
         id @Int :: Int -> Int
     \end{minted}
 
-    %todo refer to params
+    \subsubsection{First-class polymorphism}
 
-    % todo higher-rank polymorphism
+    Существует возможность писать функции, которые принимают другие полиморфные функции в качестве аргументов.
+    Типы таких функций называются \vocab{типами высшего ранга (higher-ranked types)}, их можно использовать с расширением \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/rank_polymorphism.html}{RankNTypes}.
+    Так, типовой параметр функции \texttt{g} определяет функция \texttt{f}, а не вызывающий функцию \texttt{f}:
+    \begin{minted}{haskell}
+        f :: (forall a . a -> a) -> (Int, Char)
+        f g = (g @Int 42, g @Char 'a') -- типовая аппликация для наглядности
+        ghci> f (\x -> x)
+    \end{minted}
+
+    Проблема типов высшего ранга в том, что их вывод неразрешим, то есть глобальный вывод типов Haskell в этом случае перестаёт работать.
+    Но если типы высшего ранга приписать вручную, остальной вывод будет работать как и раньше.
+    Например, числа Чёрча имеют высший ранг\footnote{\url{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}}:
+    \begin{minted}{haskell}
+        suc :: (forall a . (a -> a) -> a -> a) -> (a -> a) -> a -> a
+        suc n s z = s (n s z)
+    \end{minted}
+
+    %! suppress = LineBreak
+    \begin{task}
+        Какой ранг имеет тип тип \mintinline{haskell}|Int -> (forall a . a -> a)|?
+    \end{task}
+
+    По умолчанию типовые параметры можно специализировать только на конкретные типы.
+    Расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/impredicative_types.html}{ImpredicativeTypes} позволяет специализировать типовые параметры на полиморфные типы (включающие \mintinline{haskell}|forall|'ы внутри себя).
+    \begin{minted}{haskell}
+        runST :: (forall s. ST s a) -> a
+        id :: forall b. b -> b
+        foo = id runST -- типизируется только с ImpredicativeTypes
+    \end{minted}
+
+    \cite{serrano2020quick}, \cite{emrich2020freezeml}
+
+
+
     % todo impredicative applications
     % todo first-class polymorphism
     % todo quick lookup
     % todo bidirectional typing
     % todo алгоритмы вывода для first-class polymorphism
+
+    \subsubsection{Higher-kinded polymorphism}
+
+    Haskell позволяет также абстрагироваться по типам произвольных кайндов, не только \mintinline{haskell}|Type|.
+    Например, \mintinline{haskell}|f :: forall (m :: Type -> Type) a . a -> m a|.
+
+    Говорят, что функции, возвращающие значение какого-то такого вида \texttt{m a} --- ``too polymorphic''.
+    Код, использующий такие функции будет сталкиваться с серьёзнами проблемами в производительности, так как компилятор не знает конкретного типа и не может заинлайнить соответствующие вызовы \texttt{fmap}, bind, и т.д.
+    Чтобы обойти эту проблему, рекомендуется пользоваться либо конкретными типами, либо воспользоваться библиотекой kan-extensions\footnote{\url{https://hackage.haskell.org/package/kan-extensions}}~\cite[13.5]{maguire-types}.
+
+    % todo https://bartoszmilewski.com/2017/04/17/kan-extensions/
+
+    Далеко не во всех языках есть полиморфизм высшего ранга, но иногда он нужен.
+    Например, если мы хотим объявить абстрактный тип \mintinline{haskell}|Monad|.
+    Заметим, что тип кайнда \mintinline{haskell}|Type -> Type| --- это функция на типах, принимающая один тип, и возвращающая другой.
+    Соответственно, функция, абстрагированная по такому типу~--- функция высшего порядка, в некотором смысле.
+    Но мы уже знаем технику избавления от них --- дефункцинализация~\cite{defunctionalization-slides}.
+    Рассмотрим пример на языке Kotlin.
+
+    Будем представлять типовую аппликацию в виде отдельного типа \mintinline{kotlin}|Apply<Sym, T>|.
+    Установим, к примеру, изоморфизм между \mintinline{kotlin}|List<T>| и \mintinline{kotlin}|Apply<ListSym, T>|:
+    \begin{minted}{kotlin}
+        class Apply<Sym, T>(val value: Any)
+        object ListSym
+
+        fun <T> List<T>.to(): Apply<ListSym, T> = Apply(this)
+        fun <T> Apply<ListSym, T>.from(): List<T> = this.value as List<T>
+    \end{minted}
+
+    Теперь мы можем объявить интерфейс монад и задать реализацию для списка с помощью синглтона:
+    \begin{minted}{kotlin}
+        interface Monad<M> {
+            fun <T> pure(x: T): Apply<M, T>
+            infix fun <T, R> Apply<M, T>.bind(k: (T) -> Apply<M, R>): Apply<M, R>
+        }
+
+        object ListMonad : Monad<ListSym> {
+            override fun <T> pure(x: T): Apply<ListSym, T> = listOf(x).to()
+            override fun <T, R> Apply<ListSym, T>.
+                    bind(k: (T) -> Apply<ListSym, R>): Apply<ListSym, R> =
+                this.from().flatMap { k(it).from() }.to()
+        }
+    \end{minted}
+
+    И наконец мы можем писать функции над произвольными монадами:
+    \begin{minted}{haskell}
+        fun <M> Monad<M>.go(x: Apply<M, Int>): Apply<M, Int> =
+            x bind { pure(it + 1) } bind { pure(it + 2) }
+
+        fun test(xs: List<Int>): List<Int> = ListMonad.go(xs.to()).from()
+    \end{minted}
+
+    Не лишним будет отметить, что результирующий код выглядит несколько чудовищно.
+    Скорее всего, использование этой техники не окупает себя и нужно выбирать другой стиль программирования.
+    Однако иметь этот инструмент в ящике не будет лишним.
 
     \subsection{Реализация параметрического полиморфизма}
 
@@ -1425,61 +1520,6 @@
 
     % todo параметрический полиморфизм через специальный
 
-    \subsection{Higher-kinded polymorphism}
-
-    Haskell позволяет также абстрагироваться по типам произвольных кайндов, не только \mintinline{haskell}|Type|.
-    Например, \mintinline{haskell}|f :: forall (m :: Type -> Type) a . a -> m a|.
-
-    Говорят, что функции, возвращающие значение какого-то такого вида \texttt{m a} --- ``too polymorphic''.
-    Код, использующий такие функции будет сталкиваться с серьёзнами проблемами в производительности, так как компилятор не знает конкретного типа и не может заинлайнить соответствующие вызовы \texttt{fmap}, bind, и т.д.
-    Чтобы обойти эту проблему, рекомендуется пользоваться либо конкретными типами, либо воспользоваться библиотекой kan-extensions\footnote{\url{https://hackage.haskell.org/package/kan-extensions}} (см главу 13.5 в~\cite{maguire-types}).
-
-    % todo https://bartoszmilewski.com/2017/04/17/kan-extensions/
-
-    Далеко не во всех языках есть полиморфизм высшего ранга, но иногда он нужен.
-    Например, если мы хотим объявить абстрактный тип \mintinline{haskell}|Monad|.
-    Заметим, что тип кайнда \mintinline{haskell}|Type -> Type|~--- это функция на типах, принимающая один тип, и возвращающая другой.
-    Соответственно, функция, абстрагированная по такому типу~--- функция высшего порядка, в некотором смысле.
-    Но мы уже знаем технику избавления от них --- дефункцинализация~\cite{defunctionalization-slides}.
-    Рассмотрим пример на языке Kotlin.
-
-    Будем представлять типовую аппликацию в виде отдельного типа \mintinline{kotlin}|Apply<Sym, T>|.
-    Установим, к примеру, изоморфизм между \mintinline{kotlin}|List<T>| и \mintinline{kotlin}|Apply<ListSym, T>|:
-    \begin{minted}{kotlin}
-        class Apply<Sym, T>(val value: Any)
-        object ListSym
-
-        fun <T> List<T>.to(): Apply<ListSym, T> = Apply(this)
-        fun <T> Apply<ListSym, T>.from(): List<T> = this.value as List<T>
-    \end{minted}
-
-    Теперь мы можем объявить интерфейс монад и задать реализацию для списка с помощью синглтона:
-    \begin{minted}{kotlin}
-        interface Monad<M> {
-            fun <T> pure(x: T): Apply<M, T>
-            infix fun <T, R> Apply<M, T>.bind(k: (T) -> Apply<M, R>): Apply<M, R>
-        }
-
-        object ListMonad : Monad<ListSym> {
-            override fun <T> pure(x: T): Apply<ListSym, T> = listOf(x).to()
-            override fun <T, R> Apply<ListSym, T>.
-                    bind(k: (T) -> Apply<ListSym, R>): Apply<ListSym, R> =
-                this.from().flatMap { k(it).from() }.to()
-        }
-    \end{minted}
-
-    И наконец мы можем писать функции над произвольными монадами:
-    \begin{minted}{haskell}
-        fun <M> Monad<M>.go(x: Apply<M, Int>): Apply<M, Int> =
-            x bind { pure(it + 1) } bind { pure(it + 2) }
-
-        fun test(xs: List<Int>): List<Int> = ListMonad.go(xs.to()).from()
-    \end{minted}
-
-    Не лишним будет отметить, что результирующий код выглядит несколько чудовищно.
-    Скорее всего, использование этой техники не окупает себя и нужно выбирать другой стиль программирования.
-    Однако иметь этот инструмент в ящике не будет лишним.
-
     \subsection{Полиморфизм по конвенции вызова (levity polymorphism)} \label{subsec:levity-polymorphism}
 
     Как мы уже обсуждали выше~\ref{subsubsec:type-erasure}, параметрический полиморфизм в Haskell реализуется следующим образом: все значения хранятся в куче и передаются в полиморфные функции по указателю.
@@ -1519,6 +1559,8 @@
 
     % todo project valhalla
     % todo jvm specialization https://youtu.be/JI09cs2yUgY?si=BOeUXS2lXs8bvNHE
+
+    % todo variance & functors
 
 
     \section{Специальный полиморфизм} \label{sec:ad-hoc}
@@ -1591,6 +1633,7 @@
 
     % todo delimited via undelimited and mutable cell
 
+
     \section{Интерпретаторы зазеркалья} \label{sec:wonder-interpreters}
 
     % todo are custom patretns in haskell connected to this?
@@ -1621,12 +1664,16 @@
 
     % todo threaded code
 
+    % todo https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html
+
     \cite{gibbons2013functional, gibbons2014folding}
 
     % todo
 
 
     \section{Метапрограммирование и специализация}
+
+    % todo type data GHC extension & datatype promotion
 
     % todo split intro several topics
 
@@ -1724,7 +1771,7 @@
 
     % todo \textit{multimethods}
 
-    Languages with \textit{multimethods}, like Common Lisp’s CLOS, Dylan, and Julia do support adding both new types and operations  easily.
+    Languages with \textit{multimethods}, like Common Lisp’s CLOS, Dylan, and Julia do support adding both new types and operations easily.
     What they typically sacrifice is either static type checking, or separate compilation.
 
     % todo ZIO, TS Effect
