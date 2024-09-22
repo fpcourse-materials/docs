@@ -1,3 +1,4 @@
+%! suppress = LineBreak
 %! suppress = Makeatletter
 %! suppress = TooLargeSection
 %! suppress = MissingLabel
@@ -1329,22 +1330,16 @@
     \end{task}
 
     По умолчанию типовые параметры можно специализировать только на конкретные типы.
-    Расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/impredicative_types.html}{ImpredicativeTypes} позволяет специализировать типовые параметры на полиморфные типы (включающие \mintinline{haskell}|forall|'ы внутри себя).
+    Расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/impredicative_types.html}{ImpredicativeTypes} позволяет специализировать типовые параметры на полиморфные типы (включающие \mintinline{haskell}|forall|'ы внутри себя) --- \vocab{импредикативное применение}.
     \begin{minted}{haskell}
         runST :: (forall s. ST s a) -> a
         id :: forall b. b -> b
         foo = id runST -- типизируется только с ImpredicativeTypes
     \end{minted}
 
-    \cite{serrano2020quick}, \cite{emrich2020freezeml}
-
-
-
-    % todo impredicative applications
-    % todo first-class polymorphism
-    % todo quick lookup
-    % todo bidirectional typing
-    % todo алгоритмы вывода для first-class polymorphism
+    Типы высших рангов вместе с импредикативным применением образуют \vocab{полиморфизм первого класса (first-class polymorphism)}, когда полиморфные типы могут использоваться почти так же свободно, как и любые другие.
+    Классический алгоритм вывода Хиндли-Дамаса-Милнера не справляется (и в общем случае задача неразрешима), так что существует большое количество решений, делающих различные компромиссы.
+    Наиболее известные --- FreezeML~\cite{emrich2020freezeml} и Quick Look\footnote{\href{https://youtu.be/ZuNMo136QqI?si=qp8PAEeeF-bioCB_}{(youtube) A Quick Look at Impredicativity (Simon Peyton Jones)}}~\cite{serrano2020quick}, реализованный в Haskell с недавнего времени.
 
     \subsubsection{Higher-kinded polymorphism}
 
