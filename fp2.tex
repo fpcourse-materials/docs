@@ -1349,7 +1349,7 @@
 
     Говорят, что функции, возвращающие значение какого-то такого вида \texttt{m a} --- слишком полиморфные, ``too polymorphic''.
     Код, использующий такие функции будет сталкиваться с серьёзнами проблемами в производительности, так как компилятор не знает конкретного типа и не может заинлайнить соответствующие вызовы \texttt{fmap}, bind, и т.д.
-    Чтобы обойти эту проблему, рекомендуется пользоваться либо конкретными типами, либо воспользоваться библиотекой kan-extensions\footnote{\url{https://hackage.haskell.org/package/kan-extensions}}\footnote{\url{https://bartoszmilewski.com/2017/04/17/kan-extensions/}}~\cite[13.5]{maguire-types}.
+    Чтобы обойти эту проблему, рекомендуется пользоваться либо конкретными типами, либо воспользоваться библиотекой kan-extensions\footnote{\url{https://hackage.haskell.org/package/kan-extensions}}\footnote{\url{https://bartoszmilewski.com/2017/04/17/kan-extensions/}}~\cite[параграф 13.5]{maguire-types}.
 
     Далеко не во всех языках есть полиморфизм высшего ранга, но иногда он нужен.
     Например, если мы хотим объявить абстрактный тип \mintinline{haskell}|Monad|.
@@ -1394,6 +1394,15 @@
     Не лишним будет отметить, что результирующий код выглядит несколько чудовищно.
     Скорее всего, использование этой техники не окупает себя и нужно выбирать другой стиль программирования.
     Однако иметь этот инструмент в ящике не будет лишним.
+
+    \subsubsection{Вариантность}
+
+    \cite[глава 3]{maguire-types}
+    \cite{hinze2012functional}
+
+    % todo
+
+    % todo типовые абстракции и маленькие лямбды в типах
 
     \subsection{Реализация параметрического полиморфизма}
 
@@ -1543,6 +1552,8 @@
     % todo \chapter*{Valhalla - Where Are We?}
 
     % todo data femilies for representation polymorphism
+
+    % todo nim implementation via effect system
 
     % todo data kinds
 
