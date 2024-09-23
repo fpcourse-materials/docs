@@ -1310,6 +1310,21 @@
         id @Int :: Int -> Int
     \end{minted}
 
+    Конструкторы данных формально описываются путём использования лямбда-абстракций и редукций на уровне типов.
+    Таким образом, возникает необходимость контроля за корректностью написания типов, которая осуществляется системой кайндов.
+    \begin{align*}
+        &Pair : * \rightarrow * \rightarrow * \\
+        &Pair = \lambda \tau^*~\sigma^*.~(\forall \gamma.~\tau\rightarrow\sigma\rightarrow\gamma) \\
+        &pair : \forall \alpha~\beta.~\alpha \rightarrow \beta \rightarrow Pair~\alpha~\beta \\
+        &pair = \Lambda \alpha^*~\beta^*.~\lambda x^\alpha~y^\beta.~(\Lambda \gamma^*.~\lambda f^{\alpha\rightarrow\beta\rightarrow\gamma}.~f~\gamma~x~y) \\
+        &fst : \forall \alpha~\beta.~Pair~\alpha~\beta\rightarrow \alpha \\
+        &fst = \Lambda \alpha^*~\beta^*.~\lambda p^{Pair~\alpha~\beta}.~p~\alpha~\mathbf{K}
+    \end{align*}
+
+    Haskell не позволяет создавать функции на типах по месту с помощью явной типовой лямбды\footnote{\url{https://stackoverflow.com/questions/4069840/lambda-for-type-expressions-in-haskell}}.
+    В Scala существует нетривиальный трюк\footnote{\href{https://stackoverflow.com/questions/8736164/what-are-type-lambdas-in-scala-and-what-are-their-benefits}{(stackoverflow) Scala type lambdas.}}\footnote{https://stackoverflow.com/questions/9443004/what-does-the-operator-mean-in-scala}, который позволяет этого добиться.
+    Scala3, однако, включила эту возможность непосредственно в язык\footnote{\url{https://docs.scala-lang.org/scala3/reference/new-types/type-lambdas.html}}.
+
     \subsubsection{First-class polymorphism}
 
     Существует возможность писать функции, которые принимают другие полиморфные функции в качестве аргументов.
@@ -1431,7 +1446,7 @@
     \end{figure}
 
     Типовой конструктор можно объявить ковариантным или контравариантным функтором (или никаким из них) относительно типового параметра в зависимости от вида декларации соответствующих конструкторов данных.
-    А именно, от \vocab{полярности}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}} позиций, в которых входит этот типовой параметр в декларации.
+    А именно, от \vocab{полярности}\footnote{\url{https://existentialtype.wordpress.com/2012/08/25/polarity-in-type-theory/}}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}} позиций, в которых входит этот типовой параметр в декларации.
 
     Попробуем развить интуитивное понимание полярностей.
     Рассмотрим некоторое вычисление типа \texttt{F a}.
@@ -1489,26 +1504,17 @@
         dimap serialize deserialize (query :: Text -> Text) :: Age -> [User]
     \end{minted}
 
+    Также понятие вариантности часто встречается в объектно ориентированных языках для обозначения возможности дополнить отношение подтипизации на полиморфные типы (да и вообще в теории подтипизации).
 
+    Действительно, \vocab{отношение подтипизации} \texttt{B <: A} говорит о том, что значение типа \texttt{B} безопасно использовать в позиции, где ожидается значение типа \texttt{A}.
+    Иначе говоря, существует функция \texttt{upcast :: B -> A}.
+    Если типовой конструктор \texttt{F a} ковариантен относительно параметра \texttt{a}, то по \texttt{upcast} найдётся \texttt{upcast' :: F B -> F A}.
+    То есть отношение подтипизации также автоматически включает \texttt{F B <: F A}.
+    Контравариантный случай аналогично.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    % todo
-
-    % todo типовые абстракции и маленькие лямбды в типах
+    \begin{task}
+        Убедитесь в вашем любимом языке с поддержкой вариантности, что минус на минус даёт плюс.
+    \end{task}
 
     \subsection{Реализация параметрического полиморфизма}
 
@@ -1706,6 +1712,8 @@
 
     % todo associated type families
 
+    % todo reference dependent types
+
     % todo
 
 
@@ -1840,6 +1848,8 @@
 
 
     \section{Дополнительные главы монад}
+
+    % todo ncatlabs
 
     % todo Monads and algebras
 
