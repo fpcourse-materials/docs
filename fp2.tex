@@ -119,6 +119,10 @@
 % https://tex.stackexchange.com/questions/10684/vertical-space-in-lists
 \usepackage{enumitem}
 \setlist{noitemsep} % nosep
+\renewcommand{\labelitemi}{$\triangleright$}
+\renewcommand{\labelitemii}{$\triangleright$}
+\renewcommand{\labelitemiii}{$\triangleright$}
+\renewcommand{\labelitemiv}{$\triangleright$}
 % ------------------------------------------------
 
 \begin{document}
@@ -1397,8 +1401,110 @@
 
     \subsubsection{Вариантность}
 
-    \cite[глава 3]{maguire-types}
-    \cite{hinze2012functional}
+    В этом параграфе мы будем рассматривать тему с точки зрения программирования~\cite[глава 3]{maguire-types}, не отдавая должного теории категорий.
+    Восполнить пробел можно с помощью замечательной статьи, написанной в жанре пьесы~\cite{hinze2012functional}.
+
+    \vocab{Ковариантный функтор} --- пара из типового конструктора \texttt{F} и операции на функциях \texttt{fmap :: (a -> b) -> (F a -> F b)}.
+    Плюс законы о том, что \texttt{fmap} уважает \texttt{id} и композицию.
+
+    \begin{minted}{haskell}
+        class Functor f where
+          fmap :: (a -> b) -> (f a -> f b)
+    \end{minted}
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.3\textwidth]{figs/functor}
+    \end{figure}
+
+    \vocab{Контравариантный функтор} --- пара из типового конструктора и операции на функциях, разворачивающей стрелку.
+    Плюс соответствующие законы.
+
+    \begin{minted}{haskell}
+        class Contravariant f where
+          contramap :: (a -> b) -> (f b -> f a)
+    \end{minted}
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.3\textwidth]{figs/contra-functor}
+    \end{figure}
+
+    Типовой конструктор можно объявить ковариантным или контравариантным функтором (или никаким из них) относительно типового параметра в зависимости от вида декларации соответствующих конструкторов данных.
+    А именно, от \vocab{полярности}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}} позиций, в которых входит этот типовой параметр в декларации.
+
+    Попробуем развить интуитивное понимание полярностей.
+    Рассмотрим некоторое вычисление типа \texttt{F a}.
+    Параметр \texttt{a} входит в положительной позиции, если все его значения можно извлечь из \texttt{F a}, как в следующих примерах (для извлечения могут понадобиться паттерн-матчинг и аппликация):
+    \begin{minted}{haskell}
+        data F a = L a | R a
+        data F a = D a (Int -> a)
+    \end{minted}
+
+    Вхождения, наоборот, отрицательные, если значения соответствующего типа нельзя получить из вычисления, но нужно ему предоставить.
+    Например, в качестве параметров функций:
+    \begin{minted}{haskell}
+        data F a = F (a -> Int)
+        data F a = L (a -> ()) | R Int
+    \end{minted}
+    Действительно, для первого примера можно объявить инстанс \mintinline{haskell}|Contravariant|:
+    \begin{minted}{haskell}
+        instance Contravariant F where
+          contramap :: (a -> b) -> (F b -> F a)
+          contramap g (F f) = F (f . g)
+    \end{minted}
+
+    Можно предположить, что на плюс и минус действуют обычные мультипликативные законы.
+    И это действительно так.
+    \begin{itemize}
+        \item Плюс на плюс даёт плюс:
+        \begin{minted}{haskell}
+            data F a = F (Int -> (Int -> a))
+        \end{minted}
+        \item Плюс на минус (и наоборот) --- минус:
+        \begin{minted}{haskell}
+            data F a = F ((Int -> a) -> Int)
+        \end{minted}
+        \item Минус на минус --- плюс, поскольку параметр принимаемой функции выдаётся реализацией вызывающей стороне:
+        \begin{minted}{haskell}
+            data F a = F ((a -> Int) -> Int)
+        \end{minted}
+    \end{itemize}
+
+    Тип от двух положительных параметров можно объявить \vocab{бифунктором}:
+    \begin{minted}{haskell}
+        class Bifunctor f where
+          bimap :: (a -> c) -> (b -> d) -> f a b -> f c d
+    \end{minted}
+
+    Тип от двух параметров, положительного и отрицательного, --- \vocab{профунктором}:
+    \begin{minted}{haskell}
+        class Profunctor p where
+          dimap :: (c -> a) -> (b -> d) -> p a b -> p c d
+    \end{minted}
+
+    Профункторы являются некоторыми обобщениями функциональной стрелки.
+    Например, если у нас есть SQL запрос, который по данным возвращает результат, его можно объявить профунктором с семантикой --- добавить предобработку входных данных и предобработку выходных:
+    \begin{minted}{haskell}
+        dimap serialize deserialize (query :: Text -> Text) :: Age -> [User]
+    \end{minted}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     % todo
 
@@ -1638,6 +1744,8 @@
 
     % todo delimited via undelimited and mutable cell
 
+    % todo transducers, pipelines and internal iteration
+
 
     \section{Интерпретаторы зазеркалья} \label{sec:wonder-interpreters}
 
@@ -1668,6 +1776,8 @@
     % todo композиционность и её восстановление через эксплицирование контекстных зывисимостей.
 
     % todo threaded code
+
+    % todo connections to polarity https://ncatlab.org/nlab/show/polarity+in+type+theory
 
     % todo https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html
 
@@ -1731,6 +1841,8 @@
 
     \section{Дополнительные главы монад}
 
+    % todo Monads and algebras
+
     % todo оригинальная статья
 
     % todo monadic reflection
@@ -1750,6 +1862,9 @@
     % todo call by push value
 
     % todo monads in pythong with nice syntax
+
+    % todo lazyness
+    % todo direct style
 
     % todo
 
@@ -1775,6 +1890,8 @@
     % todo Polymorphic Symmetric Multiple Dispatch with Variance
 
     % todo \textit{multimethods}
+
+    % todo  custom schedulers
 
     Languages with \textit{multimethods}, like Common Lisp’s CLOS, Dylan, and Julia do support adding both new types and operations easily.
     What they typically sacrifice is either static type checking, or separate compilation.
@@ -1837,6 +1954,8 @@
     % todo Higher-Order Type-Level Programming in Haskell
 
     % todo как полиморфные кайнды связаны с levity-полиморфизмом
+
+    % todo type families & saturation
 
 
 
