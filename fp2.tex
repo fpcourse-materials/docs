@@ -1575,32 +1575,15 @@
         \item[\negative] Поскольку информация о типах стирается, нельзя ничего сделать с типовым аргументом, не имея его обитателей (например, запросить рефлексией информацию).
     \end{itemize}
 
-    Такого подхода придерживаются JVM, Haskell и, как правило, другие функциональные языки.
+    Такого подхода придерживаются JVM, Haskell и, как правило, другие функциональные языки ввиду его гибкости.
 
-
-
-
-
-
-
-    Языки со стиранием типов стараются снижать накладные расходы на боксинг.
-    Так, некоторые языки урезают диапазоны значений примитивов для избежания боксинга, например, OCaml и \href{https://koka-lang.github.io/koka/doc/book.html#sec-value-types}{Koka}.
-
-
-    Конечно, компиляторы стараются оптимизировать накладные расходы на боксинг путём инстанциации.
-
-    Для GHC можно указать правила переписывания, которые заставят компилятор использовать специализированные версии для определённых типов\footnote{\href{https://downloads.haskell.org/~ghc/6.12.2/docs/html/users\_guide/rewrite-rules.html\#rule-spec}{GHC user guide. Rewrite rules. Specialization.}}.
-    \begin{minted}{haskell}
-        {-# RULES "genericLookup/Int" genericLookup = intLookup #-}
-    \end{minted}
-
-
-    Haskell также поддерживает value-типы (unboxed) и написание функций, полиморфных по конвенции вызова.
-    См.~\ref{subsec:levity-polymorphism}.
-
-    % todo koka language generics implementation
-
-    % todo java specialization
+    Особую проблему вызывает работа с примитивами, потому что каждое значение приходится сначала боксить (переносить в кучу), а потом уже использовать в полиморфном контексте.
+    Поэтому языки борются с этим как могут.
+    Некоторые языки урезают диапазоны значений примитивов, чтобы зарезервировать бит, определяющий, это указатель или значение.
+    Код консультируется с этим битом для работы (похоже на~\ref{subsubsec:swift-generics}).
+    Так делают, например, OCaml и \href{https://koka-lang.github.io/koka/doc/book.html#sec-value-types}{Koka}.
+    Агрессивный инлайнинг тоже помогает.
+    Java пытается аккуратно двигаться в сторону возможности мономорфизации\footnote{\href{https://youtu.be/JI09cs2yUgY?si=MLkRs31mN1koXIu1}{Type Specialization of Java Generics - What If Casts Have Teeth ?}}\footnote{\url{https://cr.openjdk.org/~jrose/values/parametric-vm.html}}.
 
     \subsubsection{Гибридный подход}
 
@@ -1612,15 +1595,16 @@
     То есть следы дженериков в таком подходе есть в промежуточном представлении CIL, а также в рантайме.
 
     \begin{itemize}
-        \item[\positive] Порождается эффективный код, работающий с примитивами
-        \item[\positive] Доступна рефлексия по дженерикам
-        \item[\positive] Небольшое время компиляции
-        \item[\negative] Инстанциация в рантайме замедляет исполнение
-            % todo слышал от михаила, что в шарпах какие-то дорогие структуры в рантайме используются чтобы проверять подтипизацию. Или это в контексте варианса было?
-            % todo when subtyping has a cost или что-то такое
+        \item[\positive] Порождается эффективный код, работающий с примитивами;
+        \item[\positive] Доступна рефлексия по дженерикам;
+        \item[\positive] Небольшое время компиляции;
+        \item[\negative] Инстанциация в рантайме замедляет исполнение;
+        \item[\negative] Variance работает только для reference types.
     \end{itemize}
 
-    \subsubsection{Использование виртуальной таблицы свойств типов}
+    % todo выпросить инфу про подтипизацию у Михаила
+
+    \subsubsection{Использование виртуальной таблицы свойств типов} \label{subsubsec:swift-generics}
 
     Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{2017 LLVM Developers’ Meeting: ``Implementing Swift Generics''}} вместе с каждым типовым параметром передаёт value witness table (рис.~\ref{fig:swift-witness-table}).
     Это таблица со всей необходимой информацией, о типе: размер и выравнивание, что нужно сделать при копировании и перемещении объекта (например, инкрементировать счётчик ссылок).
@@ -1639,15 +1623,19 @@
     \end{figure}
 
     \begin{itemize}
-        \item[\positive] Небольшое время компиляции
-        \item[\positive] Предсказуемая эффективность (не приводит к неожиданным паузам в рантайме)
-        \item[\positive] Эффективная работа с value-значениями
-        \item[\negative] Серьёзный константный оверхед на динамические вызовы через таблицу, эффективность очень сильно зависит от компиляторных оптимизаций
+        \item[\positive] Небольшое время компиляции;
+        \item[\positive] Предсказуемая эффективность (не приводит к неожиданным паузам в рантайме);
+        \item[\positive] Эффективная работа с value-значениями;
+        \item[\positive] Высокая гибкость;
+        \item[\positive] Информация о типах не стирается;
+        \item[\negative] Серьёзный константный оверхед на динамические вызовы через таблицу, эффективность очень сильно зависит от компиляторных оптимизаций.
     \end{itemize}
 
-    % todo параметрический полиморфизм через специальный
+    Своего рода реализация параметрического полиморфизма через специальный.
 
     \subsection{Полиморфизм по конвенции вызова (levity polymorphism)} \label{subsec:levity-polymorphism}
+
+    % todo java valhalla
 
     Как мы уже обсуждали выше~\ref{subsubsec:type-erasure}, параметрический полиморфизм в Haskell реализуется следующим образом: все значения хранятся в куче и передаются в полиморфные функции по указателю.
     Однако, если для вычислительного кода важна производительность, такой подход не годится ввиду большой нагрузки на подсистему управления памятью и множества индирекций.
@@ -1717,6 +1705,11 @@
     % todo C. V. Hall, K. Hammond, S. L. Peyton Jones, and P. L. Wadler. Type classes in haskell
 
     % todo S. Peyton Jones, S. Weirich, R. A. Eisenberg, and D. Vytiniotis. A reflection on types. In A list of successes that can change the world,
+
+    Для GHC можно указать правила переписывания, которые заставят компилятор использовать специализированные версии для определённых типов\footnote{\href{https://downloads.haskell.org/~ghc/6.12.2/docs/html/users\_guide/rewrite-rules.html\#rule-spec}{GHC user guide. Rewrite rules. Specialization.}}.
+    \begin{minted}{haskell}
+        {-# RULES "genericLookup/Int" genericLookup = intLookup #-}
+    \end{minted}
 
     % todo functional dependencies & associated types
 
