@@ -1385,7 +1385,7 @@
     Рассмотрим пример на языке Kotlin.
 
     Будем представлять типовую аппликацию в виде отдельного типа \mintinline{kotlin}|Apply<Sym, T>|.
-    Установим, к примеру, изоморфизм между \mintinline{kotlin}|List<T>| и \mintinline{kotlin}|Apply<ListSym, T>|:
+    Установим изоморфизм между \mintinline{kotlin}|List<T>| и \mintinline{kotlin}|Apply<ListSym, T>|:
     \begin{minted}{kotlin}
         class Apply<Sym, T>(val value: Any)
         object ListSym
@@ -1506,7 +1506,7 @@
     \end{minted}
 
     Профункторы являются некоторыми обобщениями функциональной стрелки.
-    Например, если у нас есть SQL запрос, который по данным возвращает результат, его можно объявить профунктором с семантикой --- добавить предобработку входных данных и предобработку выходных:
+    Например, если у нас есть SQL запрос, который по данным возвращает результат, его можно объявить профунктором с семантикой --- добавить пред-обработку входных данных и пост-обработку выходных:
     \begin{minted}{haskell}
         dimap serialize deserialize (query :: Text -> Text) :: Age -> [User]
     \end{minted}
@@ -1642,14 +1642,14 @@
 
     \subsection{Полиморфизм по конвенции вызова (levity polymorphism)} \label{subsec:levity-polymorphism}
 
-    % todo java valhalla
-
     Как мы уже обсуждали выше~\ref{subsubsec:type-erasure}, параметрический полиморфизм в Haskell реализуется следующим образом: все значения хранятся в куче и передаются в полиморфные функции по указателю.
     Однако, если для вычислительного кода важна производительность, такой подход не годится ввиду большой нагрузки на подсистему управления памятью и множества индирекций.
     Поэтому Haskell позволяет также писать код с использованием unboxed значений.
     А если код не полагается на конкретную конвенцию вызова, его можно по ней абстрагировать, и писать один код для boxed и unboxed значений~\cite{eisenberg2017levity}.
 
-    \begin{figure}[h]
+    \subsubsection{Классификация значений по runtime представлению}
+
+    \begin{figure}
         \centering
         \includegraphics[width=0.5\textwidth]{/home/yukio/Diary/projs/fpcourse/fp-2024/docs/figs/haskell-value-kinds}
         \caption{Виды значений в Haskell с примерами~\cite{eisenberg2017levity}.}
@@ -1659,33 +1659,53 @@
     На рисунке~\ref{fig:haskell-value-kinds} можно увидеть классификацию значений в Haskell с примерами типов.
     \vocab{Unboxed типы} --- их значения удерживаются и передаются по значению.
     \vocab{Boxed}, соответственно, наоборот, передаются по указателю и хранятся в куче.
-    Обычный \mintinline{haskell}|Int| является просто декларацией следующего вида, где \mintinline{haskell}|I#| --- это обычный конструктор, содержащий unboxed значение.
+    Обычный \mintinline{haskell}|Int| является просто декларацией следующего вида, где \mintinline{haskell}|I#| --- это обычный конструктор с необычным именем, содержащий unboxed значение.
     \begin{minted}{haskell}
         data Int = I# Int#
     \end{minted}
 
-    % todo levity
+    \vocab{Lifted типы} --- содержат $\bot$ в качестве значения.
+    Иначе говоря, могут содержать отложенные вычисления.
+    \vocab{Unlifted типы} --- наоборот, не могут быть отложенными.
+    Операции, производящие значения unlifted типов всегда энергичные.
+    Свойство lifted/unlifted называют \vocab{levity}.
+    Чтобы распространить дальнейшее изложение на энергичные языки, можно levity заменить на boxity и всё останется справедливым.
 
     \# в именах типов и функций --- это конвенция, показывающая, что где-то рядом происходит работа с unlifted значениями\footnote{Нужно подключить расширение MagicHash, чтобы пользоваться \# в идентификаторах.}.
 
-    % todo \chapter*{Valhalla - Where Are We?}
+    Также в Haskell есть unboxed кортежи, которых не существует на этапе исполнения.
+    Например, следующая функция как бы возвращает пару значений, но в действительности компилятор может их разместить, например, в паре регистров.
+    Соответственно, паттерн-матчинг по таким кортежам, просто позволяет сослаться на каждое из этих значений.
+    \begin{minted}{haskell}
+        divMod# :: Int -> Int -> (# Int, Int #)
+        case divMod# n k of (# quot, rem #) -> ...
+    \end{minted}
+    Соответственно, нет никакого различия между по-разному вложенными unboxed кортежами:
+    \begin{minted}{haskell}
+        (# A, (# B, C #)) ?$\equiv$? (# #( A, B #), C #) ?$\equiv$? (# A, B, C #)
+    \end{minted}
 
-    % todo data femilies for representation polymorphism
+    \subsubsection{Datatype promotion}
+
+    \cite{yorgey2012giving}
 
     % todo nim implementation via effect system
 
     % todo data kinds
 
+    % todo type data
+
+    % todo original promotion paper
+
+    % todo type level literals
+
     %todo
 
-    % todo nim
-    % todo first-class polymorphism & quick look & impredicativity
+    \subsubsection{Representation polymorphism}
 
-    % todo project valhalla
-    % todo jvm specialization https://youtu.be/JI09cs2yUgY?si=BOeUXS2lXs8bvNHE
+    % todo
 
-    % todo variance & functors
-
+    % todo restrictions
 
     \section{Специальный полиморфизм} \label{sec:ad-hoc}
 
@@ -1714,6 +1734,8 @@
     % todo C. V. Hall, K. Hammond, S. L. Peyton Jones, and P. L. Wadler. Type classes in haskell
 
     % todo S. Peyton Jones, S. Weirich, R. A. Eisenberg, and D. Vytiniotis. A reflection on types. In A list of successes that can change the world,
+
+    % todo call stack
 
     Для GHC можно указать правила переписывания, которые заставят компилятор использовать специализированные версии для определённых типов\footnote{\href{https://downloads.haskell.org/~ghc/6.12.2/docs/html/users\_guide/rewrite-rules.html\#rule-spec}{GHC user guide. Rewrite rules. Specialization.}}.
     \begin{minted}{haskell}
