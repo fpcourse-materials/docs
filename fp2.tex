@@ -1078,6 +1078,8 @@
           Lam t -> Lam (eval t)
     \end{minted}
 
+    Можно заметить, что эта реализация не самая эффективная, потому что мы делаем каждое применение функции лишним проходом по терму.
+
     \subsubsection{Окружение}
 
     Можно делать подстановку значений переменных лениво, распространяя окружение, которое ставит в соответствие свободным переменным термы.
@@ -1101,6 +1103,9 @@
     \begin{task}
         Объясните, зачем окружение модифицируется на строчке~10?
     \end{task}
+
+    Если ветка \mintinline{haskell}|Lam1| не будет рекурсивно обходить подтерм и подставлять значения переменных, информация о значениях свободных переменных в нём потеряется и мы получим динамическое связывание вместо статического.
+    Чтобы восстановить статическое связывание, ветка \mintinline{haskell}|Lam1| интерпретатора должна конструировать замыкание, включающее текущее окружение (см. далее~\ref{subsubsec:closures}).
 
     \subsubsection{Верифицированный контекст}
 
@@ -1203,7 +1208,7 @@
     \end{minted}
 
     \begin{task}
-        Можно ли было объявить \mintinline{haskell}|Lam| как
+        Можно ли было объявить \mintinline{haskell}|Lam3| следующим образом?
         \begin{minted}{haskell}
             Lam3 :: (arg -> Term3 res) -> Term3 (arg -> res)
         \end{minted}
@@ -1223,6 +1228,8 @@
     \end{minted}
 
     Теперь мы можем функциональные объекты представлять как пару из контекста и указателя на глобальную функцию --- то есть как \vocab{замыкание (closure)}\footnote{\url{https://en.wikipedia.org/wiki/Closure_(computer_programming)}}\footnote{Термин closure был предложен Piter Landin, вместе с кучей других вещей.}.
+    Плавный переход от интерпретаторов с окружением к замыканиям можно посмотреть в гарвардских слайдах~\cite{closures-slides}.
+    Простую и понятную реализацию для интерпретаторов --- в книжке~\cite[глава 11]{nystrom2021crafting}.
 
     \subsubsection{Дефункционализация} \label{subsubsec:defunctionalization}
 
@@ -1691,6 +1698,8 @@
     % todo A Reflection on Types SPJ paper
 
     % todo haskell specialization
+
+    % todo https://wiki.haskell.org/Inlining_and_Specialisation
 
     % todo existential types, different vtable implementations, value types support
     % todo scala type classes
