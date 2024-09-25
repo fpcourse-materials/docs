@@ -1321,11 +1321,11 @@
     Таким образом, возникает необходимость контроля за корректностью типовых аппликаций, которая осуществляется системой кайндов.
     \begin{align*}
         &Pair : * \rightarrow * \rightarrow * \\
-        &Pair = \lambda \tau^*~\sigma^*.~(\forall \gamma.~\tau\rightarrow\sigma\rightarrow\gamma) \\
-        &pair : \forall \alpha~\beta.~\alpha \rightarrow \beta \rightarrow Pair~\alpha~\beta \\
-        &pair = \Lambda \alpha^*~\beta^*.~\lambda x^\alpha~y^\beta.~(\Lambda \gamma^*.~\lambda f^{\alpha\rightarrow\beta\rightarrow\gamma}.~f~\gamma~x~y) \\
-        &fst : \forall \alpha~\beta.~Pair~\alpha~\beta\rightarrow \alpha \\
-        &fst = \Lambda \alpha^*~\beta^*.~\lambda p^{Pair~\alpha~\beta}.~p~\alpha~\mathbf{K}
+        &Pair = \lambda \tau^*~\sigma^*\ldotp\forall \gamma\ldotp(\tau\rightarrow\sigma\rightarrow\gamma)\to\gamma \\
+        &pair : \forall \alpha~\beta\ldotp\alpha \rightarrow \beta \rightarrow Pair~\alpha~\beta \\
+        &pair = \Lambda \alpha^*~\beta^*\ldotp\lambda x^\alpha~y^\beta\ldotp(\Lambda \gamma^*\ldotp\lambda f^{\alpha\rightarrow\beta\rightarrow\gamma}\ldotp f~x~y) \\
+        &fst : \forall \alpha~\beta\ldotp Pair~\alpha~\beta\rightarrow \alpha \\
+        &fst = \Lambda \alpha^*~\beta^*\ldotp\lambda p^{Pair~\alpha~\beta}\ldotp p~\alpha~(\mathbf{K}\ap\alpha\ap\beta)
     \end{align*}
 
     Haskell не позволяет создавать функции на типах по месту с помощью явной типовой лямбды\footnote{\url{https://stackoverflow.com/questions/4069840/lambda-for-type-expressions-in-haskell}}.
@@ -1714,6 +1714,7 @@
     % todo
 
     % todo restrictions
+
 
     \section{Специальный полиморфизм} \label{sec:ad-hoc}
 
