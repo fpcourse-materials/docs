@@ -847,7 +847,7 @@
 
     % todo investigate actual HOF implementation
 
-    \subsection{Инициальные интерпретаторы}
+    \subsection{Реализация интерпретаторов}
 
     Итак, мы определили, что интерпретаторы --- это основа основ, потому что главная задача программиста --- борьба со сложностью, а главный инструмент этой борьбы --- использование подходящих доменно-специфичных языков, позволяющих думать только о важном, абстрагируя несущественные детали.
 
@@ -857,6 +857,7 @@
     Далее мы научимся миновать этап построения дерева определяемого языка, напрямую расширяя мета-язык новыми конструкциями (раздел~\ref{sec:wonder-interpreters}).
     И наконец, постараемся приблизиться к священного Граалю этой науки~--- расширяемым интерпретаторам (раздел~\ref{sec:effect-handlers}).
 
+    ``Классические'' интерпретаторы часто называют \vocab{инициальными} интерпретаторами.
     Слово ``инициальный'' тут относится к тому, что мы имеем дело с инициальным объектом категории интерпретаций.
     Всё что нам нужно понимать, --- что инициальные интерпретаторы работают с деревом программы, заданным классически с помощью \mintinline{haskell}|data| (да, деревья можно задавать и по-другому).
 
@@ -1523,6 +1524,33 @@
         Убедитесь в вашем любимом языке с поддержкой вариантности, что минус на минус даёт плюс.
     \end{task}
 
+    \subsubsection{Data promotion \& kind polymorphism}
+
+
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.99\textwidth]{figs/types-eq-kinds}
+        \caption{Типы и канды --- одно~\cite{bragilevsky-haskell} (не совсем, но почти).}
+        \label{fig:types-eq-kinds}
+    \end{figure}
+
+    \cite{yorgey2012giving}
+
+    \cite{weirich2013system}
+
+    \ref{fig:types-eq-kinds}
+
+    % todo data kinds
+
+    % todo type data
+
+    % todo original promotion paper
+
+    % todo type level literals
+
+    % todo
+
     \subsection{Реализация параметрического полиморфизма}
 
     \vocab{Конвенция вызова}\footnote{\url{https://en.wikipedia.org/wiki/Calling_convention}} представляет собой набор соглашений между тем, как функция компилируется и как должна вызываться.
@@ -1566,6 +1594,8 @@
         Это позволит не описывать сложные сигнатуры полиморфных функций.
         Однако тогда функции придётся вручную инстанциировать против всевозможных типов, иначе нельзя понять статически, компилируется она хотя бы против этих типов или нет.
     \end{itemize}
+
+    % todo Зиг и патчинг бинарей влияет на ситуацию?
 
     \subsubsection{Стирание типа} \label{subsubsec:type-erasure}
 
@@ -1685,35 +1715,15 @@
         (# A, (# B, C #)) ?$\equiv$? (# #( A, B #), C #) ?$\equiv$? (# A, B, C #)
     \end{minted}
 
-    \subsubsection{Datatype promotion}
-
-    \begin{figure}
-        \centering
-        \includegraphics[width=0.99\textwidth]{figs/types-eq-kinds}
-        \caption{Типы и канды --- одно~\cite{bragilevsky-haskell}.}
-        \label{fig:types-eq-kinds}
-    \end{figure}
-
-    \cite{yorgey2012giving}
-    \ref{fig:types-eq-kinds}
-
-    % todo nim implementation via effect system
-
-    % todo data kinds
-
-    % todo type data
-
-    % todo original promotion paper
-
-    % todo type level literals
-
-    %todo
-
     \subsubsection{Representation polymorphism}
 
     % todo
 
     % todo restrictions
+
+    % todo connection to kind polymorphism
+
+
 
 
     \section{Специальный полиморфизм} \label{sec:ad-hoc}
@@ -1744,6 +1754,10 @@
 
     % todo S. Peyton Jones, S. Weirich, R. A. Eisenberg, and D. Vytiniotis. A reflection on types. In A list of successes that can change the world,
 
+    % todo \chapter*{"Hackett: a metaprogrammable Haskell" by Alexis King}
+
+    \cite{constraint-kind}
+
     % todo call stack
 
     Для GHC можно указать правила переписывания, которые заставят компилятор использовать специализированные версии для определённых типов\footnote{\href{https://downloads.haskell.org/~ghc/6.12.2/docs/html/users\_guide/rewrite-rules.html\#rule-spec}{GHC user guide. Rewrite rules. Specialization.}}.
@@ -1762,6 +1776,8 @@
     % todo associated type families
 
     % todo reference dependent types
+
+    % todo рулесы, законы и оптимизация
 
     % todo
 
@@ -1795,6 +1811,8 @@
     % todo reference to best refactoring
     % todo refrence co calculate correct compilers and stuff
 
+    % todo somedoby's PHD
+
     \cite{reynolds1972definitional, reynolds1998definitional, defunctionalization-slides}
 
     % todo jeremy gibbons papers, review the talk
@@ -1802,6 +1820,10 @@
     % todo delimited via undelimited and mutable cell
 
     % todo transducers, pipelines and internal iteration
+
+    % todo Delimited continuations and asynchronous exceptions
+
+    % todo reason isomorphically
 
 
     \section{Интерпретаторы зазеркалья} \label{sec:wonder-interpreters}
@@ -1872,6 +1894,8 @@
     % todo https://ora.ox.ac.uk/objects/uuid:cd041aa0-8d69-4f18-bce2-6d75244b69b9/files/m7fd9779b27fcb70ae734e66bcd3ee79f
 
     % todo Oleg's finally tagless partially evaluated paper
+
+    % todo variadics
 
     % todo Staging with Class
 
