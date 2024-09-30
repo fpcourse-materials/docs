@@ -967,6 +967,9 @@
           If c t e -> if interpret c then interpret t else interpret e
     \end{minted}
 
+    Заметим, что в структуре данных типа \mintinline{haskell}|Term ty| не хранятся значения типа \texttt{ty}, а этот типовой параметр существует только для обеспечения большей типовой безопасности.
+    Такие типовые параметры называют \vocab{фантомными}\footnote{\url{https://wiki.haskell.org/Phantom_type}}.
+
     \subsubsection{Typed tagless initial interpreters}
 
     Опишем систему типов нашего маленького языка.
@@ -1526,6 +1529,113 @@
 
     \subsubsection{Data promotion \& kind polymorphism}
 
+    Ранее мы программировали на уровне термов, а типы контролировали ``правильность'' построения термов.
+    Но типы так же являются языком как с синтаксической точки зрения, так и с вычислительной.
+    Вычисления на типах мы будем рассматривать далее, а в этом параграфе научимся конструировать в Haskell различные структуры на уровне типов.
+
+    В качестве модельной задачи зададим структуру данных, моделирующую вектор, но такую, что в её типе хранится длина.
+    Для начала определим натуральные числа на уровне типов в стиле Пеано:
+    \begin{minted}{haskell}
+        data Zero
+        data Suc n
+    \end{minted}
+
+    \begin{task}
+        Сколько обитателей типа \mintinline{haskell}|Suc (Suc Zero)|?
+    \end{task}
+
+    Теперь мы можем задать тип вектора, содержащий информацию о длине:
+    \begin{minted}{haskell}
+        data Vec (size :: Type) (elem :: Type) where
+          VNil :: Vec Zero a
+          VCons :: a -> Vec n a -> Vec (Suc n) a
+
+        example :: Vec (Suc (Suc Zero)) Int
+        example = VCons 1 (VCons 2 VNil)
+    \end{minted}
+
+    Для такого типа, например, можно написать безопасную функцию \mintinline{haskell}|zip|, работающую только на векторах одинаковой длины:
+    \begin{minted}{haskell}
+        vzip :: Vec n a -> Vec n b -> Vec n (a, b)
+        vzip VNil VNil = VNil                                      -- n ?$\sim$? Zero
+        vzip (VCons x xs) (VCons y ys) = VCons (x, y) (vzip xs ys) -- n ?$\sim$? Suc n'
+    \end{minted}
+
+    Заметьте, что в остальных ветках \mintinline{haskell}|vzip| должны возникнуть эквивалентности, начинающиеся с различных конструкторов, например, \mintinline{haskell}|Zero ?$\sim$? Suc n|.
+    Поскольку невозможно построить такие аргументы функции, Haskell позволяет соответствующие ветки не рассматривать.
+
+    \begin{task}
+        Напишите функцию добавления в конец элемента вектора.
+        Двигайтесь последовательно, заполняя типовые дыры и отслеживая возникающие эквивалентности.
+    \end{task}
+
+    Удивительно, но сейчас наш язык типов не типизирован.
+    Действительно, кайнд \mintinline{haskell}|Suc| --- \mintinline{haskell}|Suc :: Type -> Type|, соответственно ничто не мешает написать \mintinline{haskell}|Suc (Maybe Int)|.
+    То есть язык кайндов, который должен контролировать типы, слишком беден.
+    В то же время он слишком ограничивающий, поскольку не поддерживает полиморфизм, что дало начало большому количеству дублирований а ля \mintinline{haskell}|Typeable (ty :: Type)|, \mintinline{haskell}|Typeable1 (ty :: Type -> Type)|\ldots
+
+    Чтобы обогатить систему кайндов для лучшего контроля за программами уровня типов, System $F_C$ была расширена до System $F_C^\uparrow$ (читается FC-pro)~\cite{yorgey2012giving}.
+    Это достигается автоматическим продвижением \mintinline{haskell}|data| деклараций на уровень выше (расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/data_kinds.html#extension-DataKinds}{DataKinds}).
+    А именно: любой конструктор типа также становится кайндом, а конструктор данных --- конструктором типа.
+    Так, в примере с числами, мы можем задекларировать натуральные числа как обычно и использовать на уровне типов:
+    \begin{minted}{haskell}
+        data Nat = Zero | Suc Nat
+        ghci> :k Suc :: Nat -> Nat
+    \end{minted}
+
+    Теперь вектору можно приписать более точный кайнд:
+    \begin{minted}{haskell}
+        data Vec (size :: Nat) (elem :: Type) where
+          VNil :: Vec Zero a
+          VCons :: a -> Vec n a -> Vec (Suc n) a
+    \end{minted}
+
+    Поскольку типы и термы в Haskell живут в разных пространствах имён, можно называть конструкторы типов и данных одинаково.
+    Однако если продвинуть такой тип данных, возникнет неоднозначность, мы имеем в виду тип или продвинутый конструктор.
+    Haskell позволяет указать явно, что речь идёт о продвинутом конструкторе с помощью одинарной кавычки.
+    \begin{minted}{haskell}
+        data T = T Nat
+        ghci> :k T
+        T :: Type
+        ghci> :k 'T
+        'T :: Nat -> T
+    \end{minted}
+
+    Недавние версии GHC поддерживают прямое объявление конструкций уровня типов с помощью расширения \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_data.html#extension-TypeData}{TypeData}.
+    Не любые \mintinline{haskell}|data| декларации подходят для продвижения, в то же время \mintinline{haskell}|type data| декларации позволяют явно запросить структуру уровня типов и получить внятные ошибки, если декларация написана неправильно.
+    \begin{minted}{haskell}
+        type data Nat = Zero | Suc Nat
+    \end{minted}
+
+    В случае продвижения полиморфного типа, мы получаем полиморфные кайнды \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/poly_kinds.html}{PolyKinds}:
+    \begin{minted}{haskell}
+        data [a] = [] | (:) a [a]
+        ghci> :k '(:)
+        '(:) :: forall k . k -> [k] -> [k]
+    \end{minted}
+
+    Зададим гетерогенный список, индексированный типами элементов:
+    \begin{minted}{haskell}
+        data HList (tys :: [Type]) where
+          HNil :: HList '[]
+          HCons :: ty -> HList tys -> HList (ty ': tys)
+
+        example :: HList '[Int, Bool, Double]
+        example = HCons 42 $ HCons True $ HCons 12.5 HNil
+    \end{minted}
+
+    Структуры данных тоже могут быть полиморфными.
+    Рассмотрим следующий тип \href{https://hackage.haskell.org/package/tagged-0.8.8/docs/Data-Tagged.html#t:Tagged}{\mintinline{haskell}|Tagged|}, позволяющий дополнить тип значения дополнительным типовым тегом.
+    Кайнд тега может быть произвольным, поэтому, например, можем использовать встроенные в систему типов константы \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_literals.html}{TypeLits}:
+    \begin{minted}{haskell}
+        newtype Tagged (tag :: k) (a :: Type) = Tagged a
+        ghci> :t Tagged
+        Tagged :: forall k (tag :: k) a. a -> Tagged {k} tag a
+        --                                            ?$\uparrow$? передаётся неявно
+        example :: Tagged ("hello" :: Symbol) Int
+        example = Tagged 42
+    \end{minted}
+
 
 
     \begin{figure}
@@ -1535,19 +1645,13 @@
         \label{fig:types-eq-kinds}
     \end{figure}
 
-    \cite{yorgey2012giving}
+
 
     \cite{weirich2013system}
 
     \ref{fig:types-eq-kinds}
 
-    % todo data kinds
-
-    % todo type data
-
-    % todo original promotion paper
-
-    % todo type level literals
+    % todo variadics
 
     % todo
 
@@ -1755,6 +1859,8 @@
     % todo S. Peyton Jones, S. Weirich, R. A. Eisenberg, and D. Vytiniotis. A reflection on types. In A list of successes that can change the world,
 
     % todo \chapter*{"Hackett: a metaprogrammable Haskell" by Alexis King}
+
+    % todo
 
     \cite{constraint-kind}
 
