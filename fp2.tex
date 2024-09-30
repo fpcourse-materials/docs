@@ -1533,7 +1533,7 @@
     Но типы так же являются языком как с синтаксической точки зрения, так и с вычислительной.
     Вычисления на типах мы будем рассматривать далее, а в этом параграфе научимся конструировать в Haskell различные структуры на уровне типов.
 
-    В качестве модельной задачи зададим структуру данных, моделирующую вектор, но такую, что в её типе хранится длина.
+    В качестве модельной задачи зададим структуру данных, моделирующую вектор, но такую, что тип будет параметризован длиной.
     Для начала определим натуральные числа на уровне типов в стиле Пеано:
     \begin{minted}{haskell}
         data Zero
@@ -1575,7 +1575,7 @@
     В то же время он слишком ограничивающий, поскольку не поддерживает полиморфизм, что дало начало большому количеству дублирований а ля \mintinline{haskell}|Typeable (ty :: Type)|, \mintinline{haskell}|Typeable1 (ty :: Type -> Type)|\ldots
 
     Чтобы обогатить систему кайндов для лучшего контроля за программами уровня типов, System $F_C$ была расширена до System $F_C^\uparrow$ (читается FC-pro)~\cite{yorgey2012giving}.
-    Это достигается автоматическим продвижением \mintinline{haskell}|data| деклараций на уровень выше (расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/data_kinds.html#extension-DataKinds}{DataKinds}).
+    Это достигается автоматическим продвижением (promotion) \mintinline{haskell}|data| деклараций на уровень выше (расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/data_kinds.html#extension-DataKinds}{DataKinds}).
     А именно: любой конструктор типа также становится кайндом, а конструктор данных --- конструктором типа.
     Так, в примере с числами, мы можем задекларировать натуральные числа как обычно и использовать на уровне типов:
     \begin{minted}{haskell}
@@ -1590,15 +1590,19 @@
           VCons :: a -> Vec n a -> Vec (Suc n) a
     \end{minted}
 
+    \begin{task}
+        Что выведет \mintinline{haskell}|ghci> :k Vec|?
+    \end{task}
+
     Поскольку типы и термы в Haskell живут в разных пространствах имён, можно называть конструкторы типов и данных одинаково.
-    Однако если продвинуть такой тип данных, возникнет неоднозначность, мы имеем в виду тип или продвинутый конструктор.
+    Однако если продвинуть такой тип данных, возникнет неоднозначность: мы имеем в виду тип или продвинутый конструктор.
     Haskell позволяет указать явно, что речь идёт о продвинутом конструкторе с помощью одинарной кавычки.
     \begin{minted}{haskell}
         data T = T Nat
         ghci> :k T
-        T :: Type
+        T :: Type      -- Речь про конструктор типа
         ghci> :k 'T
-        'T :: Nat -> T
+        'T :: Nat -> T -- Речь про продвинутый конструктор данных
     \end{minted}
 
     Недавние версии GHC поддерживают прямое объявление конструкций уровня типов с помощью расширения \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_data.html#extension-TypeData}{TypeData}.
@@ -1607,12 +1611,36 @@
         type data Nat = Zero | Suc Nat
     \end{minted}
 
-    В случае продвижения полиморфного типа, мы получаем полиморфные кайнды \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/poly_kinds.html}{PolyKinds}:
+    В случае продвижения полиморфного типа, мы получаем полиморфные кайнды (\href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/poly_kinds.html}{PolyKinds}):
     \begin{minted}{haskell}
         data [a] = [] | (:) a [a]
         ghci> :k '(:)
         '(:) :: forall k . k -> [k] -> [k]
     \end{minted}
+
+    \begin{figure}
+        \centering
+        %! suppress = Quote
+        \begin{tabular}{|c|c|c|}
+            \hline
+            Term                                   & Type                                            & Kind                                            \\
+            \hline
+            \mintinline{haskell}|Zero|             & \mintinline{haskell}|Nat|                       & \mintinline{haskell}|Type|                      \\
+            \mintinline{haskell}|[Zero, Suc Zero]| & \mintinline{haskell}|[Nat]|                     & \mintinline{haskell}|Type|                      \\
+            \mintinline{haskell}|[]|               & \mintinline{haskell}|forall a. [a]|             & \mintinline{haskell}|Type|                      \\
+            \mintinline{haskell}|(:)|              & \mintinline{haskell}|forall a. a -> [a] -> [a]| & \mintinline{haskell}|Type|                      \\
+            & \mintinline{haskell}|'Suc 'Zero|                & \mintinline{haskell}|Nat|                       \\
+            & \mintinline{haskell}|'['Zero, 'Suc 'Zero]|      & \mintinline{haskell}|[Nat]|                     \\
+            & \mintinline{haskell}|'[Int, Double]|            & \mintinline{haskell}|[Type]|                    \\
+            & \mintinline{haskell}|'[]|                       & \mintinline{haskell}|forall k. [k]|             \\
+            & \mintinline{haskell}|'(:)|                      & \mintinline{haskell}|forall k. k -> [k] -> [k]| \\
+            \hline
+        \end{tabular}
+        \caption{Пример вселенных в Haskell.}
+        \label{fig:universes}
+    \end{figure}
+
+    Примеры продвижения различных конструкций можно увидеть в таблице~\ref{fig:universes}.
 
     Зададим гетерогенный список, индексированный типами элементов:
     \begin{minted}{haskell}
@@ -1624,36 +1652,29 @@
         example = HCons 42 $ HCons True $ HCons 12.5 HNil
     \end{minted}
 
-    Структуры данных тоже могут быть полиморфными.
+    Структуры данных тоже могут быть полиморфными по кайндам.
     Рассмотрим следующий тип \href{https://hackage.haskell.org/package/tagged-0.8.8/docs/Data-Tagged.html#t:Tagged}{\mintinline{haskell}|Tagged|}, позволяющий дополнить тип значения дополнительным типовым тегом.
     Кайнд тега может быть произвольным, поэтому, например, можем использовать встроенные в систему типов константы \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_literals.html}{TypeLits}:
     \begin{minted}{haskell}
         newtype Tagged (tag :: k) (a :: Type) = Tagged a
         ghci> :t Tagged
-        Tagged :: forall k (tag :: k) a. a -> Tagged {k} tag a
-        --                                            ?$\uparrow$? передаётся неявно
+        Tagged :: forall k (tag :: k) a. a -> Tagged tag a
+
         example :: Tagged ("hello" :: Symbol) Int
         example = Tagged 42
     \end{minted}
 
-
+    Современный Haskell в итоге пришёл к тому, что система типов не делает различий между типами и кайндами (рис.~\ref{fig:types-eq-kinds}).
+    В частности, \mintinline{haskell}|Type :: Type|.
+    Это нужно для расширения возможностей Haskell в сторону программирования с зависимыми типами путём добавления несинтаксических эквивалентностей для кайндов (\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/poly_kinds.html#extension-TypeInType}{TypeInType}).
+    $System~FC$ была представлена в работе~\cite{weirich2013system}\footnote{\href{https://www.youtube.com/watch?v=ISGENChlA4M&list=PLvPsfYrGz3wufQguebnCduYgQQ9UMeJRt}{(youtube) Мини-курс на русском языке про развитие Haskell в сторону зависимой типизации.}}\footnote{\href{https://www.youtube.com/watch?v=_HYI7zjkrEs&list=PLvPsfYrGz3wuVAGhNf6-i7uafXg56oqM5&index=1}{(youtube) Мини-курс на русском языке --- система вывода типов Haskell.}}.
 
     \begin{figure}
         \centering
         \includegraphics[width=0.99\textwidth]{figs/types-eq-kinds}
-        \caption{Типы и канды --- одно~\cite{bragilevsky-haskell} (не совсем, но почти).}
+        \caption{Типы и канды --- одно~\cite{bragilevsky-haskell}.}
         \label{fig:types-eq-kinds}
     \end{figure}
-
-
-
-    \cite{weirich2013system}
-
-    \ref{fig:types-eq-kinds}
-
-    % todo variadics
-
-    % todo
 
     \subsection{Реализация параметрического полиморфизма}
 
@@ -1828,8 +1849,6 @@
     % todo connection to kind polymorphism
 
 
-
-
     \section{Специальный полиморфизм} \label{sec:ad-hoc}
 
     % todo ConstraintKinds
@@ -1866,6 +1885,8 @@
 
     % todo call stack
 
+    % todo примеры с HList
+
     Для GHC можно указать правила переписывания, которые заставят компилятор использовать специализированные версии для определённых типов\footnote{\href{https://downloads.haskell.org/~ghc/6.12.2/docs/html/users\_guide/rewrite-rules.html\#rule-spec}{GHC user guide. Rewrite rules. Specialization.}}.
     \begin{minted}{haskell}
         {-# RULES "genericLookup/Int" genericLookup = intLookup #-}
@@ -1884,6 +1905,10 @@
     % todo reference dependent types
 
     % todo рулесы, законы и оптимизация
+
+    % todo asking to fill parameters for you because they are very obvious. Implicit in dependently-typed languages
+
+    % todo variadics, open sums and products
 
     % todo
 
@@ -2004,6 +2029,8 @@
     % todo variadics
 
     % todo Staging with Class
+
+    % todo hygene macro & dynamic scoping
 
 %    \subsection{Template Haskell}
 %
