@@ -1882,6 +1882,7 @@
 
         type Type = TYPE LiftedRep
     \end{minted}
+
     \mintinline{haskell}|TYPE| --- это магический тип, определённый в компиляторе.
     Он параметризован runtime-представлением значений.
     Теперь привычный \mintinline{haskell}|Type| --- это частный случай с boxed lifted значениями.
@@ -1899,6 +1900,15 @@
               :: TYPE (TupleRep '[IntRep, TupleRep '[LiftedRep, DoubleRep]])
         \end{minted}
     \end{itemize}
+
+    Выставив runtime-представление в структуре кайндов, мы теперь можем параметризоваться по ним.
+    Например, кайнд функциональной стрелки выглядит следующим образом\footnote{Выключить упрощения: \mintinline{haskell}|ghci> :set -fprint-explicit-foralls -fprint-explicit-runtime-reps|}:
+    \begin{minted}{haskell}
+        ghci> :k (->)
+        (->) :: forall {q :: RuntimeRep} {r :: RuntimeRep}. TYPE q -> TYPE r -> Type
+    \end{minted}
+
+    К сожалению, Haskell выставляет довольно строгое ограничение: связыватели не могут иметь тип, полиморфный по runtime представлению.
 
 
     % todo
@@ -1925,6 +1935,8 @@
     % todo constraint is a proposition and dict is a proof
 
     % todo constraints package of Edward Kmett
+
+    % todo monomorphism restriction
 
     % todo pattern-matching on types
 
