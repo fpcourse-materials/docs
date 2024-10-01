@@ -1711,9 +1711,9 @@
     Таким образом, реализация параметрического полиморфизма в языке --- это не тривиальная задача.
     Разные языки используют различные подходы, все со своими достоинствами и недостатками.
 
-    \subsubsection{Инстанциация (мономорфизация)}
+    \subsubsection{Mономорфизация} \label{subsubsec:monomorphization}
 
-    \vocab{Инстанциирование (мономорфизация)} --- самый прямолинейный подход, компилируем функцию отдельно для каждого набора типовых аргументов.
+    \vocab{Mономорфизация} --- самый прямолинейный подход, компилируем функцию отдельно для каждого набора типовых аргументов.
     Так, если различных наборов типовых аргументов, с которыми эта функция вызывается, например, 100 (что запросто может быть), то её код будет компилироваться сто раз и занимать в бинарнике в сто раз больше места.
     Так делают, например, C++ и Rust.
 
@@ -1766,7 +1766,7 @@
     Агрессивный инлайнинг тоже помогает.
     Java пытается аккуратно двигаться в сторону возможности мономорфизации\footnote{\href{https://youtu.be/JI09cs2yUgY?si=MLkRs31mN1koXIu1}{Type Specialization of Java Generics - What If Casts Have Teeth ?}}\footnote{\url{https://cr.openjdk.org/~jrose/values/parametric-vm.html}}.
 
-    \subsubsection{Гибридный подход}
+    \subsubsection{Гибридный подход} \label{subsubsec:hybrid}
 
     С\# реализует гибридный подход\footnote{\href{https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/generics/generics-in-the-run-time}{Generics in the runtime (C\# programming guide).}}.
     Они различают значения, хранимые в куче --- \vocab{reference types}, и значения, хранимые на стеке --- \vocab{value types}.
@@ -1780,7 +1780,7 @@
         \item[\positive] Доступна рефлексия по дженерикам;
         \item[\positive] Небольшое время компиляции;
         \item[\negative] Инстанциация в рантайме замедляет исполнение;
-        \item[\negative] Variance работает только для reference types.
+        \item[\negative] Variance работает только для reference types (что странно --- есть ``правильная'' подтипизация, а есть ``неправильная'').
     \end{itemize}
 
     % todo выпросить инфу про подтипизацию у Михаила
@@ -1909,13 +1909,25 @@
     \end{minted}
 
     К сожалению, Haskell выставляет довольно строгое ограничение: связыватели не могут иметь тип, полиморфный по runtime представлению.
+    Можно легко предположить, почему, --- нельзя сгенерировать код функции для работы с параметром произвольного рантайм-представления.
+    Это можно решить только мономорфизацией~\ref{subsubsec:monomorphization}, но Haskell избегает этого подхода\footnote{\url{https://gitlab.haskell.org/ghc/ghc/-/issues/14917}}.
+    Сообщество также пытается найти другие решения\footnote{\url{https://mail.haskell.org/pipermail/haskell-cafe/2023-January/135770.html}} (что-то вроде~\ref{subsubsec:swift-generics}).
+
+    Например, изначально оператор аппликации был обобщён только по возвращаемому типу.
+    Это не порождает проблем, так как вызывающий код сможет вывести представление и сгенерировать подходящий код:
+    \begin{minted}{haskell}
+        ($) :: forall r a (b :: TYPE r). (a -> b) -> a -> b
+        f $ ?\framebox{x}? = f x
+    \end{minted}
+
+    Однако, было замечено, что для оператора аппликации можно получить другую реализацию, не использующую levity-полиморфное связывание\footnote{\url{https://gitlab.haskell.org/ghc/ghc/-/merge_requests/10131}}:
+    \begin{minted}{haskell}
+        ($) :: forall ra rb (a :: TYPE ra) (b :: TYPE rb). (a -> b) -> a -> b
+        ($) f = f
+    \end{minted}
 
 
-    % todo
-
-    % todo restrictions
-
-    % todo connection to kind polymorphism
+    \clearpage
 
 
     \section{Специальный полиморфизм} \label{sec:ad-hoc}
