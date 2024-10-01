@@ -1,3 +1,4 @@
+%! suppress = Quote
 %! suppress = LineBreak
 %! suppress = Makeatletter
 %! suppress = TooLargeSection
@@ -1527,7 +1528,7 @@
         Убедитесь в вашем любимом языке с поддержкой вариантности, что минус на минус даёт плюс.
     \end{task}
 
-    \subsubsection{Data promotion \& kind polymorphism}
+    \subsubsection{Data promotion \& kind polymorphism} \label{subsubsec:promotion}
 
     Ранее мы программировали на уровне термов, а типы контролировали ``правильность'' построения термов.
     Но типы так же являются языком как с синтаксической точки зрения, так и с вычислительной.
@@ -1720,8 +1721,6 @@
         Однако тогда функции придётся вручную инстанциировать против всевозможных типов, иначе нельзя понять статически, компилируется она хотя бы против этих типов или нет.
     \end{itemize}
 
-    % todo Зиг и патчинг бинарей влияет на ситуацию?
-
     \subsubsection{Стирание типа} \label{subsubsec:type-erasure}
 
     Можно всё сделать наоборот, унифицировав значения, которые приходят на вход полиморфным функциям, вместо того, чтобы компилировать код под каждый тип.
@@ -1795,7 +1794,7 @@
 
     Своего рода реализация параметрического полиморфизма через специальный.
 
-    \subsection{Полиморфизм по конвенции вызова (levity polymorphism)} \label{subsec:levity-polymorphism}
+    \subsection{Полиморфизм по конвенции вызова} \label{subsec:representation-polymorphism}
 
     Как мы уже обсуждали выше~\ref{subsubsec:type-erasure}, параметрический полиморфизм в Haskell реализуется следующим образом: все значения хранятся в куче и передаются в полиморфные функции по указателю.
     Однако, если для вычислительного кода важна производительность, такой подход не годится ввиду большой нагрузки на подсистему управления памятью и множества индирекций.
@@ -1842,6 +1841,47 @@
 
     \subsubsection{Representation polymorphism}
 
+    Значения различных типов могут быть на этапе исполнения устроены по-разному.
+    То есть нам нужна некоторая система классификации типов.
+    Но такая система в Haskell уж есть --- кайнды.
+    Опишем в виде структур данных предметную область, а потом продвинем на нужный уровень с помощью DataKinds~\ref{subsubsec:promotion}.
+
+    Стандартная библиотека Haskell \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/representation_polymorphism.html}{предоставляет} следующие типы данных:
+    \begin{minted}{haskell}
+        TYPE :: RuntimeRep -> Type
+
+        data Levity = Lifted | Unlifted
+
+        data RuntimeRep = BoxedRep Levity
+                        | IntRep | DoubleRep
+                        | TupleRep [RuntimeRep]
+                        | SumRep [RuntimeRep]
+                        | ...
+
+        type LiftedRep = BoxedRep Lifted
+
+        type Type = TYPE LiftedRep
+    \end{minted}
+    \mintinline{haskell}|TYPE| --- это магический тип, определённый в компиляторе.
+    Он параметризован runtime-представлением значений.
+    Теперь привычный \mintinline{haskell}|Type| --- это частный случай с boxed lifted значениями.
+
+    \begin{itemize}
+        \item \mintinline{haskell}|Int :: TYPE (BoxedRep Lifted)| или \mintinline{haskell}|:: Type|
+        \item \mintinline{haskell}|IntRep| и \mintinline{haskell}|DoubleRep| соответствуют представлению численных констант (в зависимости от архитектуры процессора, целые числа и числа с плавающей запятой может быть необходимо располагать в различных специальных регистрах)\\ \mintinline{haskell}|Int# :: TYPE IntRep|
+        \item \mintinline{haskell}|Maybe Int :: Type|
+        \item \mintinline{haskell}|Maybe :: Type -> Type|
+        \item \mintinline{haskell}|TupleRep| и \mintinline{haskell}|SumRep| --- unboxed алгебраические типы, представления параметризованы представлениями хранимых значений\\
+        \mintinline{haskell}|(# Int, Bool #) :: TYPE (TupleRep '[LiftedRep, LiftedRep])|
+        \item Для простоты не унифицируются типы вложенных кортежей
+        \begin{minted}{haskell}
+            (# Int#, (# Int, Double# #) #)
+              :: TYPE (TupleRep '[IntRep, TupleRep '[LiftedRep, DoubleRep]])
+        \end{minted}
+    \end{itemize}
+
+
+
     % todo
 
     % todo restrictions
@@ -1850,6 +1890,8 @@
 
 
     \section{Специальный полиморфизм} \label{sec:ad-hoc}
+
+    % todo https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/constraints.html
 
     % todo ConstraintKinds
 
