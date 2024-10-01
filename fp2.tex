@@ -155,6 +155,9 @@
     Не в последнюю очередь выбор тем для курса обусловлен интересами его автора.
 
 
+    \clearpage
+
+
     \section{Воспоминания о ФП}
 
     В этом разделе мы вспомним основные концепции функционального программирования и языка Haskell.
@@ -170,49 +173,52 @@
     Формальный параметр должен быть задекларирован выше по дереву с помощью специальной $\lambda$-вершины.
     Вместо формального параметра можно в дальнейшем подставлять различные конкретные параметры, то есть использовать одно выражение для различных целей.
 
-    \begin{tikzpicture}
-        \node [expr] (div) {$\div$};
-        \node [expr] (x) [below left=of div] {$x$};
-        \node [expr] (plus) [below right = of div] {$+$};
-        \node [expr] (two) [below right = of plus] {$2$};
-        \node [hexpr] (mult) [below left = of plus] {$\times$};
-        \node [hexpr] (ten) [below left = of mult] {$10$};
-        \node [hexpr] (four) [below right = of mult] {$4$};
-        \draw[->] (plus) -- (div);
-        \draw[->] (x) -- (div);
-        \draw[->] (mult) -- (plus);
-        \draw[->] (ten) -- (mult);
-        \draw[->] (four) -- (mult);
-        \draw[->] (two) -- (plus);
-    \end{tikzpicture}
-    \begin{tikzpicture}
-        \node [hdecl] (f) {$f$};
-        \node [hexpr] (lam) [below=of f] {$\lambda$};
-        \node [hdecl] (y) [below right =of lam] {$y$};
-        \node [expr] (div) [below=of lam] {$\div$};
-        \node [expr] (x) [below left=of div] {$x$};
-        \node [expr] (plus) [below right = of div] {$+$};
-        \node [hexpr] (param) [below left=of plus] {$y$};
-        \node [expr] (two) [below right = of plus] {$2$};
-        \draw[->] (lam) -- (f);
-        \draw[->] (div) -- (lam);
-        \draw[->] (plus) -- (div);
-        \draw[->] (x) -- (div);
-        \draw[->] (two) -- (plus);
-        \draw[->] (param) -- (plus);
-        \draw[->] (y) -- (lam);
-    \end{tikzpicture}
-    \begin{tikzpicture}
-        \node [hexpr] (app) {$@$};
-        \node [hexpr] (f) [below left =of app] {$f$};
-        \node [expr] (mult) [below right= of app] {$\times$};
-        \node [expr] (ten) [below left= of mult] {$10$};
-        \node [expr] (four) [below right= of mult] {$4$};
-        \draw[->] (mult) -- (app);
-        \draw[->] (f) -- (app);
-        \draw[->] (ten) -- (mult);
-        \draw[->] (four) -- (mult);
-    \end{tikzpicture}
+    \begin{figure}[h]
+        \centering
+        \begin{tikzpicture}
+            \node [expr] (div) {$\div$};
+            \node [expr] (x) [below left=of div] {$x$};
+            \node [expr] (plus) [below right = of div] {$+$};
+            \node [expr] (two) [below right = of plus] {$2$};
+            \node [hexpr] (mult) [below left = of plus] {$\times$};
+            \node [hexpr] (ten) [below left = of mult] {$10$};
+            \node [hexpr] (four) [below right = of mult] {$4$};
+            \draw[->] (plus) -- (div);
+            \draw[->] (x) -- (div);
+            \draw[->] (mult) -- (plus);
+            \draw[->] (ten) -- (mult);
+            \draw[->] (four) -- (mult);
+            \draw[->] (two) -- (plus);
+        \end{tikzpicture}
+        \begin{tikzpicture}
+            \node [hdecl] (f) {$f$};
+            \node [hexpr] (lam) [below=of f] {$\lambda$};
+            \node [hdecl] (y) [below right =of lam] {$y$};
+            \node [expr] (div) [below=of lam] {$\div$};
+            \node [expr] (x) [below left=of div] {$x$};
+            \node [expr] (plus) [below right = of div] {$+$};
+            \node [hexpr] (param) [below left=of plus] {$y$};
+            \node [expr] (two) [below right = of plus] {$2$};
+            \draw[->] (lam) -- (f);
+            \draw[->] (div) -- (lam);
+            \draw[->] (plus) -- (div);
+            \draw[->] (x) -- (div);
+            \draw[->] (two) -- (plus);
+            \draw[->] (param) -- (plus);
+            \draw[->] (y) -- (lam);
+        \end{tikzpicture}
+        \begin{tikzpicture}
+            \node [hexpr] (app) {$@$};
+            \node [hexpr] (f) [below left =of app] {$f$};
+            \node [expr] (mult) [below right= of app] {$\times$};
+            \node [expr] (ten) [below left= of mult] {$10$};
+            \node [expr] (four) [below right= of mult] {$4$};
+            \draw[->] (mult) -- (app);
+            \draw[->] (f) -- (app);
+            \draw[->] (ten) -- (mult);
+            \draw[->] (four) -- (mult);
+        \end{tikzpicture}
+    \end{figure}
 
     Простейший функциональный язык --- $\lambda$-исчисление.
     Выражения в нём называются $\lambda$-термами.
@@ -242,24 +248,27 @@
 
     Редукция определяется следующим правилом переписывания: ищется применение $\lambda$-функции к аргументу и в её тело осуществляется подстановка аргумента во все свободные вхождения переменной, связанной лямбдой.
 
-    \begin{tikzpicture}
-        \node [expr] (top) {$\cdots$};
-        \node [hexpr] (ap) [below = of top] {$@$};
-        \node [hexpr] (lam) [below left = of ap] {$\lambda$};
-        \node [decl] (x) [below right = of lam] {$x$};
-        \node [subtree] (l) [below = of lam] {$M$};
-        \node [subtree] (r) [below right = of ap] {$N$};
-        \draw[->] (ap) -- (top);
-        \draw[->] (lam) -- (ap);
-        \draw[->] (l) -- (lam);
-        \draw[->] (r.north) -- (ap);
-        \draw[->] (x) -- (lam);
-    \end{tikzpicture}
-    \begin{tikzpicture}
-        \node [expr] (top) {$\cdots$};
-        \node [subtree] (bot) [below = of top] {$\subst{M}{x}{N}$};
-        \draw[->] (bot) -- (top);
-    \end{tikzpicture}
+    \begin{figure}[h]
+        \centering
+        \begin{tikzpicture}
+            \node [expr] (top) {$\cdots$};
+            \node [hexpr] (ap) [below = of top] {$@$};
+            \node [hexpr] (lam) [below left = of ap] {$\lambda$};
+            \node [decl] (x) [below right = of lam] {$x$};
+            \node [subtree] (l) [below = of lam] {$M$};
+            \node [subtree] (r) [below right = of ap] {$N$};
+            \draw[->] (ap) -- (top);
+            \draw[->] (lam) -- (ap);
+            \draw[->] (l) -- (lam);
+            \draw[->] (r.north) -- (ap);
+            \draw[->] (x) -- (lam);
+        \end{tikzpicture}
+        \begin{tikzpicture}
+            \node [expr] (top) {$\cdots$};
+            \node [subtree] (bot) [below = of top] {$\subst{M}{x}{N}$};
+            \draw[->] (bot) -- (top);
+        \end{tikzpicture}
+    \end{figure}
 
     \subsection{Типы}
 
@@ -271,50 +280,55 @@
     Как известно, выражение можно представить в виде дерева.
     Для примера рассмотрим $(\lambda y\ldotp x \div (y + 2)) \ap 3$:
     \\
-    \begin{tikzpicture}
-        \node [expr] (ap) {$@$};
-        \node [expr] (three) [below right = of ap]{$3$};
-        \node [hexpr] (lam) [below left =of ap] {$\lambda$};
-        \node [hdecl] (y) [below right =of lam] {$y$};
-        \node [expr] (div) [below=of lam] {$\div$};
-        \node [expr] (x) [below left=of div] {$x$};
-        \node [expr] (plus) [below right = of div] {$+$};
-        \node [hexpr] (param) [below left=of plus] {$y$};
-        \node [expr] (two) [below right = of plus] {$2$};
-        \draw[->] (three) -- (ap);
-        \draw[->] (lam) -- (ap);
-        \draw[->] (div) -- (lam);
-        \draw[->] (plus) -- (div);
-        \draw[->] (x) -- (div);
-        \draw[->] (two) -- (plus);
-        \draw[->] (param) -- (plus);
-        \draw[->] (y) -- (lam);
-    \end{tikzpicture}
+    \begin{figure}[h]
+        \centering
+        \begin{tikzpicture}
+            \node [expr] (ap) {$@$};
+            \node [expr] (three) [below right = of ap]{$3$};
+            \node [hexpr] (lam) [below left =of ap] {$\lambda$};
+            \node [hdecl] (y) [below right =of lam] {$y$};
+            \node [expr] (div) [below=of lam] {$\div$};
+            \node [expr] (x) [below left=of div] {$x$};
+            \node [expr] (plus) [below right = of div] {$+$};
+            \node [hexpr] (param) [below left=of plus] {$y$};
+            \node [expr] (two) [below right = of plus] {$2$};
+            \draw[->] (three) -- (ap);
+            \draw[->] (lam) -- (ap);
+            \draw[->] (div) -- (lam);
+            \draw[->] (plus) -- (div);
+            \draw[->] (x) -- (div);
+            \draw[->] (two) -- (plus);
+            \draw[->] (param) -- (plus);
+            \draw[->] (y) -- (lam);
+        \end{tikzpicture}
+    \end{figure}
 
     Идея анализа типов состоит в том, что мы каждой вершине дерева программы пытаемся присвоить некоторую синтаксическую метку по определённым правилам.
     Если каждой вершине метку присвоить можно, то мы считаем, что программа проходит проверку типов, и она ``хорошая''.
 
     Пример выше проходит проверку типов в некоторой разумной системе типов:
-
-    \begin{tikzpicture}
-        \node [expr] (ap) {$@ : int$};
-        \node [expr] (three) [below right = of ap]{$3 : int$};
-        \node [hexpr] (lam) [below left=of ap] {$\lambda : int \to int$};
-        \node [decl] (y) [below right = of lam] {$y {\color{red}~: int}$};
-        \node [expr] (div) [below=of lam] {$\div : int$};
-        \node [expr] (x) [below left=of div] {$x : int$};
-        \node [expr] (plus) [below right = of div] {$+ : int$};
-        \node [hexpr] (param) [below left=of plus] {$y : int$};
-        \node [expr] (two) [below right = of plus] {$2 : int$};
-        \draw[->] (lam) -- (ap);
-        \draw[->] (three) -- (ap);
-        \draw[->] (div) -- (lam);
-        \draw[->] (plus) -- (div);
-        \draw[->] (x) -- (div);
-        \draw[->] (two) -- (plus);
-        \draw[->] (param) -- (plus);
-        \draw[->] (y) -- (lam);
-    \end{tikzpicture}
+    \begin{figure}[h]
+        \centering
+        \begin{tikzpicture}
+            \node [expr] (ap) {$@ : int$};
+            \node [expr] (three) [below right = of ap]{$3 : int$};
+            \node [hexpr] (lam) [below left=of ap] {$\lambda : int \to int$};
+            \node [decl] (y) [below right = of lam] {$y {\color{red}~: int}$};
+            \node [expr] (div) [below=of lam] {$\div : int$};
+            \node [expr] (x) [below left=of div] {$x : int$};
+            \node [expr] (plus) [below right = of div] {$+ : int$};
+            \node [hexpr] (param) [below left=of plus] {$y : int$};
+            \node [expr] (two) [below right = of plus] {$2 : int$};
+            \draw[->] (lam) -- (ap);
+            \draw[->] (three) -- (ap);
+            \draw[->] (div) -- (lam);
+            \draw[->] (plus) -- (div);
+            \draw[->] (x) -- (div);
+            \draw[->] (two) -- (plus);
+            \draw[->] (param) -- (plus);
+            \draw[->] (y) -- (lam);
+        \end{tikzpicture}
+    \end{figure}
 
     Система типов определяет синтаксис типовых меток и правила, по которым их можно приписывать.
     Синтаксис обычно описывается в классических нотациях а ля BNF, а правила в виде типовых дробей.
@@ -638,6 +652,9 @@
     \begin{task}
         Два числа с консоли, поделите одно на другое нацело и распечатайте результат, если остаток не нулевой, распечатайте его тоже.
     \end{task}
+
+
+    \clearpage
 
 
     \section{Классические интерпретаторы}
@@ -1293,6 +1310,9 @@
     \end{task}
 
 
+    \clearpage
+
+
     \section{Параметрический полиморфизм}
 
     Под \vocab{параметрическим полиморфизмом} будем подразумевать возможность единообразно работать с произвольными типами данных.
@@ -1799,7 +1819,7 @@
     Как мы уже обсуждали выше~\ref{subsubsec:type-erasure}, параметрический полиморфизм в Haskell реализуется следующим образом: все значения хранятся в куче и передаются в полиморфные функции по указателю.
     Однако, если для вычислительного кода важна производительность, такой подход не годится ввиду большой нагрузки на подсистему управления памятью и множества индирекций.
     Поэтому Haskell позволяет также писать код с использованием unboxed значений.
-    А если код не полагается на конкретную конвенцию вызова, его можно по ней абстрагировать, и писать один код для boxed и unboxed значений~\cite{eisenberg2017levity}.
+    А если конвенция вызова не принципиальна, можно по ней абстрагироваться и писать один код для boxed и unboxed значений~\cite{eisenberg2017levity}.
 
     \subsubsection{Классификация значений по runtime представлению}
 
@@ -1825,7 +1845,7 @@
     Свойство lifted/unlifted называют \vocab{levity}.
     Чтобы распространить дальнейшее изложение на энергичные языки, можно levity заменить на boxity и всё останется справедливым.
 
-    \# в именах типов и функций --- это конвенция, показывающая, что где-то рядом происходит работа с unlifted значениями\footnote{Нужно подключить расширение MagicHash, чтобы пользоваться \# в идентификаторах.}.
+    \# в именах типов и функций --- это конвенция, показывающая, что где-то рядом происходит работа с unlifted значениями\footnote{Нужно подключить расширение \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/magic_hash.html}{MagicHash}, чтобы пользоваться \# в идентификаторах.}.
 
     Также в Haskell есть unboxed кортежи, которых не существует на этапе исполнения.
     Например, следующая функция как бы возвращает пару значений, но в действительности компилятор может их разместить, например, в паре регистров.
@@ -1881,7 +1901,6 @@
     \end{itemize}
 
 
-
     % todo
 
     % todo restrictions
@@ -1890,6 +1909,41 @@
 
 
     \section{Специальный полиморфизм} \label{sec:ad-hoc}
+
+
+
+
+
+    \cite{hudak2007history}
+
+    \cite{wadler1989make}
+
+    % todo what do you want to give name to
+
+    % todo implicit parameters
+
+    % todo constraint is a proposition and dict is a proof
+
+    % todo constraints package of Edward Kmett
+
+    % todo pattern-matching on types
+
+    % todo serializer and serializable
+
+    % todo proxy
+
+    % todo algebra driven design
+
+    % todo rules and coersion
+
+    % todo type classes vs interfaces
+    % todo type classes via interfaces and implicits
+
+    % todo incoherent instances
+
+    % todo instance arguments
+
+    % todo Monoid a => Monad m ??
 
     % todo https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/constraints.html
 
@@ -1928,6 +1982,8 @@
     % todo call stack
 
     % todo примеры с HList
+
+    % todo orphans
 
     Для GHC можно указать правила переписывания, которые заставят компилятор использовать специализированные версии для определённых типов\footnote{\href{https://downloads.haskell.org/~ghc/6.12.2/docs/html/users\_guide/rewrite-rules.html\#rule-spec}{GHC user guide. Rewrite rules. Specialization.}}.
     \begin{minted}{haskell}
@@ -2131,6 +2187,8 @@
 
     \section{Хендлеры эффектов} \label{sec:effect-handlers}
 
+    % todo monad error is a bullshit
+
     % todo https://homepages.inf.ed.ac.uk/wadler/papers/expression/expression.txt
 
     % todo https://www.eff-lang.org/handlers-tutorial.pdf
@@ -2178,10 +2236,14 @@
 
     % todo Working with Source Plugins paper
 
+    % todo \href{https://gitlab.haskell.org/ghc/ghc/-/wikis/commentary/compiler/generated-code}{\color{blue} I know kung fu: learning STG by example}
+
     % todo
 
 
     \section{Оптика}
+
+    % todo there are pierce lenses
 
     % todo http://www.timphilipwilliams.com/posts/2019-07-25-minecraft.html
 
