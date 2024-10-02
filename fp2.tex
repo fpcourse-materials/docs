@@ -1930,19 +1930,125 @@
     \clearpage
 
 
-    \section{Специальный полиморфизм} \label{sec:ad-hoc}
+    \section{Специальный (ad-hoc) полиморфизм} \label{sec:ad-hoc}
+
+    Как-то Joe Fasel в разговоре с Philip Wadler высказал идею того, что перегрузка функций (overloading) должна находить своё отражение в типах.
+    Wadler понял его неправильно~\cite{hudak2007history}.
+    Но то, что он понял, --- оказалось классами типов~\cite{wadler1989make}.
+
+    Christopher Strachey ввёл классификацию полиморфизма на две категории.
+    Параметрический --- один и тот же код работает с данными различных типов.
+    \vocab{Специальный (ad-hoc) полиморфизм} --- код выбирается в зависимости от типа.
+    Например, один и тот же символ умножения по-разному действует на целые числа и на числа с плавающей точкой.
+
+    Перегрузка в языках обозначает возможность назвать несколько функций одинаково, у которых должны быть различные наборы входных параметров.
+    В месте вызова компилятор статически определяет по типам аргументов, какую из них действительно следует вызвать.
+    \begin{minted}{cpp}
+        string toString(x: int) { ... }
+        string toString(fmt: String, d: double) { ... }
+    \end{minted}
+
+    Классы типов обязуют сначала задекларировать именованную сущность (собственно, класс типов), которая включает в себя пачку деклараций функций, которые могут быть перегружены для различных типов.
+    \begin{minted}{haskell}
+        class Show a where
+          show :: a -> String
+
+        instance Show Int where
+          show :: Int -> String
+          show = ...
+    \end{minted}
+
+    Необходимо заметить, что декларация класса типов содержит формальный типовой параметр, по вхождениям которого в тип функции, собственно, выбирается перегрузка.
+    Таких параметров может быть много, они могут иметь стрелочные кайнды.
+    Например, в случае класса типов \mintinline{haskell}|Applicative|, выбор реализации операции \mintinline{haskell}|pure| будет происходить по типовому конструктору результата, то есть даже не по полноценному типу.
+    Такая гибкость и близко не достигается при классической перегрузке.
+    \begin{minted}{haskell}
+        class Functor f => Applicative (f :: Type -> Type) where
+          pure :: a -> f a
+          ...
+
+        instance Applicative Maybe where
+          pure :: a -> Maybe a
+          ...
+    \end{minted}
+
+    Также, в отличие от перегрузки, классы типов совместимы с параметрическим полиморфизмом.
+    Так, в типе полиморфной функции нельзя указать, что для типа должна присутствовать определённая перегрузка.
+    Классы типов же позволяют ограничить набор возможных типовых аргументов теми, для которых реализован инстанс нужного класса типов:
+    \begin{minted}{haskell}
+        showPrefixed :: Show a => a -> String -> String
+    \end{minted}
+
+    Если сравнивать классы типов с переопределением (overriding) в ООП языках, то разрешение вызова виртуальной функции происходит с использованием таблицы, хранящейся объекте первого параметра (получателя вызова, receiver).
+    Классы типов же опираются исключительно на тип, поэтому, например, возможно определение констант в классах типов:
+    \begin{minted}{haskell}
+        class Enum a => Bounded a where
+          minBound :: a
+          maxBound :: a
+    \end{minted}
+
+    В то же время, классы типов не являются типами, а, скорее, предикатами на типах.
+    Тип удовлетворяет такому предикату, или свойству, если для него есть соответствующий инстанс.
+    Поэтому, в частности, привычный способ в ООП создать гетерогенную коллекцию элементов, имеющих общий интерфейс, напрямую не сработает с классами типов.
+    Например, такой тип не будет корректным: \mintinline{haskell}|[Show]|.
+    Мы вернёмся к этой проблеме в~\ref{subsubsec:existentials}
+
+    \subsection{Реализация классов типов}
 
 
 
+    \cite{hall1996type}
 
+    % todo
 
-    \cite{hudak2007history}
+    \subsubsection{Словари и население}
 
-    \cite{wadler1989make}
+    % todo
+
+    \subsubsection{Неявные аргументы}
+
+    % todo implicit parameters
+
+    % todo
+
+    \subsubsection{Имплиситы}
+
+    \cite{oliveira2010type}
+
+    % todo
+
+    % todo техническое мясо про вывод и формализмы
+    % todo специализация
+
+    \subsection{Использование классов типов}
+
+    % todo
+
+    \subsubsection{Коерции}
+
+    % todo type roles
+
+    \subsubsection{Экзистенциальные типы} \label{subsubsec:existentials}
+
+    % todo
+
+    \subsubsection{Рефлексия на типах}
+
+    \cite{peyton2016reflection}
+
+    % todo
+
+    \subsubsection{Сериализация}
+
+    % todo
+
+    \subsubsection{Получение значений с уровня типов}
+
+    % todo
+
 
     % todo what do you want to give name to
 
-    % todo implicit parameters
 
     % todo constraint is a proposition and dict is a proof
 
@@ -2035,6 +2141,9 @@
     % todo
 
 
+    \clearpage
+
+
     \section{Продолжения (continuations)} \label{sec:continuations}
 
     % todo
@@ -2054,6 +2163,8 @@
     % todo CPS correspond to double negation in logic reynolds1998definitional
 
     % todo defuctionalized continuations, pepers from gibbons talk
+
+    % todo SPJ compiling without continuations
 
     % todo difference lists
 
