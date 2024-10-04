@@ -1398,6 +1398,8 @@
     Haskell позволяет также абстрагироваться по типам произвольных кайндов, не только \mintinline{haskell}|Type|.
     Например, \mintinline{haskell}|f :: forall (m :: Type -> Type) a . a -> m a|.
 
+    % todo too polymorphic: theorems for free
+
     Говорят, что функции, возвращающие значение какого-то такого вида \texttt{m a} --- слишком полиморфные, ``too polymorphic''.
     Код, использующий такие функции будет сталкиваться с серьёзнами проблемами в производительности, так как компилятор не знает конкретного типа и не может заинлайнить соответствующие вызовы \texttt{fmap}, bind, и т.д.
     Чтобы обойти эту проблему, рекомендуется пользоваться либо конкретными типами, либо воспользоваться библиотекой kan-extensions\footnote{\url{https://hackage.haskell.org/package/kan-extensions}}\footnote{\url{https://bartoszmilewski.com/2017/04/17/kan-extensions/}}~\cite[параграф 13.5]{maguire-types}.
@@ -1657,7 +1659,7 @@
             & \mintinline{haskell}|'(:)|                      & \mintinline{haskell}|forall k. k -> [k] -> [k]| \\
             \hline
         \end{tabular}
-        \caption{Пример вселенных в Haskell.}
+        \caption{Пример продвижений в Haskell.}
         \label{fig:universes}
     \end{figure}
 
@@ -1991,13 +1993,18 @@
     Тип удовлетворяет такому предикату, или свойству, если для него есть соответствующий инстанс.
     Поэтому, в частности, привычный способ в ООП создать гетерогенную коллекцию элементов, имеющих общий интерфейс, напрямую не сработает с классами типов.
     Например, такой тип не будет корректным: \mintinline{haskell}|[Show]|.
-    Мы вернёмся к этой проблеме в~\ref{subsubsec:existentials}
+    Мы вернёмся к этой проблеме в~\ref{subsubsec:existentials}.
 
     \subsection{Реализация классов типов}
 
+    Несмотря на поразительное могущество, идея реализации классов типов крайне проста.
+    Она была уже во всей полноте представлена в первой работе~\cite{wadler1989make}.
+    В дальнейших работах уточнялся механизм вывода типов в виде сведения к классической системе типов в стиле Hindley-Milner~\cite{hall1996type}.
+    Остальные работы, в основном, предлагают огромное разнообразие различных приложений.
 
+    \footnote{\href{https://youtu.be/-TJGhGa04F8?si=vQDXYa3frYilXRhw}{(youtube) Type inference as constraint solving: how GHC’s type inference engine actually works - SPJ.}}
 
-    \cite{hall1996type}
+    \footnote{\href{https://youtu.be/hIZxTQP1ifo?si=aG2Lk2eb-5E5SOLb}{Edward Kmett - Type Classes vs. the World.}}
 
     % todo
 
@@ -2025,6 +2032,8 @@
     % todo
 
     \subsubsection{Коерции}
+
+    \cite{breitner2014safe}
 
     % todo type roles
 
