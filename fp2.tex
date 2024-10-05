@@ -2164,6 +2164,27 @@
     Подробно эти ограничения описаны в~\cite{sulzmann2007understanding}.
     Также GHC предоставляет различные расширения, ослабляющие эти ограничения и перекладывающие часть ответственности на плечи программиста\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/instances.html}}.
 
+    Написание инстансов похоже на паттерн-матчинг времени компиляции по типу.
+    Вывод инстансов выполнит эти мнимые \texttt{case-of} по типу и построит терм, который представляет собой вычисление, составленное из веток такого паттерн-матчинга.
+    Таким образом, мы можем опускать информацию из типов в термы:
+    \begin{minted}{haskell}
+        type data Nat = Zero | Suc Nat
+
+        class KnownNat (n :: Nat) where
+          natVal :: Int
+
+        instance KnownNat Zero where
+          natVal = 0
+
+        instance KnownNat n => KnownNat (Suc n) where
+          natVal = 1 + natVal @n
+
+        ghci> natVal @(Suc (Suc Zero))
+    \end{minted}
+
+    Вывод инстансов опирается только на вид "головы" декларации --- части после \mintinline{haskell}|=>|.
+    Это можно использовать, откладывая применение эквивалентностей.
+    Так, например, работает constraint trick\footnote{\url{https://chrisdone.com/posts/haskell-constraint-trick/}}.
 
 
 
@@ -2173,9 +2194,7 @@
 
 
 
-    \footnote{https://chrisdone.com/posts/haskell-constraint-trick/}
-
-    \cite[раздел 12]{maguire-types}
+    \cite[глава 12]{maguire-types}
 
     % todo maguire custom type errors
 
@@ -2232,7 +2251,7 @@
 
     \subsubsection{Экзистенциальные типы} \label{subsubsec:existentials}
 
-    \cite[раздел 7]{maguire-types}
+    \cite[глава 7]{maguire-types}
 
     % todo dynamic
 
@@ -2246,7 +2265,7 @@
 
     \cite{breitner2014safe}
 
-    \cite[раздел 8]{maguire-types}
+    \cite[глава 8]{maguire-types}
 
     % todo type roles
 
