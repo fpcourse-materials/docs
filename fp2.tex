@@ -2159,11 +2159,6 @@
     Необходимо сконструировать терм типа \mintinline{haskell}|ShowDict [a]|.
     Очевидно, это будет просто аппликации одного к другому.
 
-    В общем случае процесс населения типа неразрешим.
-    Поэтому GHC накладывает большое количество ограничений на фид инстансов, которые гарантируют тотальность вывода.
-    Подробно эти ограничения описаны в~\cite{sulzmann2007understanding}.
-    Также GHC предоставляет различные расширения, ослабляющие эти ограничения и перекладывающие часть ответственности на плечи программиста\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/instances.html}}.
-
     Написание инстансов похоже на паттерн-матчинг времени компиляции по типу.
     Вывод инстансов выполнит эти мнимые \texttt{case-of} по типу и построит терм, который представляет собой вычисление, составленное из веток такого паттерн-матчинга.
     Таким образом, мы можем опускать информацию из типов в термы:
@@ -2182,27 +2177,40 @@
         ghci> natVal @(Suc (Suc Zero))
     \end{minted}
 
-    Вывод инстансов опирается только на вид "головы" декларации --- части после \mintinline{haskell}|=>|.
-    Это можно использовать, откладывая применение эквивалентностей.
+    В общем случае процесс населения типа неразрешим.
+    Поэтому GHC накладывает большое количество ограничений на вид инстансов, которые гарантируют тотальность вывода.
+    Подробно эти ограничения описаны в~\cite{sulzmann2007understanding}.
+    Также GHC предоставляет различные расширения, ослабляющие эти ограничения и перекладывающие часть ответственности на плечи программиста\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/instances.html}}.
+    Например, c UndecidableInstances можно легко написать разворот списка типов на этапе компиляции, как и любую другую функцию:
+    \begin{minted}{haskell}
+        class Reverse (acc :: [Type]) (tys :: [Type]) where
+          showReverse :: String
+
+        instance ShowT acc => Reverse acc '[] where
+          showReverse = showTypes @acc
+
+        instance Reverse (ty : acc) tys => Reverse acc (ty : tys) where
+          showReverse = showReverse @(ty : acc) @tys
+
+        ghci> showReverse @'[] @'[Char, Int, Double]
+    \end{minted}
+
+    Вывод инстансов опирается только на вид "головы" декларации --- справа от \mintinline{haskell}|=>|, а ограничения слева применяются постфактум.
+    Это можно использовать, чтобы писать более общие инстансы.
     Так, например, работает constraint trick\footnote{\url{https://chrisdone.com/posts/haskell-constraint-trick/}}.
 
+    Этим же пользуется механизм кастомизируемых ошибок компиляции из \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/GHC-TypeLits.html}{GHC.TypeLits}.
+    Если инстанс сработал и компилятор начал обрабатывать ограничения слева, значит, что-то пошло не так~\cite[глава 12]{maguire-types}.
 
-
-
-
-
-
-
-
-    \cite[глава 12]{maguire-types}
-
-    % todo maguire custom type errors
-
-
-
-
-
-
+    \begin{minted}{haskell}
+        instance (TypeError
+          ( Text "Attempting to show a function of type `"
+            :<>: ShowType (a -> b)
+            :<>: Text "'"
+            :$$: Text "Did you forget to apply an argument?"
+          )) => Show (a -> b) where
+          show = undefined
+    \end{minted}
 
     \subsubsection{Имплиситы}
 
@@ -2329,7 +2337,6 @@
     % todo \chapter*{"Hackett: a metaprogrammable Haskell" by Alexis King}
 
     % todo
-
 
 
     % todo call stack
