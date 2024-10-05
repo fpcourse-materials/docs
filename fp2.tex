@@ -1,3 +1,4 @@
+%! suppress = Ellipsis
 %! suppress = Quote
 %! suppress = LineBreak
 %! suppress = Makeatletter
@@ -2142,7 +2143,27 @@
         f d x = case d of ShowDict -> ?\framebox{x}? -- в скоупе доступен инстанс Show b
     \end{minted}
 
-    \subsubsection{Вывод свидетельств}
+    \subsubsection{Вывод инстансов}
+
+    Чтобы вызвать ограниченно-полиморфную функцию, GHC производит вывод инстансов или, иначе говоря, автоматически конструирует свидетелей.
+    Вывод инстансов тесно интегрирован с общей системой вывода типов Haskell\footnote{\href{https://youtu.be/-TJGhGa04F8?si=vQDXYa3frYilXRhw}{(youtube) Type inference as constraint solving: how GHC’s type inference engine actually works - SPJ.}}.
+
+    В действительности вывод инстансов это не что иное, как \point{задача населения типа}.
+    Действительно, после трансляции в Core, классы типов представляют собой словари функций.
+    У нас в контексте имеются конкретные словари и функции, позволяющие из одних словарей получать другие.
+    Требуется найти терм, конструирующий словарь нужного типа.
+
+    Например, внутри функции \mintinline{haskell}|f :: Show a => ..| происходит вызов ограниченно- полиморфной функции
+    \mintinline{haskell}|g :: Show [a] -> ..|.
+    У нас имеется словарь \mintinline{haskell}|ShowDict a|, а так же функция \mintinline{haskell}|ShowDict a -> ShowDict [a]|, пришедшая из импортов\footnote{Инстансы можно импортировать пустым импортом: \mintinline{haskell}|import Module ()|.}.
+    Необходимо сконструировать терм типа \mintinline{haskell}|ShowDict [a]|.
+    Очевидно, это будет просто аппликации одного к другому.
+
+    В общем случае процесс населения типа неразрешим.
+    Поэтому GHC накладывает большое количество ограничений на фид инстансов, которые гарантируют тотальность вывода.
+    Подробно эти ограничения описаны в~\cite{sulzmann2007understanding}.
+    Также GHC предоставляет различные расширения, ослабляющие эти ограничения и перекладывающие часть ответственности на плечи программиста\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/instances.html}}.
+
 
 
 
@@ -2154,17 +2175,19 @@
 
     \footnote{https://chrisdone.com/posts/haskell-constraint-trick/}
 
+    \cite[раздел 12]{maguire-types}
+
     % todo maguire custom type errors
 
 
-    \footnote{Нужен импорт модуля, даже пустой, с определением нужных инстансов: \mintinline{haskell}|import Module ()|.}
+
 
 
 
 
     \subsubsection{Имплиситы}
 
-    \footnote{\href{https://youtu.be/-TJGhGa04F8?si=vQDXYa3frYilXRhw}{(youtube) Type inference as constraint solving: how GHC’s type inference engine actually works - SPJ.}}
+
 
     \footnote{\href{https://youtu.be/hIZxTQP1ifo?si=aG2Lk2eb-5E5SOLb}{Edward Kmett - Type Classes vs. the World.}}
 
@@ -2181,6 +2204,8 @@
 
     \subsection{Семейства типов, ассоциированные семейства}
 
+    % todo fist-class type families
+
     % todo
 
     \subsection{Кайнд Constraint}
@@ -2195,13 +2220,7 @@
 
     % todo
 
-    \subsubsection{Коерции}
-
-    \cite{breitner2014safe}
-
-    % todo type roles
-
-    \subsubsection{Экзистенциальные типы} \label{subsubsec:existentials}
+    \subsubsection{Сериализация}
 
     % todo
 
@@ -2211,13 +2230,25 @@
 
     % todo
 
-    \subsubsection{Сериализация}
+    \subsubsection{Экзистенциальные типы} \label{subsubsec:existentials}
+
+    \cite[раздел 7]{maguire-types}
+
+    % todo dynamic
 
     % todo
 
     \subsubsection{Получение значений с уровня типов}
 
     % todo
+
+    \subsubsection{Коерции}
+
+    \cite{breitner2014safe}
+
+    \cite[раздел 8]{maguire-types}
+
+    % todo type roles
 
 
     % todo what do you want to give name to
