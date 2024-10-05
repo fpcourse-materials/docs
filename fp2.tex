@@ -126,6 +126,10 @@
 \renewcommand{\labelitemiv}{$\triangleright$}
 % ------------------------------------------------
 
+% Formatting
+\usepackage{multicol}
+% ------------------------------------------------
+
 \begin{document}
 
     \begin{center}
@@ -2002,17 +2006,113 @@
     В дальнейших работах уточнялся механизм вывода типов в виде сведения к классической системе типов в стиле Hindley-Milner~\cite{hall1996type}.
     Остальные работы, в основном, предлагают огромное разнообразие различных приложений.
 
+    \subsubsection{Словари}
+
+    Рассмотрим идею реализации классов типов на примере полиморфной сортировки.
+    Сортировка для списка элементов конкретного типа пишется тривиально:
+    \begin{minted}{haskell}
+        sort :: [Int] -> [Int]
+        sort = \case [] -> []; x:xs -> insert x (sort xs)
+          where
+            insert x xs = let (l, r) = List.partition (?\framebox{<}? x) xs in l ++ x : r)
+    \end{minted}
+
+    В реализации единственная информация о типе, которой мы пользуемся --- порядок на его обитателях.
+    Таким образом, при переходе к полиморфной сортировке, нам нужно принять словарь с предикатами, задающими нужный порядок для данного типа\footnote{Приятный синтаксис распаковки рекордов доступен с расширением \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/record_wildcards.html}{RecordWildCards}.}.
+    \begin{minted}{haskell}
+        data OrdDict a = OrdDict { less :: a -> a -> Bool }
+
+        sort :: OrdDict a -> [a] -> [a]
+        sort d@OrdDict {..} = \case [] -> []; x:xs -> insert x (sort d xs)
+          where
+            insert x xs = let (l, r) = List.partition (?\framebox{`less`}? x) xs in l ++ x : r)
+    \end{minted}
+
+    Теперь, чтобы воспользоваться сортировкой на списке чисел, нужно сконструировать нужный рекорд и вызвать с ним функцию на списке конкретных типов:
+    \begin{minted}{haskell}
+        intOrd :: OrdDict Int
+        intOrd = OrdDict { less = (<) }
+
+        ghci> sort intOrd [3, 2, 1]
+    \end{minted}
+
+    Возможна ситуация, когда инстанс для одного типа зависит от инстанса для другого
+    Например, сравнение списков можно получить автоматически, зная порядок на элементах.
+    В случае словарей мы это моделируем функцией между словарями:
+    \begin{minted}{haskell}
+        listDict :: OrdDict a -> OrdDict [a]
+        listDict d = OrdDict { less = ... ?\framebox{less d}? ... }
+    \end{minted}
+
+    Теперь мы можем сортировать список списков, конструируя нужный словарь:
+    \begin{minted}{haskell}
+        ghci> sort (listDict intDict) [[3, 2], [2, 1], [0]]
+    \end{minted}
+
+    Сравнение явной передачи словарей и классов типов можно увидеть в следующей таблице:
+
+    \begin{tabular}{p{8cm}p{8cm}}
+        \begin{enumerate}
+            \item Определение словаря функций
+            \begin{minted}{haskell}
+                data MyOrd a = MyOrd
+                  { less :: a -> a -> Bool }
+            \end{minted}
+            \item Экземпляр словаря для конкретного типа
+            \begin{itemize}
+                \item Именованное значение
+            \end{itemize}
+            \begin{minted}{haskell}
+                intMyOrd :: MyOrd Int
+                intMyOrd = MyOrd { less = (<) }
+            \end{minted}
+            \item Явный параметр функции
+            \begin{minted}{haskell}
+                sort :: MyOrd a -> [a] -> [a]
+            \end{minted}
+            \item Передаётся пользователем
+            \begin{minted}{haskell}
+                test = sort ?\framebox{intMyOrd}? [3, 2, 1]
+            \end{minted}
+        \end{enumerate}
+        &
+        \begin{enumerate}
+            \item Определение класса типов
+            \begin{minted}{haskell}
+                 class MyOrd a where
+                   less :: a -> a -> Bool
+            \end{minted}
+            \item Объявление типа представителем класса типов
+            \begin{itemize}
+                \item Не имеет имени
+            \end{itemize}
+            \begin{minted}{haskell}
+                instance MyOrd Int where
+                  less = (<)
+            \end{minted}
+            \item Неявный параметр функции
+            \begin{minted}{haskell}
+                sort :: MyOrd a => [a] -> [a]
+            \end{minted}
+            \item Передаётся компилятором
+            \begin{minted}{haskell}
+                test = sort [3, 2, 1]
+            \end{minted}
+        \end{enumerate}
+    \end{tabular}
+
+
+
+
+
+
+    \subsubsection{Неявные аргументы}
+
+    \footnote{Нужен импорт модуля, даже пустой, с определением нужного инстанса: \mintinline{haskell}|import Module ()|.}
+
     \footnote{\href{https://youtu.be/-TJGhGa04F8?si=vQDXYa3frYilXRhw}{(youtube) Type inference as constraint solving: how GHC’s type inference engine actually works - SPJ.}}
 
     \footnote{\href{https://youtu.be/hIZxTQP1ifo?si=aG2Lk2eb-5E5SOLb}{Edward Kmett - Type Classes vs. the World.}}
-
-    % todo
-
-    \subsubsection{Словари и население}
-
-    % todo
-
-    \subsubsection{Неявные аргументы}
 
     % todo implicit parameters
 
