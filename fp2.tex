@@ -929,7 +929,7 @@
 
     Этот подход часто называют динамической типизацей, когда мы атрибутируем значения некоторой типовой информацией для использования во время исполнения.
 
-    \subsubsection{Equality coercions, GADTs}
+    \subsubsection{Equality coercions, GADTs} \label{subsubsec:gadts}
 
     Как мы знаем, конструкторы данных в Haskell --- это обычные функции с той лишь разницей, что их реализация генерируется компилятором (аллокация памяти, размещение полей\ldots).
     У функций есть сигнатура.
@@ -2101,24 +2101,72 @@
         \end{enumerate}
     \end{tabular}
 
+    Таким образом, словарь --- это свидетель (witness) того, что тип удовлетворяет ограничению.
+    Подобно тому, как коерции свидетельствуют несинтаксические эквивалентности на типах~\ref{subsubsec:gadts}.
 
-
-
-
+    \begin{task}
+        Какой словарь будет соответствовать higher-kinded классу типов \mintinline{haskell}|Functor|?
+    \end{task}
 
     \subsubsection{Неявные аргументы}
 
-    \footnote{Нужен импорт модуля, даже пустой, с определением нужного инстанса: \mintinline{haskell}|import Module ()|.}
+    Можно думать так, что слева от \mintinline{haskell}|=>| передаются неявные аргументы функций, выводимые компилятором из контекста.
+    То есть, например, не стоит удивляться вхождениям \mintinline{haskell}|=>| в отрицательной позиции, это просто функция с неявным аргументом.
+    Так, следующий код не скомпилируется, потому что в месте использования переменной \texttt{y} нет значения типа \mintinline{haskell}|Show b|:
+    \begin{minted}{haskell}
+        f :: (Show b => b) -> b
+        f x = ?\framebox{x}?
+    \end{minted}
+    Можно это значение принять в функции \texttt{f}, тогда оно автоматически пропагируется в \texttt{y}:
+    \begin{minted}{haskell}
+        f :: Show b => (Show b => b) -> b
+        f x = ?\framebox{x}?
+    \end{minted}
+
+    Расширение \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/implicit_parameters.html}{ImplicitParams} даёт возможность делать некоторое аргументы функции неявными.
+    Фактически, это реализация динамического связывания в статическом языке~\cite{lewis2000implicit}.
+    Неявные аргументы берутся из скоупа и подставляются автоматически:
+    \begin{minted}[escapeinside=##]{haskell}
+        sortBy :: (a -> a -> Bool) -> [a] -> [a]
+
+        sort :: (?cmp :: a -> a -> Bool) => [a] -> [a]
+        sort = sortBy ?cmp
+    \end{minted}
+
+    Haskell также предоставляет возможность сохранять словари в структуры данных:
+    \begin{minted}{haskell}
+        data ShowDict a where
+          ShowDict :: Show a => ShowDict a
+
+        f :: ShowDict b -> (Show b => b) -> b
+        f d x = case d of ShowDict -> ?\framebox{x}? -- в скоупе доступен инстанс Show b
+    \end{minted}
+
+    \subsubsection{Вывод свидетельств}
+
+
+
+
+
+
+
+
+
+    \footnote{https://chrisdone.com/posts/haskell-constraint-trick/}
+
+    % todo maguire custom type errors
+
+
+    \footnote{Нужен импорт модуля, даже пустой, с определением нужных инстансов: \mintinline{haskell}|import Module ()|.}
+
+
+
+
+    \subsubsection{Имплиситы}
 
     \footnote{\href{https://youtu.be/-TJGhGa04F8?si=vQDXYa3frYilXRhw}{(youtube) Type inference as constraint solving: how GHC’s type inference engine actually works - SPJ.}}
 
     \footnote{\href{https://youtu.be/hIZxTQP1ifo?si=aG2Lk2eb-5E5SOLb}{Edward Kmett - Type Classes vs. the World.}}
-
-    % todo implicit parameters
-
-    % todo
-
-    \subsubsection{Имплиситы}
 
     \cite{oliveira2010type}
 
@@ -2126,6 +2174,22 @@
 
     % todo техническое мясо про вывод и формализмы
     % todo специализация
+
+    \subsubsection{Правила и специализация}
+
+    % todo
+
+    \subsection{Семейства типов, ассоциированные семейства}
+
+    % todo
+
+    \subsection{Кайнд Constraint}
+
+    \cite{constraint-kind}
+
+    % todo vadics example
+
+    % todo
 
     \subsection{Использование классов типов}
 
@@ -2216,7 +2280,7 @@
 
     % todo
 
-    \cite{constraint-kind}
+
 
     % todo call stack
 
