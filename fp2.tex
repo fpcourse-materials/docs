@@ -2126,7 +2126,7 @@
 
     Расширение \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/implicit_parameters.html}{ImplicitParams} даёт возможность делать некоторое аргументы функции неявными.
     Фактически, это реализация динамического связывания в статическом языке~\cite{lewis2000implicit}.
-    Неявные аргументы берутся из скоупа и подставляются автоматически:
+    Неявные аргументы берутся из скоупа по имени и подставляются автоматически:
     \begin{minted}[escapeinside=##]{haskell}
         sortBy :: (a -> a -> Bool) -> [a] -> [a]
 
@@ -2149,7 +2149,7 @@
     Вывод инстансов тесно интегрирован с общей системой вывода типов Haskell\footnote{\href{https://youtu.be/-TJGhGa04F8?si=vQDXYa3frYilXRhw}{(youtube) Type inference as constraint solving: how GHC’s type inference engine actually works - SPJ.}}.
 
     В действительности вывод инстансов это не что иное, как \point{задача населения типа}.
-    Действительно, после трансляции в Core, классы типов представляют собой словари функций.
+    Действительно, после трансляции в Core (промежуточное представление в GHC), классы типов представляют собой словари функций.
     У нас в контексте имеются конкретные словари и функции, позволяющие из одних словарей получать другие.
     Требуется найти терм, конструирующий словарь нужного типа.
 
@@ -2158,6 +2158,8 @@
     У нас имеется словарь \mintinline{haskell}|ShowDict a|, а так же функция \mintinline{haskell}|ShowDict a -> ShowDict [a]|, пришедшая из импортов\footnote{Инстансы можно импортировать пустым импортом: \mintinline{haskell}|import Module ()|.}.
     Необходимо сконструировать терм типа \mintinline{haskell}|ShowDict [a]|.
     Очевидно, это будет просто аппликации одного к другому.
+
+    % todo
 
     Написание инстансов похоже на паттерн-матчинг времени компиляции по типу.
     Вывод инстансов выполнит эти мнимые \texttt{case-of} по типу и построит терм, который представляет собой вычисление, составленное из веток такого паттерн-матчинга.
@@ -2197,7 +2199,7 @@
 
     Вывод инстансов опирается только на вид "головы" декларации --- справа от \mintinline{haskell}|=>|, а ограничения слева применяются постфактум.
     Это можно использовать, чтобы писать более общие инстансы.
-    Так, например, работает constraint trick\footnote{\url{https://chrisdone.com/posts/haskell-constraint-trick/}}.
+    Так, например, работает \vocab{constraint trick}\footnote{\url{https://chrisdone.com/posts/haskell-constraint-trick/}}, позволяющий резолвить ad-hoc полиморфные функции в параметрически-полиморфном контексте.
 
     Этим же пользуется механизм кастомизируемых ошибок компиляции из \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/GHC-TypeLits.html}{GHC.TypeLits}.
     Если инстанс сработал и компилятор начал обрабатывать ограничения слева, значит, что-то пошло не так~\cite[глава 12]{maguire-types}.
@@ -2211,24 +2213,53 @@
           show = undefined
     \end{minted}
 
-    \subsubsection{Имплиситы}
+    \subsubsection{Имплиситы и когерентность}
+
+    Существуют подходы к реализации классов типов, когда они не являются отдельной возможностью языка, а получаются как следствие других, более общих, механизмов.
+
+    Так, в Scala существует механизм имплиситов (implicits)~\cite{kvrikava2019scala}.
+    Параметры функции могут быть помечены \mintinline{scala}|implicit|.
+    Теперь, если в контексте есть \mintinline{scala}|implicit| значения и \mintinline{scala}|implicit| функции, аргументы сгенерируются автоматически исходя из типа параметра.
+    Теперь мы можем смоделировать словарь функций, например, с помощью интерфейсов (которые в Scala называются \mintinline{scala}|trait|) и синглтонов, чтобы получить вполне себе классы типов~\cite{oliveira2010type}.
+    Функции с имплисит-параметрами не являются в полном смысле функциями первого класса в Scala.
+    \begin{minted}{scala}
+        trait Show[T] {
+            def show(x: T): String
+        }
+
+        def show[T](x: T)(implicit ev: Show[T]): String = ev.show(x)
+
+        implicit object intShow extends Show[Int] {
+            def show(x: Int): String = x.toString
+        }
+
+        def showAll[T](xs: List[T])(implicit ev: Show[T]): String =
+            xs.map(show(_)).join(", ")
+    \end{minted}
+
+    В языках с зависимыми типами неявные параметры\footnote{\url{https://agda.readthedocs.io/en/v2.7.0.1/language/implicit-arguments.html}} особенно нужны, потому что, например, типы --- это такие же параметры функции, как и все остальные.
+    Поэтому вывод типов~--- это фактически вывод неявных аргументов функций.
+    Более того, зависимые функции, вместе с аргументами
+
+    \cite{devriese2011bright}
+    kek\footnote{\url{https://agda.readthedocs.io/en/v2.7.0.1/language/instance-arguments.html}}
+
 
 
 
     \footnote{\href{https://youtu.be/hIZxTQP1ifo?si=aG2Lk2eb-5E5SOLb}{Edward Kmett - Type Classes vs. the World.}}
 
-    \cite{oliveira2010type}
 
     % todo
 
     % todo техническое мясо про вывод и формализмы
     % todo специализация
 
-    \subsubsection{Правила и специализация}
+    \subsubsection{Правила (rules) и специализация}
 
     % todo
 
-    \subsection{Семейства типов, ассоциированные семейства}
+    \subsection{Семейства, ассоциированные семейства}
 
     % todo fist-class type families
 
