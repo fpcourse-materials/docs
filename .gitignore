@@ -1,5 +1,6 @@
 *.pdf
 *-pause.tex
+*.600gf
 flags.tex
 
 # Created by https://www.toptal.com/developers/gitignore/api/intellij,latex,haskell,python,macos,windows,linux,visualstudiocode

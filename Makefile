@@ -131,14 +131,6 @@ sem14h:
 sem14p:
 	sh build-slides.sh 1 14 pause
 
-sem2-1: sem2-1h sem2-1p
-
-sem2-1h:
-	sh build-slides.sh 2 01 handout
-
-sem2-1p:
-	sh build-slides.sh 2 01 pause
-
 handouttrue:
 	echo "\handouttrue" > flags.tex
 
