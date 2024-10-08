@@ -395,7 +395,7 @@ GHC позволяет прямо в коде, с помощью специал�
 
 \subsection{Семейства, ассоциированные семейства}
 
-% todo fist-class type families
+% todo fist-class type families, efunctionalisation (Eisenberg 2013)
 
 % todo \chapter*{FunWithTypeFuns}
 
@@ -403,24 +403,58 @@ GHC позволяет прямо в коде, с помощью специал�
 
 \subsection{Кайнд Constraint}
 
+% todo boxed constraints
 
+Давно появлялись предложения добавить в GHC поддержку синонимов для констреинтов, семейств констреинтов и т.д~\cite{orchard2010haskell}.
+В итоге был предложен\footnote{\url{https://gitlab.haskell.org/ghc/ghc/-/wikis/kind-fact}} и реализован\footnote{\url{http://blog.omega-prime.co.uk/2011/09/10/constraint-kinds-for-ghc/}} некоторый механизм унификации типов и констреинтов.
+Таким образом, всё, что работало для типов, стало работать и для констреинтов.
 
+В GHC с \href{https://downloads.haskell.org/ghc/9.2-latest/docs/html/users_guide/exts/constraint_kind.html}{ConstraintKinds} был добавлен специальный кайнд \mintinline{haskell}|Constraint|:
+\begin{itemize}
+    \item Класс типов конструирует констреинт: \mintinline{haskell}|Monad :: (Type -> Type) -> Constraint|;
+    \item Эквивалентность является констреинтом: \mintinline{haskell}|(a ?$\sim$? b) :: Constraint|;
+    \item Пустой кортеж констреинтов является констреинтом: \mintinline{haskell}|() :: Constraint|;
+    \item Кортеж констреинтов является констреинтом: \mintinline{haskell}|(Eq a, a ?$\sim$? b) :: Constraint|.
+\end{itemize}
 
+Теперь, например, мы можем реифицировать словарь как объект языка:
+\begin{minted}{haskell}
+    data Dict (c :: Constraint) where
+      Dict :: c => Dict c
+\end{minted}
 
+Вспомним гетерогенный список, рассмотренный ранее~\ref{subsubsec:promotion}:
+\begin{minted}{haskell}
+    data HList (tys :: [Type]) where
+      HNil :: HList '[]
+      HCons :: ty -> HList tys -> HList (ty : tys)
+\end{minted}
 
-\cite{constraint-kind}
+Эта структура данных является first-class аналогом variadic generics в C++ или Swift\footnote{\url{https://github.com/swiftlang/swift-evolution/blob/main/proposals/0398-variadic-types.md}}\footnote{Собственно, смысл вариадиков --- не вводить в язык всё что нужно, чтобы сделать \mintinline{haskell}|HList| возможным.}.
+Например, мы написать \texttt{map} для такой структуры, если все типы удовлетворяют определённому ограничению.
+Для этого сначала реализуем семейство, генерирующее кортеж констреинтов для каждого типа из списка:
+\begin{minted}{haskell}
+    type family All (c :: k -> Constraint) (tys :: [k]) :: Constraint where
+      All c '[] = ()
+      All c (ty : tys) = (c ty, All c tys)
 
-% todo vadics example
+    -- All Show [Int, Double] ?$\sim$? (Show Int, (Show Double, ())
+\end{minted}
 
-% todo tuple constraints
+Теперь можем реализовать \texttt{map}:
+\begin{minted}{haskell}
+    hmap :: forall c res tys . All c tys
+         => (forall ty . c ty => ty -> res) -> HList tys -> [res]
+    hmap f = \case
+      HNil -> []
+      HCons x xs -> f x : hmap @c f xs
 
-% todo constraint families and constraint synonims
+    ghci> hmap @Show show (HCons (1 :: Int) $ HCons 'a' HNil)
+\end{minted}
 
 % todo https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/quantified_constraints.html
 
-% todo с constraint kinds фигня отсюда не нужна Haskell Type Constraints Unleashed
 
-\cite{orchard2010haskell}
 
 % todo
 
