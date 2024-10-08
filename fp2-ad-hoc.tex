@@ -224,7 +224,7 @@ Haskell также предоставляет возможность сохра�
 Чтобы вывести \mintinline{haskell}|ShowDict [a]|, выводится сначала посылка \mintinline{haskell}|ShowDict a|.
 То есть получается рекурсия по структуре типа.
 Иначе говоря, вывод инстансов можно эксплуатировать как вычислительный примитив уровня типов.
-Так, например, мы можем опускать информацию из типов в термы:
+Так, например, мы можем опускать информацию из типов в термы (аналогично в \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/GHC-TypeLits.html}{GHC.TypeLits}).
 \begin{minted}{haskell}
     type data Nat = Zero | Suc Nat
 
@@ -304,7 +304,8 @@ Haskell также предоставляет возможность сохра�
     id (undefined :: Proxy Int) :: Int -> Int
 \end{minted}
 
-Теперь напишем функцию поднятия значения в тип с помощью техники через полиморфную рекурсию, описанную, например, в~\cite{kiselyov2004functional}.
+Теперь напишем функцию поднятия значения в тип с помощью техники через полиморфную рекурсию, описанную в~\cite{kiselyov2004functional}.
+Существует соответствующая библиотека\footnote{\url{https://hackage.haskell.org/package/reflection-2.1.6/docs/Data-Reflection.html}}.
 
 В действительности мы, конечно, не можем честно получить синтаксически тип нужного размера, просто потому, что типы существуют строго до стадии исполнения.
 Однако, как мы знаем, словари классов типов имеют воплощение в рантайме (случай полиморфной рекурсии~--- как раз пример, когда этого нельзя полностью избежать).
@@ -382,7 +383,9 @@ GHC позволяет прямо в коде, с помощью специал�
      #-}
 \end{minted}
 
-В частности, можно переписать полиморфную версию функции на специализированную, если типы подходят.
+% todo algebra, laws and optimizations
+
+Можно переписать полиморфную версию функции на специализированную, если типы подходят.
 Для этого нужно реализовать специализированную версию (совпадение семантики --- полностью ответственность программиста) и задать соответствующее правило переписывания:
 \begin{minted}{haskell}
     genericLookup :: Ord a => Table a b   -> a   -> b
@@ -430,8 +433,8 @@ GHC позволяет прямо в коде, с помощью специал�
       HCons :: ty -> HList tys -> HList (ty : tys)
 \end{minted}
 
-Эта структура данных является first-class аналогом variadic generics в C++ или Swift\footnote{\url{https://github.com/swiftlang/swift-evolution/blob/main/proposals/0398-variadic-types.md}}\footnote{Собственно, смысл вариадиков --- не вводить в язык всё что нужно, чтобы сделать \mintinline{haskell}|HList| возможным.}.
-Например, мы написать \texttt{map} для такой структуры, если все типы удовлетворяют определённому ограничению.
+Эта структура данных является first-class аналогом variadic generics в C++ или Swift\footnote{\url{https://github.com/swiftlang/swift-evolution/blob/main/proposals/0398-variadic-types.md}} (cобственно, смысл вариадиков --- не работать \mintinline{haskell}|HList|-подобными структурами напрямую).
+Например, мы можем написать \texttt{map} для такой структуры, если все типы удовлетворяют определённому ограничению.
 Для этого сначала реализуем семейство, генерирующее кортеж констреинтов для каждого типа из списка:
 \begin{minted}{haskell}
     type family All (c :: k -> Constraint) (tys :: [k]) :: Constraint where
@@ -506,10 +509,10 @@ GHC позволяет прямо в коде, с помощью специал�
     list = [Any 42, Any "Hello", Any (Just Nothing)]
 \end{minted}
 
-
 В месте деконструирования \mintinline{haskell}|Any|, будет доступно значение некоторого неизвестного типа.
 Очевидно, с таким значением ничего сделать нельзя.
 Однако, помимо значения, можно положить в структуру данных свидетельство о том, что этот неизвестный тип удовлетворяет некоторому классу типов.
+Подобно fat pointers в Rust.
 \begin{minted}{haskell}
     data Has (c :: Type -> Constraint) where
       Has :: c a => a -> Has c
@@ -528,19 +531,17 @@ GHC позволяет прямо в коде, с помощью специал�
     foldHas (Has x) k = k x
 \end{minted}
 
-\subsubsection{Рефлексия на типах}
+Подробнее можно посмотреть в~\cite[глава 7]{maguire-types}.
+
+\subsubsection{Type reflection}
 
 
 
-i
+i\cite{peyton2016reflection}
 
-\cite{peyton2016reflection}
+
 
 % todo dynamic
-
-% todo
-
-\subsubsection{Получение значений с уровня типов}
 
 % todo
 
@@ -552,96 +553,32 @@ i
 
 % todo https://ryanglscott.github.io/2018/06/22/quantifiedconstraints-and-the-trouble-with-traversable/
 
-% todo type roles
+% todo
 
+\subsubsection{Data reflection}
 
 % todo what do you want to give name to
 
+% todo reflecrtion https://www.tweag.io/blog/2017-12-21-reflection-tutorial/
 
-% todo constraint is a proposition and dict is a proof
+% todo
 
-% todo constraints package of Edward Kmett
 
-% todo monomorphism restriction
+\subsubsection{Открытые структуры}
 
-% todo pattern-matching on types
+% todo open unions, data a la carte
 
-% todo serializer and serializable
+% todo
 
-% todo proxy
+
+
+
+
 
 % todo algebra driven design
 
-% todo rules and coersion
-
-% todo type classes vs interfaces
-% todo type classes via interfaces and implicits
-
-% todo incoherent instances
-
-% todo instance arguments
-
 % todo Monoid a => Monad m ??
-
-% todo https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/constraints.html
-
-% todo ConstraintKinds
-
-% todo constraints and decidability
-
-% todo https://chrisdone.com/posts/haskell-constraint-trick/
-
-% todo A Reflection on Types SPJ paper
-
-% todo haskell specialization
 
 % todo HasCall stack https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/callstack.html
 
-% todo https://wiki.haskell.org/Inlining_and_Specialisation
-
-% todo existential types, different vtable implementations, value types support
-% todo scala type classes
-% todo type inhabitation, system FC, Symon's talk
-% todo доклад SPJ
-% todo open unions, data a la carte
-% todo roles and coertions
-% todo typeable & reflection
-% todo reflecrtion https://www.tweag.io/blog/2017-12-21-reflection-tutorial/
-% todo How to make ad-hoc polymorphism less ad-hoc
-
-% todo C. V. Hall, K. Hammond, S. L. Peyton Jones, and P. L. Wadler. Type classes in haskell
-
-% todo S. Peyton Jones, S. Weirich, R. A. Eisenberg, and D. Vytiniotis. A reflection on types. In A list of successes that can change the world,
-
 % todo \chapter*{"Hackett: a metaprogrammable Haskell" by Alexis King}
-
-% todo
-
-
-% todo call stack
-
-% todo примеры с HList
-
-% todo orphans
-
-
-
-% todo functional dependencies & associated types
-
-% todo https://downloads.haskell.org/~ghc/9.0.1/docs/html/users_guide/exts/constraints.html
-
-% todo Orphan rules
-
-% todo builder code serialization format from babylon
-
-% todo associated type families
-
-% todo reference dependent types
-
-% todo рулесы, законы и оптимизация
-
-% todo asking to fill parameters for you because they are very obvious. Implicit in dependently-typed languages
-
-% todo variadics, open sums and products
-
-% todo
