@@ -771,11 +771,44 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 
 \subsubsection{Type reflection}
 
-i\cite{peyton2016reflection}
+Рефлексия --- это языковой механизм получения информации о типах во время исполнения (на уровне термов).
+Звучит знакомо, и действительно Haskell реализует этот механизм с интерфейсом классов типов~\cite{peyton2016reflection}.
 
-% todo dynamic
+Библиотека предоставляет магический класс типов \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/Type-Reflection.html}{\mintinline{haskell}|Typeable|}, который реализуется компилятором для каждого конкретного типа.
+Чтобы получить информацию о типе, в скоупе должен быть инстанс \mintinline{haskell}|Typeable| для этого типа.
+Структура типа представлена типом-суммы \href{https://hackage.haskell.org/package/ghc-internal-9.1001.0/docs/src/GHC.Internal.Data.Typeable.Internal.html#TypeRep}{\mintinline{haskell}|TypeRep|}, который предоставляет возможность дополнительного типового контроля с помощью обобщённых алгебраических типов данных и типовых тегов.
+\begin{minted}{haskell}
+    class Typeable a where
+      typeRep :: TypeRep a
+\end{minted}
 
-% todo
+Например, следующим образом можно получить имя конструктора типа:
+\begin{minted}{haskell}
+    typeName :: forall a. Typeable a => String
+    typeName = tyConName $ typeRepTyCon $ typeRep $ Proxy @a
+
+    ghci> typeName @Int
+\end{minted}
+
+\begin{task}
+    Объявите класс типов, который позволяет распечатать список типов.
+\end{task}
+
+С помощью структуры представления типа и экзистенциальных типов в Haskell можно эмулировать динамическую типизацию.
+А именно: любой тип может быть преобразован в \href{}{\mintinline{haskell}|Dynamic|}, а потом безопасно преобразован обратно.
+\begin{minted}{haskell}
+    data Dynamic where
+      Dynamic :: Typeable a => a -> Dynamic
+
+    fromDynamic :: Typeable a => Dynamic -> Maybe a
+\end{minted}
+
+Это может быть полезно для определения гетерогенного хранилища ключ-значение:
+\begin{minted}{haskell}
+    data Store = Map Key Dynamic
+    data Ref ty = Ref Key
+    get :: Store -> Ref ty -> ty
+\end{minted}
 
 \subsubsection{Data reflection}
 
