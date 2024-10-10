@@ -547,7 +547,7 @@ Haskell предоставляет явный синтаксис для объя
 
     hMap
       :: forall (m :: Matchability) (c :: Type -> Constraint)
-       . forall (f :: Type ->m Type) (as :: [Type])
+       . forall (f :: Type ->?$^m$? Type) (as :: [Type])
        . All as c => (forall a. c a => a -> f a) -> HList as -> HList (Map f as)
 \end{minted}
 
@@ -680,13 +680,61 @@ Haskell предоставляет явный синтаксис для объя
 
 Подробнее можно посмотреть в~\cite[глава 7]{maguire-types}.
 
-\subsubsection{Коерции}
+\subsubsection{Коерции и роли} \label{subsubsec:coercions}
 
-\cite{breitner2014safe}
+Haskell имеет поддержку \vocab{generative type abstractions} в виде \mintinline{haskell}|newtype| деклараций.
+Эта техника позволяет задавать доменно-специфичные типы, которые во время исполнения не отличимы от оборачиваемых типов, но позволяют различать их.
+Так, мы можем ввести различные обёртки для чисел, которые в предметной области представляют собой идентификаторы различных сущностей.
+Теперь система типов не даст их перепутать.
+\begin{minted}{haskell}
+    newtype ModuleId = ModuleId Int64
+    newtype CourceId = CourceId Int64
+\end{minted}
 
-\cite[глава 8]{maguire-types}
+Существует крайне недооценённая практика программирования\footnote{\url{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}}, когда у нас в программе есть чёткая граница, на которой происходит парсинг данных из внешнего мира.
+После этой стадии сырые неструктурированные данные обогащаются структурой и принимают смысл внутри предметной области.
+Либо же мы отвергаем эти данные как некорректные.
+В оставшейся же части программы мы уже пользуемся типизированными данными, свойства которых уже установлены и гарантированы.
+Например, мы можем быть уверены, что число \mintinline{haskell}|ModuleId| строго больше нуля.
 
-% todo https://ryanglscott.github.io/2018/06/22/quantifiedconstraints-and-the-trouble-with-traversable/
+Однако, если у нас есть коллекция обёрнутых данных, а мы хотим с ней поработать как с коллекцией сырых, то нам придётся трансформировать коллекцию, несмотря на то, что эта трансформация ничего не делает.
+Оптимизатор Haskell не справится её элиминировать, потому что работает с типизированным промежуточным представлением и не сможет избавиться от преобразования, меняющего тип.
+\begin{minted}{haskell}
+    newtype [Html] = Html { unHtml :: String }
+
+    linesH :: Html -> [Html]
+    linesH = map Html . lines . ?\framebox{map}? unHtml
+\end{minted}
+
+Поэтому в Haskell есть механизм безопасных коерций между типами, у которых одинаковое представление во время исполнения.
+Это реализовано с помощью магического класса типов \mintinline{haskell}|Coercible|.
+Его имплементирует компилятор автоматически (см.~\ref{fig:coersions}).
+\begin{minted}{haskell}
+    class Coercible from to where
+      coerce :: from -> to
+\end{minted}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{figs/coersions}
+    \caption{Принципы построения инстансов \mintinline{haskell}|Coercible|~\cite{breitner2014safe}.}
+    \label{fig:coersions}
+\end{figure}
+
+Теперь, можем избавиться от лишней трансформации списка:
+\begin{minted}{haskell}
+    linesH :: Html -> [Html]
+    linesH = coerce lines
+\end{minted}
+
+
+
+Подробнее можно прочитать в~\cite{breitner2014safe} и~\cite[глава 8]{maguire-types}.
+
+% todo newtype derivings ref
+
+% todo preserve invariants and abstraction
+
 
 % todo
 
