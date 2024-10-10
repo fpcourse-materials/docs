@@ -178,16 +178,14 @@
                 height :: Tree -> Int
                 height tree = case tree of
                   Leaf _ -> 1
-                  Branch l _ r -> max (height l) (height r)
+                  Branch l _ r -> 1 + max (height l) (height r)
             \end{minted}
             \item[\answer] \pause
             \begin{minted}{haskell}
-                incrementree :: (Int -> Int) -> Tree -> Tree
-                incrementree f tree =
-                  let rec = incrementree f in
-                  case tree of
-                    Leaf x -> Leaf (f x)
-                    Branch l x r -> Branch (rec l) (f x) (rec r)
+                transform :: (Int -> Int) -> Tree -> Tree
+                transform f tree = case tree of
+                  Leaf x -> Leaf (f x)
+                  Branch l x r -> Branch (transform f l) (f x) (transform f r)
             \end{minted}
         \end{itemize}
     \end{frame}
