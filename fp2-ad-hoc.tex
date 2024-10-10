@@ -727,16 +727,45 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
     linesH = coerce lines
 \end{minted}
 
+Безопасность коерций обеспечивает \vocab{система ролей}.
+Каждый типовой параметр имеет специальное свойство --- роль.
 
+Роль phantom имеют фантомные типовые параметры.
+Их можно свободно коерсить (нет пререквизитов для инстансов \mintinline{haskell}|Coercible|):
+\begin{minted}{haskell}
+    data Phantom h = Phantom
+    data NestedPhantom b = MkNP [Phantom b] | SomethingElse
+
+    instance Coercible (Phantom a) (Phantom b)
+    instance Coercible (NestedPhantom a) (NestedPhantom b)
+\end{minted}
+
+Типовой параметр имеет роль representational, если типовой конструктор можно коерсить только при условии, что можно коерсить аргументы:
+\begin{minted}{haskell}
+    data Maybe a = Nothing | Just a
+    instance Coerce a b => Coerce (Maybe a) (Maybe b)
+\end{minted}
+
+Роль nominal имеет типовой параметр, если типовой конструктор можно коерсить только при условии, что аргументы эквивалентны.
+Это требуется, если типовой аргумент индексирует семейство или констреинт.
+\begin{minted}{haskell}
+    type family F a
+    data Applied a = Applied (F a)
+    instance (a ?$\sim$? b) => Coercible (Applied a) (Applied b)
+
+    data ShowDict a where
+      ShowDict :: Show a => a -> ShowDict a
+\end{minted}
+
+Иногда компилятор выводит неправильную роль типовому параметру.
+Например, если инварианты структуры зависят на конкретную имплементацию какого-то класса типов для типового аргумента.
+В таком случае, роли можно указать явно:
+\begin{minted}{haskell}
+    type role Map nominal representational
+    data Map k v = ...
+\end{minted}
 
 Подробнее можно прочитать в~\cite{breitner2014safe} и~\cite[глава 8]{maguire-types}.
-
-% todo newtype derivings ref
-
-% todo preserve invariants and abstraction
-
-
-% todo
 
 \subsubsection{Type reflection}
 
