@@ -472,8 +472,6 @@ Synonym families (семейства типов) фактически являю
     = Suc (Suc (Suc Zero))
 \end{minted}
 
-% todo kind families
-
 Ассоциированные семейства работают аналогично, только объявляются в рамках некоторого класса типов, являясь некоторой функциональной альтернативой \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/functional_dependencies.html}{FunctionalDependencies} (которые выглядят скорее реляционно).
 Иначе говоря, позволяют поставить в соответствие типу, для которого написан инстанс, другой тип.
 Например, коллекции --- тип её элементов.
@@ -498,7 +496,10 @@ Synonym families (семейства типов) фактически являю
 
 \subsubsection{Инъективные семейства}
 
-Семейства типов отличаются от типовых конструкторов в одном важном для вывода типов аспекте --- они не обязательно инъективные.
+Семейства типов отличаются от типовых конструкторов примерно так же, как функции от конструкторов данных.
+Конструкторы пассивны и не редуцируются (\mintinline{haskell}|Maybe Int|), в то время как функции вычисляются в какой-то результат (e.g. \mintinline{haskell}|F Int ?$\sim$? Bool|).
+В частности, как и функции, семейства не обязательно инъективны.
+
 Для типовых конструкторов, зная, что сконструированные ими типы эквивалентны, можно вывести, что типовые аргументы эквивалентны тоже.
 Например:
 \begin{minted}{haskell}
@@ -508,8 +509,8 @@ Synonym families (семейства типов) фактически являю
 Очевидно, что для классов типов это свойство по умолчанию не выполняется:
 \begin{minted}{haskell}
     type family NonInjective a where
-      NonInjective Int = ()
-      NonInjective Char = ()
+      NonInjective Int = Double
+      NonInjective Char = Double
 \end{minted}
 
 Haskell предоставляет явный синтаксис для объявления инъективных семейств типов, напоминающий функциональные зависимости в классах типов (\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_families.html#extension-TypeFamilyDependencies}{TypeFamilyDependencies})~\cite{stolarek2015injective}.
@@ -522,14 +523,33 @@ Haskell предоставляет явный синтаксис для объя
 
 \subsubsection{Семейства первого класса}
 
+Помимо инъективности, классы типов также не обязательно обладают свойством \vocab{generavity}, критически важным для вывода типов, --- один и тот же результат не обязательно получен из того же самого семейства:
+\begin{minted}{haskell}
+    f a ?$\sim$? g a ?$\Rightarrow$? f ?$\sim$? g
+\end{minted}
 
+Вместе инъективность и generavity --- \vocab{matchability}.
+Когда Haskell работает с типом стрелочного кайнда, он подразумевает, что этот тип matchable.
+Соответственно, семейства не могут передаваться в качестве параметров, а все их вхождения должны быть полностью применёнными ко всем аргументам (fully saturated).
 
-\cite{defunctionalization-slides, eisenberg2014promoting}
-\cite{kiss2019higher}
+Одним из способов обойти это ограничение является дефункционализация семейств~\cite{defunctionalization-slides, eisenberg2014promoting}.
+Как мы и обсуждали ранее~\ref{subsubsec:defunctionalization}, вместо функции первого класса заводится некоторый символ, обозначающий её, и функция интерпретации, умеющая сделать действие, соответствующее этому символу.
+В данном случае функцией интерпретации будет открытое семейство \mintinline{haskell}|Apply|.
 
-% todo fist-class type families, defunctionalisation (Eisenberg 2013)
+В Haskell ведутся работы\footnote{\href{https://ghc-proposals.readthedocs.io/en/latest/proposals/0242-unsaturated-type-families.html}{GHC proposal: Unsaturated Type Families}.} по устранению saturation ограничения~\cite{kiss2019higher}.
+Для этого нужно различать matchable и unmatchable типовые функции.
+Это предлагается делать дополнительным индексированием стрелочных кайндов: $\to \equiv
+\to^M, \twoheadrightarrow \equiv \to^U$.
+И, конечно, эти индексы могут быть полиморфными.
 
-% todo
+\begin{minted}{haskell}
+    data Matchability = Matchable | Unmatchable
+
+    hMap
+      :: forall (m :: Matchability) (c :: Type -> Constraint)
+       . forall (f :: Type ->m Type) (as :: [Type])
+       . All as c => (forall a. c a => a -> f a) -> HList as -> HList (Map f as)
+\end{minted}
 
 \subsection{Кайнд Constraint}
 
@@ -685,7 +705,6 @@ i\cite{peyton2016reflection}
 % todo reflecrtion https://www.tweag.io/blog/2017-12-21-reflection-tutorial/
 
 % todo
-
 
 \subsubsection{Открытые структуры}
 
