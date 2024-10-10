@@ -498,15 +498,31 @@ Synonym families (семейства типов) фактически являю
 
 \subsubsection{Инъективные семейства}
 
-\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_families.html#extension-TypeFamilyDependencies}{TypeFamilyDependencies}
+Семейства типов отличаются от типовых конструкторов в одном важном для вывода типов аспекте --- они не обязательно инъективные.
+Для типовых конструкторов, зная, что сконструированные ими типы эквивалентны, можно вывести, что типовые аргументы эквивалентны тоже.
+Например:
+\begin{minted}{haskell}
+    Maybe a ?$\sim$? Maybe b ?$\Rightarrow$? a ?$\sim$? b
+\end{minted}
 
-\cite{stolarek2015injective}
+Очевидно, что для классов типов это свойство по умолчанию не выполняется:
+\begin{minted}{haskell}
+    type family NonInjective a where
+      NonInjective Int = ()
+      NonInjective Char = ()
+\end{minted}
 
-% todo there was something in levity
-
-% todo
+Haskell предоставляет явный синтаксис для объявления инъективных семейств типов, напоминающий функциональные зависимости в классах типов (\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_families.html#extension-TypeFamilyDependencies}{TypeFamilyDependencies})~\cite{stolarek2015injective}.
+Конечно, компилятор проверит, что реализация инъективна.
+Синтаксис требует связать результат именем через равенство и указать, что результат определяет какие-то из типовых индексов семейства:
+\begin{minted}{haskell}
+    type family InjectiveB a b = r | r -> b
+      ...
+\end{minted}
 
 \subsubsection{Семейства первого класса}
+
+
 
 \cite{defunctionalization-slides, eisenberg2014promoting}
 \cite{kiss2019higher}
