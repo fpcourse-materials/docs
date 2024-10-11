@@ -819,7 +819,7 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 
 Как мы обсуждали ранее, в свойство когерентности гарантирует, что каждому типу в Haskell соответствует ровно один инстанс определённого класса типов.
 И единственный способ объявить инстанс в Haskell --- декларацией на верхнем уровне, то есть он не может зависеть ни от каких локальных данных.
-Однако в Haskell есть библиотека \href{https://hackage.haskell.org/package/reflection-2.1.6/docs/Data-Reflection.html}{Data.Reflection}\footnote{\url{https://www.tweag.io/blog/2017-12-21-reflection-tutorial/}}, которая позволяет создавать локальные инстансы для свежих, чёрной магией\footnote{\url{https://www.schoolofhaskell.com/user/thoughtpolice/using-reflection}} сгенерированных типов.
+Однако в Haskell есть библиотека \href{https://hackage.haskell.org/package/reflection-2.1.6/docs/Data-Reflection.html}{Data.Reflection}\footnote{\url{https://www.tweag.io/blog/2017-12-21-reflection-tutorial/}}, которая позволяет создавать локальные инстансы для свежих, чёрной магией\footnote{\url{https://www.schoolofhaskell.com/user/thoughtpolice/using-reflection}} сгенерированных, типов.
 
 Она пользуется идеей ``поднятия значений в типы'', обсуждённой нами ранее (см.~\ref{subsubsec:reify}), но в несколько более общем виде.
 Вместо заведения классов типов вида \mintinline{haskell}|Known_|, вводится один класс типов, индексированный типом термов \texttt{terms}, которые спускаются из типов:
