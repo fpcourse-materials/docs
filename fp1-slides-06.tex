@@ -35,6 +35,21 @@
         \end{itemize}
     \end{frame}
 
+    \begin{frame}[fragile]{Разминка}
+        \begin{itemize}
+            \item[\todo] Как определён \mintinline{haskell}|Either|?
+            \item[\todo] Какой будет результат выполнения следующего выражения?
+            \begin{minted}{haskell}
+                case B 1 2 of
+                  A x -> x + 3
+                  B x y -> x + y
+                  C -> 42
+            \end{minted}
+            \item[\todo] Приведите пример терма типа \mintinline{haskell}|Maybe|
+            \item[\todo] Какой тип у \mintinline{haskell}|Left 42|?
+        \end{itemize}
+    \end{frame}
+
     \begin{frame}[noframenumbering]{Содержание}
         \tableofcontents
     \end{frame}
@@ -55,7 +70,7 @@
             \end{minted}
             \item Для каждого типа пишется по инстансу
         \end{itemize}
-        \vspace{-1em}
+        \vspace{-1.2em}
         \begin{columns}[onlytextwidth]
             \begin{column}[t]{0.05\textwidth}
             \end{column}\hfill%
@@ -77,6 +92,9 @@
         \vspace{0.5em}
         \begin{itemize}
             \item В отличие от классической перегрузки, классы типов дружат с параметрическим полиморфизмом
+            \begin{minted}{haskell}
+                showWithPrefix :: Show a => a -> String -> String
+            \end{minted}
         \end{itemize}
     \end{frame}
 
@@ -88,7 +106,6 @@
             \end{minted}
             \item[\todo] Реализуйте \mintinline{haskell}|Show| для пары
             \item[\todo] Придумайте класс для парсинга данных \mintinline{haskell}|MyRead|
-            \item[\todo] Реализуйте наивный парсинг пары
             \item[\answer] \pause
             \begin{minted}{haskell}
                 instance (Show a, Show b) => Show (a, b) where
@@ -148,7 +165,7 @@
         \end{itemize}
     \end{frame}
 
-    \begin{frame}[fragile]{Специализация типовых конструкторов}
+    \begin{frame}[fragile]{Частичное применение типовых конструкторов}
         \begin{itemize}
             \item[\todo] \mintinline{haskell}|ghci> :k (,)|
             \item[\todo] \mintinline{haskell}|ghci> :k (->)|
@@ -189,7 +206,7 @@
 
     \begin{frame}[fragile]{Природа классов типов}
         \begin{itemize}
-            \item \pause Классы типов --- не типы, нельзя \mintinline{haskell}|many :: [Functor]|\footnote{Гетерогенные списки можно делать с помощью экзистенциальных типов. Но это потом.}\footnote{\advanced Type constructor \mintinline{haskell}|[]| expected \mintinline{haskell}|*|, but got \mintinline{haskell}|(* -> *) -> Constraint| instead.}
+            \item \pause Классы типов --- не типы, нельзя \mintinline{haskell}|many :: [Functor]|\footnote{Гетерогенные списки можно делать с помощью экзистенциальных типов. Но это потом.}
             \item \pause Тип принадлежит классу типов, если для него написан инстанс этого класса типов, удовлетворяющий необходимым законам этого класса
             \item \pause Иногда полезно смотреть на классы типов как на предикаты на типах
             \item[$\Rightarrow$] Мультипараметрические классы типов --- отношения
@@ -381,17 +398,12 @@
         \end{itemize}
     \end{frame}
 
-    \begin{frame}{Что посмотреть в транспорте}
+    \begin{frame}{Серьёзные материалы}
         \begin{itemize}
             \item \href{https://youtu.be/MbFqJ2NHS8M?si=LamIrSnrjbwCYrt2}{\color{blue}  Tagless-Final Style}
             \item \href{https://youtu.be/sWEtnq0ReZA?si=CxcESs7hoj73Kc7e}{\color{blue}  Олег Нижников — Современное ФП с Tagless Final}
             \item \href{https://youtu.be/p98W4bUtbO8?si=fU7dtXL3DnXEs75h}{\color{blue} The Death of Tagless Final by John A. De Goes}
             \item \href{https://reasonablypolymorphic.com/blog/review-codata/index.html}{\color{blue} Review: Codata in Action}
-        \end{itemize}
-    \end{frame}
-
-    \begin{frame}{Серьёзные материалы}
-        \begin{itemize}
             \item \href{https://okmij.org/ftp/tagless-final/index.html}{\color{blue} Tagless Final style by Oleg}
             \item \href{https://okmij.org/ftp/tagless-final/course/lecture.pdf}{\color{blue} Lecture notes on Tagless Final}
             \item Wadler, Philip, and Stephen Blott. "How to make ad-hoc polymorphism less ad hoc." \textit{Proceedings of the 16th ACM SIGPLAN-SIGACT symposium on Principles of programming languages}. 1989.
