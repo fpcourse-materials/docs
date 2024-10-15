@@ -892,10 +892,68 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 Исключения динамически типизированные и образуют иерархию~\cite{marlow2006extensible}.
 Если породить исключение может и чистый код, так как $\bot$, по семантике Haskell, населяет любой (lifted) тип, то поймать исключение можно только\footnote{\href{https://stackoverflow.com/questions/3642793/why-can-haskell-exceptions-only-be-caught-inside-the-io-monad}{(stackoverflow) Why can Haskell exceptions only be caught inside the IO monad?}} в \mintinline{haskell}|IO|~\cite{jones2001tackling}, используя специальные примитивы языка.
 
+Чтобы сделать тип исключением, нужно объявить инстанс \mintinline{haskell}|Exception| для него:
+\begin{minted}{haskell}
+    class (Typeable a, Show a) => Exception a where
+      toException :: a -> SomeException
+      toException = SomeException
 
+      fromException :: SomeException -> a
+      fromException (SomeExcetion e) = cast e
+\end{minted}
+Где \mintinline{haskell}|SomeException| --- это экзистенциальная обёртка наподобие \mintinline{haskell}|Dynamic|, в которую заворачивается конкретный тип исключения.
+Ловя \mintinline{haskell}|SomeException|, можно поймать любое исключение (\mintinline{haskell}|cast| всегда сработает).
+\begin{minted}{haskell}
+    data SomeException where
+      SomeException :: Exception a => a -> SomeException
 
+    instance Exception SomeException
+\end{minted}
 
-% todo какая-то большая статья про IO
+Система исполнения Haskell предоставляет интринсики для кидания и ловли исключений, обернём их для поддержки любого \mintinline{haskell}|Exception| типа:
+\begin{minted}{haskell}
+    throw :: Exception e => e -> a
+    throw = primThrow (toException e)
+
+    catch :: Exception e => IO a -> (e -> IO a) -> IO a
+    catch io handler = io `primCatch` \e -> case fromException e of
+      Nothing -> throw e
+      Just e' -> handler e'
+
+    ghci> throw "error" `catch` (e :: String) -> putStrLn e
+\end{minted}
+
+В простейшем случае свой тип исключения можно реализовать в две строчки.
+Чтобы его поймать, нужно либо ловить сам этот тип, либо \mintinline{haskell}|SomeException|, потому что для них обоих \mintinline{haskell}|fromException| на объекте вида \mintinline{haskell}|SomeException MyError| вернёт \mintinline{haskell}|Just|.
+\begin{minted}{haskell}
+    data MyError = MyError deriving (Show, Typeable)
+    instance Exception MyError
+\end{minted}
+
+Добавим исключение \mintinline{haskell}|ArithException| и ещё один более общий тип исключений между ним и \mintinline{haskell}|SomeException| --- \mintinline{haskell}|SomeArithException| (таким образом, будет три способа поймать \mintinline{haskell}|ArithException|).
+Для этого сделаем \mintinline{haskell}|SomeArithException| экзистенциальной обёрткой, а каждое исключение типа \mintinline{haskell}|ArithException| будем автоматически оборачивать в неё.
+В \mintinline{haskell}|fromException| на каждом уровне вложенности будем пытаться получить оборачивающий конструктор рекурсивным вызовом.
+
+\begin{minted}{haskell}
+    data SomeArithException where
+      SomeArithException :: Exception a => a -> SomeArithException
+
+    -- SomeException - базовый (реализация по умолчанию)
+    instance Exception ArithException
+
+    data DivisionByZero = DivisionByZero deriving Show
+    instance Exception DivisionByZero where
+      toException = toException . SomeArithException
+      fromException e = do
+        SomeArithException e' <- fromException e
+        cast e'
+\end{minted}
+
+Так, во время бросания \mintinline{haskell}|DivisionByZero| будет конструироваться объект вида:
+\begin{minted}{haskell}
+    SomeException (SomeArithException DivisionByZero)
+\end{minted}
+Реализация \mintinline{haskell}|fromException| для конкретного типа умеет убедиться в наличии соответствующего конструктора в результирующем объекте исключения.
 
 \subsubsection{Легковесные частичные стек-трейсы}
 
