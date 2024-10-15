@@ -1,11 +1,19 @@
 %! suppress = MissingLabel
 
-Продолжения с начала 60х не один раз возникали в литературе в различных формах и разнообразных приложениях~\cite{reynolds1993discoveries, landin1997histories}, пока в 70м Wadsworth не придумал термин общий термин \vocab{continuation} --- ``the meaning of the rest of the program''.
+Продолжения с начала 60х не один раз возникали в литературе в различных формах и разнообразных приложениях~\cite{reynolds1993discoveries, landin1997histories}, пока в 70х Wadsworth не придумал общий термин и единую концепцию --- \vocab{continuation}\footnote{\url{https://en.wikipedia.org/wiki/Continuation}} --- ``the meaning of the rest of the program''.
 
-Начальным толчком к размышлениям стал язык Algol60, имевший нетривиальную семантику меток и прыжков.
+Начальным толчком к размышлениям стал язык Algol 60, имевший нетривиальный механизм меток и прыжков.
 Проблемой была как имплементация семантики, так и её денотационное описание вместе с трансляцией в лямбда-исчисление.
 Действительно, как математически описать \texttt{goto}?
 В каком домене искать семантику таких программ?
+Ответом стала возможность сослаться на семантику остатка программы в определённой точке.
+
+% todo примеры
+\begin{itemize}
+    \item
+\end{itemize}
+
+% todo continuations and operating systems
 
 % todo continuation as a data structure
 
@@ -13,23 +21,112 @@
 
 % todo continuations and imperative programming
 
+% todo single-shot/multi-shot
+
 % todo first class coninuations
 
 % todo expression continuations
 
-% todo
+% todo codensity
 
-\subsection{Реализация продолжений}
+% todo problems with continuations: typing and resources
 
-\subsubsection{Continuation-passing style (CPS)}
-
-% todo isomorphism
-
-% todo callbacks
+% todo implementing while
 
 % todo
+
+% todo control operator, runtime наизнанку
+
+\subsection{Continuation-passing style (CPS)}
+
+Базовым способом получить в программе продолжение первого класса --- написать программу в стиле CPS.
+CPS эксплуатирует следующий изоморфизм:
+\begin{minted}{haskell}
+    to :: a -> (forall r . (a -> r) -> r)
+    to x k = k x
+
+    from :: (forall r . (a -> r) -> r) -> a
+    from comp = comp id
+\end{minted}
+
+Иначе говоря, вместо того, чтобы предоставить значение, можно запросить у вызывающей стороны, как она собирается с этим значением работать, сделать это самостоятельно и вернуть вызывающей стороне.
+
+Корни этого изоморфизма в лемме Йонеды из теории категорий~\cite{hinze2010reason}.
+Прикладным же программистам он знаком по технике использования callback'ов.
+
+Например, мы можем переписать факториал в стиле CPS:
+\begin{minted}{haskell}
+    facCps :: Int -> (forall r . (Int -> r) -> r)
+    facCps n k
+      | n <= 1 = k 1
+      | otherwise = facCps (n - 1) \res -> k (n * res)
+\end{minted}
+
+\begin{task}
+    Вручную поредуцируйте определение \mintinline{haskell}|facCps| на простом примере.
+\end{task}
+
+\begin{task}
+    Сколько функция \mintinline{haskell}|facCps| потребляет стековой памяти?
+\end{task}
 
 \subsubsection{Монада \texttt{Cont}}
+
+Из-за CPS код потерял привычную структуру, при которой функции напрямую возвращают свои результаты.
+При наличии большого количества вызовов трансформированных функций, код становится плохо читаемым.
+
+\begin{minted}{haskell}
+    fibCps :: Int -> (forall r . (Int -> r) -> r)
+    fibCps n k = if n <= 2 then k 1 else
+      fibCps (n - 1) \res1 ->
+      fibCps (n - 2) \res2 ->
+      k (res1 + res2)
+\end{minted}
+
+Однако, можно заметить, что монадическое связывание вторым аргументом тоже принимает продолжение, но ``маленькое'', до конца \mintinline{haskell}|do|-блока.
+Таким образом, можно попробовать линеаризовать CPS код с помощью монад.
+
+Заведём \mintinline{haskell}|newtype| обёртку для объявления инстансов:
+\begin{minted}{haskell}
+    newtype Cont r a = Cont { runCont :: (a -> r) -> r }
+\end{minted}
+
+Функтор добавляет пост-процессинг результату перед передачей в продолжение:
+\begin{minted}{haskell}
+    instance Functor (Cont r) where
+      -- fmap :: (a -> b) -> ((a -> r) -> r) -> ((b -> r) -> r)
+      fmap f (Cont comp) = Cont \k -> comp (k . f)
+\end{minted}
+
+Аппликатив просто передаёт значение продолжению:
+\begin{minted}{haskell}
+    instance Applicative (Cont r) where
+      pure x = Cont \k -> k x
+      (<*>) = ap
+\end{minted}
+
+Наконец, монада принимает в связывании ``маленькое'' продолжение, композирует его с ``большим'' продолжением, пришедшим снаружи, и передаёт в данное вычисление:
+\begin{minted}{haskell}
+    instance Monad (Cont r) where
+      Cont comp >>= k = Cont \k' -> comp \x -> runCont (k x) k'
+\end{minted}
+
+Теперь мы можем писать линейный код, а монадическая машинерия сама конструирует продолжения и подкладывает в предыдущие вычисления:
+\begin{minted}{haskell}
+    fibCont :: Int -> Cont r Int
+    fibCont n = if n <= 2 then pure 1 else do
+      res1 <- fibCont (n - 1)
+      res2 <- fibCont (n - 2)
+      pure (res1 + res2)
+\end{minted}
+
+\begin{task}
+    Оборвите вычисление, если \texttt{res1} больше \texttt{50}.
+\end{task}
+
+\begin{task}
+    Оборвите вычисление как только общий результат стал больше 50.
+\end{task}
 
 % todo call/cc
 
@@ -109,9 +206,7 @@
 
 % todo sicp
 
-
-
-% todo raynolds The Discoveries of Continuations
+% todo CPS трансформация интерпретаторов
 
 % todo correspondence to negation in intuitionistic logic?
 
@@ -138,3 +233,5 @@
 % todo Delimited continuations and asynchronous exceptions
 
 % todo Oleg's web cite
+
+% todo tags and prompts
