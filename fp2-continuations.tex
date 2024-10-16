@@ -33,14 +33,10 @@
 \vocab{Продолжения первого класса (first-class continuations)} --- продолжения, которые представимы в программе в виде значений.
 Учитывая, что продолжение имеет вакантное место ещё не вычисленного подвыражения, продолжения первого класса представляют функциями первого класса.
 
+Чтобы получить в коде продолжение первого класса, нужно либо написать код в специальном виде, либо воспользоваться встроенным в язык оператором.
+Например, $J$, \texttt{escape}~\cite{reynolds1972definitional}, \texttt{call/cc}\ldots
+
 % todo citations on operators
-
-
-
-
-
-% todo примеры
-
 
 % todo continuations and operating systems
 
@@ -49,8 +45,6 @@
 % todo continuations and imperative programming
 
 % todo single-shot/multi-shot
-
-% todo first class coninuations
 
 % todo codensity
 
@@ -94,6 +88,9 @@ CPS эксплуатирует следующий изоморфизм:
 \begin{task}
     Сколько функция \mintinline{haskell}|facCps| потребляет стековой памяти?
 \end{task}
+
+Существует стиль формальных семантики, называемый \vocab{continuation semantics}.
+Фактически он соответствует написанию определяющих интерпретаторов в CPS стиле.
 
 \subsubsection{Монада \texttt{Cont}}
 
@@ -155,17 +152,13 @@ CPS эксплуатирует следующий изоморфизм:
 
 % todo call/cc
 
-% todo
-
-\subsubsection{Дефункционализация продолжений}
+\subsection{Дефункционализация продолжений}
 
 \cite{reynolds1972definitional}
 
-% todo
+% todo zipper
 
-\subsubsection{State machine}
-
-% todo циклы и спиллинг
+% todo abstract machines
 
 % todo
 
@@ -173,17 +166,43 @@ CPS эксплуатирует следующий изоморфизм:
 
 \cite{dyvbig2007monadic}
 
-% todo
+% todo in haskell
 
-\subsubsection{Основные операторы}
-
-% todo
-
-\subsubsection{Реализация в Haskell}
+% todo via mutable cell
 
 % todo
 
-% todo delimited via undelimited and mutable cell
+\subsection{Нативная реализация продолжений}
+
+\subsubsection{State machine}
+
+% todo циклы и спиллинг
+
+% todo
+
+\subsubsection{Continuios stack}
+
+% todo
+
+\subsubsection{Segmented stack}
+
+% todo
+
+\subsection{Использование продолжений}
+
+% todo difference lists
+
+% todo lens
+
+% todo CPS интерпретаторы, переходы
+
+% todo корутины
+
+% todo генераторы
+
+% todo эффекты
+
+% todo transducers, pipelines and internal iteration
 
 
 
@@ -191,49 +210,18 @@ CPS эксплуатирует следующий изоморфизм:
 
 
 
-
-
-
-
-
-
-
-
-
-
-%\subsubsubsection{}
 
 % todo пример на хаскеле с примитивом
 
-% todo connection with zipper
 
 % todo goto не нужен? 　
 
 
-% todo first-class continuations
-
-%\subsubsection{}
-
-
-
-
-
-
 % todo Foundations for Programming and Implementing Effect Handlers
-
-% todo связь с монадами
-
-% todo continuation semantics
-
-% todo tasks from Moskvin's stepic
-
-% todo колбеки это продолженя в монадах
 
 % todo sicp
 
 % todo CPS трансформация интерпретаторов
-
-% todo correspondence to negation in intuitionistic logic?
 
 % todo CPS correspond to double negation in logic reynolds1998definitional
 
@@ -251,11 +239,6 @@ CPS эксплуатирует следующий изоморфизм:
 % todo refrence co calculate correct compilers and stuff
 
 \cite{reynolds1972definitional, reynolds1998definitional, defunctionalization-slides}
-
-
-% todo transducers, pipelines and internal iteration
-
-% todo Delimited continuations and asynchronous exceptions
 
 % todo Oleg's web cite
 
