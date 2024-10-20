@@ -7,15 +7,31 @@
 Действительно, как математически описать \texttt{goto}?
 В каком домене искать семантику таких программ?
 Как написать определяющий интерпретатор, отправляющий программу в этот домен?
-Ответом стала возможность сослаться на семантику остатка программы в определённой точке.
+Ответом стала возможность сослаться на семантику остатка программы в определённой точке (например, на метке).
 
 Итак, продолжение --- это абстрактная концепция, обозначающая остаток вычисления.
 Например, когда мы редуцируем простое арифметическое выражение, вычислитель фокусируется внутрь его, чтобы найти редекс.
 Оставшееся выражение с дыркой, в которую нужно будет подставить результат вычисления редекса, является продолжением.
 
-% todo picture
+\begin{figure}[h]
+    \centering
+    \begin{tabular}{|c|c|}
+        \hline
+        Фокус               & Продолжение           \\
+        \hline
+        $((2 + 3) - 4) * 5$ & $\boxempty$           \\
+        $(2 + 3) - 4$       & $\boxempty * 5$       \\
+        $2 + 3$             & $(\boxempty - 4) * 5$ \\
+        $5$                 & $(\boxempty - 4) * 5$ \\
+        $5 - 4$             & $\boxempty * 5$       \\
+        $1$                 & $\boxempty * 5$       \\
+        $1 * 5$             & $\boxempty$           \\
+        $5$                 & $\boxempty$           \\
+        \hline
+    \end{tabular}
+\end{figure}
 
-Практически продолжение представляет собой некоторую структуру данных, сохраняющее всё что нужно, чтобы продолжить исполнение программы с определённого места.
+Практически говоря, продолжение представляет собой некоторую структуру данных, сохраняющее всё что нужно, чтобы продолжить исполнение программы с определённого места.
 Иначе говоря, это некоторый снапшот состояния вычислителя, интерпретатора.
 
 Как правило, продолжения существуют вне пользовательского кода.
@@ -29,32 +45,14 @@
     \item Конструкции \mintinline{kotlin}|break| и \mintinline{kotlin}|continue| восстанавливают продолжение после цикла и до\ldots
 \end{itemize}
 
-Говоря ``продолжение'' часто понимают продолжения первого класса.
+В примерах выше конструкции языка управляют продолжениями неявно.
+Однако, иногда вводят операторы, позволяющие явно оперировать продолжениями.
+
 \vocab{Продолжения первого класса (first-class continuations)} --- продолжения, которые представимы в программе в виде значений.
 Учитывая, что продолжение имеет вакантное место ещё не вычисленного подвыражения, продолжения первого класса представляют функциями первого класса.
 
-Чтобы получить в коде продолжение первого класса, нужно либо написать код в специальном виде, либо воспользоваться встроенным в язык оператором.
+Чтобы получить в коде продолжение первого класса, нужно либо написать код в специальном виде, либо воспользоваться встроенным в язык оператором~\cite[приложение A]{hillerstrom2022foundations}.
 Например, $J$, \texttt{escape}~\cite{reynolds1972definitional}, \texttt{call/cc}\ldots
-
-% todo citations on operators
-
-% todo continuations and operating systems
-
-% todo origins: yoneda (reason isomorphically), logic
-
-% todo continuations and imperative programming
-
-% todo single-shot/multi-shot
-
-% todo codensity
-
-% todo problems with continuations: typing and resources
-
-% todo implementing while & break
-
-% todo
-
-% todo control operator, runtime наизнанку
 
 \subsection{Continuation-passing style (CPS)}
 
@@ -68,12 +66,13 @@ CPS эксплуатирует следующий изоморфизм:
     from comp = comp id
 \end{minted}
 
-Иначе говоря, вместо того, чтобы предоставить значение, можно запросить у вызывающей стороны, как она собирается с этим значением работать, сделать это самостоятельно и вернуть вызывающей стороне.
+Иначе говоря, вместо того, чтобы предоставить значение, можно запросить у вызывающей стороны, как она собирается с этим значением работать, сделать это самостоятельно и вернуть вызывающей стороне\footnote{\url{https://wiki.haskell.org/Cont_computations_as_question-answering_boxes}}.
 
 Корни этого изоморфизма в лемме Йонеды из теории категорий~\cite{hinze2010reason}.
 Прикладным же программистам он знаком по технике использования callback'ов.
 
-Например, мы можем переписать факториал в стиле CPS:
+Например, мы можем переписать факториал в стиле CPS.
+Заметьте, что код имеет доступ к продолжению первого класса (однако, никак нетривиально не использует его).
 \begin{minted}{haskell}
     facCps :: Int -> (forall r . (Int -> r) -> r)
     facCps n k
@@ -88,9 +87,6 @@ CPS эксплуатирует следующий изоморфизм:
 \begin{task}
     Сколько функция \mintinline{haskell}|facCps| потребляет стековой памяти?
 \end{task}
-
-Существует стиль формальных семантики, называемый \vocab{continuation semantics}.
-Фактически он соответствует написанию определяющих интерпретаторов в CPS стиле.
 
 \subsubsection{Монада \texttt{Cont}}
 
@@ -150,7 +146,51 @@ CPS эксплуатирует следующий изоморфизм:
     Оборвите вычисление как только общий результат стал больше 50.
 \end{task}
 
-% todo call/cc
+\subsubsection{\texttt{call/cc}}
+
+Можно получить доступ к продолжению просто написав где-то в \mintinline{haskell}|do|-нотации конструктор:
+\begin{minted}{haskell}
+    do ...; Cont \?\framebox{k}? -> ...; ...
+\end{minted}
+Однако, для получения продолжений, как правило, пользуются специальными операторами.
+Классическим примером является \texttt{call/cc}:
+\begin{minted}{haskell}
+    callCC :: ((a -> Cont r b) -> Cont r a) -> Cont r a
+    callCC f = Cont \k -> runCont (f \x -> Cont \_ -> k x) k
+\end{minted}
+
+\texttt{call/cc} принимает функцию \texttt{f}, в которую передаёт текущее продолжение (рис.~\ref{fig:call-cc}).
+При этом вызов продолжения работает как \mintinline{kotlin}|return| для \texttt{f} (продолжение не содержит кода \texttt{f}):
+\begin{minted}{haskell}
+    foo :: Int -> Cont r String
+    foo x = callCC $ \k -> do
+      let y = x ^ 2 + 3
+      when (y > 20) $ k "over twenty"
+      return (show $ y - 4)
+\end{minted}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.6\linewidth]{/home/yukio/Diary/projs/fpcourse/fp-2024/docs/figs/call-cc}
+    \caption{\texttt{call/cc} вызывает функцию \texttt{f} с продолжением \texttt{k}.
+    Аргумент \texttt{k} подставляется вместо вхождения \texttt{call/cc}.}
+    \label{fig:call-cc}
+\end{figure}
+
+\subsubsection{Continuation semantics}
+
+Существует стиль формальных семантики, называемый \vocab{continuation semantics}.
+Фактически он соответствует написанию определяющих интерпретаторов в CPS стиле.
+
+% todo
+
+\subsubsection{Эффективный CPS}
+
+% todo kotlin
+
+% todo rust
+
+% todo C# generators
 
 \subsection{Дефункционализация продолжений}
 
@@ -164,11 +204,15 @@ CPS эксплуатирует следующий изоморфизм:
 
 \subsection{Delimited continuations}
 
+\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}
+
 \cite{dyvbig2007monadic}
 
 % todo in haskell
 
-% todo via mutable cell
+% todo via mutable cell (Representing Monads)
+
+% todo Kotlin stack Jumps
 
 % todo
 
@@ -204,12 +248,33 @@ CPS эксплуатирует следующий изоморфизм:
 
 % todo transducers, pipelines and internal iteration
 
+% todo CEKT
+
+% todo continuation semantics
 
 
+% todo citations on operators
+
+% todo continuations and operating systems
+
+% todo origins: yoneda (reason isomorphically), logic
+
+% todo continuations and imperative programming
+
+% todo single-shot/multi-shot
+
+% todo codensity
+
+% todo problems with continuations: typing and resources
+
+% todo implementing while & break
+
+% todo
+
+% todo control operator, runtime наизнанку
 
 
-
-
+% todo coroutines example https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style
 
 % todo пример на хаскеле с примитивом
 
