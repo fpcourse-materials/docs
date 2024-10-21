@@ -227,7 +227,7 @@ Example: coroutines.}}.
 
 \cite{reynolds1972definitional}
 
-% todo zipper
+% todo zipper and nested continuations
 
 % todo huet zipper
 
@@ -239,9 +239,12 @@ Example: coroutines.}}.
 
 \subsection{Delimited continuations}
 
-Ранее мы рассматривали \vocab{неограниченные (undelimited) продолжения}, которые представляют собой весь остаток программы до её конца.
+Ранее мы рассматривали \vocab{неограниченные (undelimited) продолжения} (или subcontinuations), которые представляют собой весь остаток программы до её конца.
 В том числе, мы рассматривали оператор \texttt{call/cc}, который реифицирует неограниченное продолжение в виде функции для непосредственного использования пользователем.
 Однако, предоставление пользователю неограниченных продолжений ведёт к множеству проблем и не очень полезно на практике~\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
+
+Более того, неограниченные продолжения де-факто --- не совсем функции, так как они не возвращают результата (он уже ``beyond the grave''), следовательно, они также не композируются (как и странно композировать \texttt{abort} с \texttt{exit})\footnote{\url{https://okmij.org/ftp/continuations/undelimited.html}}.
+Неограниченные продолжения --- это скорее ко-значения, пока часть программы выполняется, они ожидают её результата~\cite{curien2000duality}.
 
 Вместо этого вводятся парные операторы для работы с \vocab{ограниченными (delimited) продолжениями}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}.
 Один позволяет пользователю ограничить продолжение, второй --- захватить всё продолжение до вхождения первого, ограничивающего, оператора.
@@ -261,6 +264,29 @@ Example: coroutines.}}.
 В литературе встречается огромное количество операторов, для работы с ограниченными продолжениями~\cite[приложение А]{hillerstrom2022foundations}.
 Мы рассмотрим классификацию из классической работы~\cite{dyvbig2007monadic}.
 
+Работа вводит следующий набор синтаксических конструкций (рис.~\ref{fig:prompt-syntax}) для работы с ограниченными продолжениями в дополнение к чистому call-by-value лямбда-исчислению.
+Исторически в лиспах неограниченные продолжения были ограничены лишь REPL, отсюда название ограничений --- ``prompt''.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.75\linewidth]{figs/prompt-syntax}
+    \caption{Синтаксис $\lambda$-исчисления с примитивами для работы с продолжениями.}
+    \label{fig:prompt-syntax}
+\end{figure}
+
+\begin{itemize}
+    \item $newPrompt$ --- создаёт свежий идентификатор (метку) ограничения;
+    \item $pushPrompt \ap p \ap e$ --- устанавливает ограничение с меткой $p$ и исполняет выражение $e$;
+    \item $withSubCont\ap p\ap f$ --- захватывает частичное продолжение до ограничения с меткой $p$ и передаёт в функцию $f$, возвращает результат $f$ (рис.~\ref{fig:push-prompt});
+    \item $pushSubCont\ap k \ap v$ --- исполняет композицию текущего продолжения и $k$ на значении $v$.
+\end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{figs/push-prompt}
+    \caption{Пример работы \texttt{withSubCont}.}
+    \label{fig:push-prompt}
+\end{figure}
 
 
 
@@ -268,27 +294,24 @@ Example: coroutines.}}.
 
 
 
-
-
-% todo https://okmij.org/ftp/continuations/undelimited.html
 
 % todo in haskell
 
 % todo
 
-\subsection{Нативная реализация продолжений}
+\subsubsection{Реализация ограниченных продолжений}
 
-\subsubsection{State machine}
+%\subsubsection{State machine}
 
-% todo циклы и спиллинг
-
-% todo
-
-\subsubsection{Continuios stack}
+% todo Cont is for delimited continuations
 
 % todo
 
-\subsubsection{Segmented stack}
+%\subsubsection{Continuios stack}
+
+% todo
+
+%\subsubsection{Segmented stack}
 
 % todo
 
@@ -314,14 +337,7 @@ Example: coroutines.}}.
 
 % todo continuation semantics
 
-
-% todo citations on operators
-
 % todo continuations and operating systems
-
-% todo origins: yoneda (reason isomorphically), logic
-
-% todo continuations and imperative programming
 
 % todo single-shot/multi-shot
 
@@ -335,24 +351,9 @@ Example: coroutines.}}.
 
 % todo control operator, runtime наизнанку
 
-
-% todo coroutines example https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style
-
-% todo пример на хаскеле с примитивом
-
-
-% todo goto не нужен? 　
-
-
-% todo Foundations for Programming and Implementing Effect Handlers
-
 % todo sicp
 
 % todo CPS трансформация интерпретаторов
-
-% todo CPS correspond to double negation in logic reynolds1998definitional
-
-% todo defuctionalized continuations, pepers from gibbons talk
 
 % todo SPJ compiling without continuations
 
@@ -363,10 +364,3 @@ Example: coroutines.}}.
 % todo calculating correct compilers
 
 % todo reference to best refactoring
-% todo refrence co calculate correct compilers and stuff
-
-\cite{reynolds1972definitional, reynolds1998definitional, defunctionalization-slides}
-
-% todo Oleg's web cite
-
-% todo tags and prompts
