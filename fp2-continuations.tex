@@ -90,7 +90,7 @@ CPS эксплуатирует следующий изоморфизм:
 
 \subsubsection{Монада \texttt{Cont}}
 
-Из-за CPS код потерял привычную структуру, при которой функции напрямую возвращают свои результаты.
+Из-за CPS код потерял привычную структуру, при которой функции напрямую возвращают свои результаты (i.e. \vocab{direct style}).
 При наличии большого количества вызовов трансформированных функций, код становится плохо читаемым.
 
 \begin{minted}{haskell}
@@ -184,7 +184,7 @@ Example: coroutines.}}.
 \subsubsection{Continuation semantics}
 
 Существует стиль формальных семантики, называемый \vocab{continuation semantics}.
-Фактически он соответствует написанию определяющих интерпретаторов в CPS.
+Фактически он соответствует написанию определяющих интерпретаторов в CPS\footnote{\url{https://ncatlab.org/nlab/show/continuation-passing+style}}.
 
 Заметьте, что то, что мы строили выше, является shallow embedding некоторого языка, заданного в continuation semantics.
 Реализация интерпретатора для deep embedding из~\ref{subsubsec:h-syntax}, например, будет выглядеть следующим образом:
@@ -223,9 +223,19 @@ Example: coroutines.}}.
 
 \subsection{Дефункционализация продолжений}
 
+
+
+
+
+\footnote{\url{https://ncatlab.org/nlab/show/defunctionalization}}
+
 \cite{reynolds1972definitional}
 
 % todo zipper
+
+% todo huet zipper
+
+% todo zipper context and derivations
 
 % todo abstract machines
 
@@ -262,6 +272,8 @@ Example: coroutines.}}.
 % todo
 
 \subsection{Использование продолжений}
+
+% todo trampolining
 
 % todo difference lists
 
