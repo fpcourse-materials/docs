@@ -197,12 +197,17 @@ Example: coroutines.}}.
       Lam3 f -> k \arg -> eval3' (f (Val3 arg)) id
 \end{minted}
 
-Язык с CPS интерпретатором легко расширить управляющими конструкциями вроде \texttt{call/cc}.
+Язык с CPS интерпретатором расширить управляющими конструкциями вроде \texttt{call/cc}.
 Также можно заметить, что реализация интерпретатора стала хвостово-рекурсивной, а стратегии больше не определяется мета-языком~\cite{reynolds1972definitional}.
 
 % todo call/cc
 
-% todo
+Проследить семантику операций также можно в следующей нотации, эксплицирующей продолжения:
+
+\begin{align*}
+    E[abort(e)] &\rightsquigarrow e\\
+    E[call/cc(f)] &\rightsquigarrow E[f(\lambda x\ldotp E[x])]
+\end{align*}
 
 \subsubsection{Эффективный CPS}
 
@@ -211,7 +216,10 @@ Example: coroutines.}}.
 Изначально продолжения придумывались для описания семантики прыжков, но можно пойти и в обратную сторону, реализовав продолжения эффективно для современных машин через \texttt{goto}.
 
 Так, состояние функции целиком один раз аллоцируется в куче, а перемещения по телу реализованы как машина состояний --- с помощью меток и прыжков.
-Таким образом, например, реализованы безстековые корутины в Kotlin\footnote{\url{https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md\#state-machines}}, генераторы в C\#\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}\ldots
+Таким образом, например, реализованы безстековые корутины в Kotlin\footnote{\url{https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md\#state-machines} \label{note:kotlin-state}}, генераторы в C\#\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}\ldots
+
+Даже в таком виде CPS остаётся тяжеловесной трансформацией, способной замедлить исполнение кода на порядки.
+Дело, в частности, в том, что переменные в таком подходе сложно размещать в регистрах (у функций много точек выходов и входов\footref{note:kotlin-state}), приходится постоянно записывать их в RAM --- производить spilling\footnote{\url{https://en.wikipedia.org/wiki/Register_allocation}}.
 
 \subsection{Дефункционализация продолжений}
 
