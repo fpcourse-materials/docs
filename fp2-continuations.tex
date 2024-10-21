@@ -223,10 +223,6 @@ Example: coroutines.}}.
 
 \subsection{Дефункционализация продолжений}
 
-
-
-
-
 \footnote{\url{https://ncatlab.org/nlab/show/defunctionalization}}
 
 \cite{reynolds1972definitional}
@@ -243,15 +239,40 @@ Example: coroutines.}}.
 
 \subsection{Delimited continuations}
 
-\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}
+Ранее мы рассматривали \vocab{неограниченные (undelimited) продолжения}, которые представляют собой весь остаток программы до её конца.
+В том числе, мы рассматривали оператор \texttt{call/cc}, который реифицирует неограниченное продолжение в виде функции для непосредственного использования пользователем.
+Однако, предоставление пользователю неограниченных продолжений ведёт к множеству проблем и не очень полезно на практике~\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
 
-\cite{dyvbig2007monadic}
+Вместо этого вводятся парные операторы для работы с \vocab{ограниченными (delimited) продолжениями}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}.
+Один позволяет пользователю ограничить продолжение, второй --- захватить всё продолжение до вхождения первого, ограничивающего, оператора.
+Таким образом, всё продолжение нарезается на сегменты, некоторый префикс которых может быть реифицирован.
+
+Например, операция кидания и поимки исключения состоит из конструкции \mintinline{kotlin}|try-catch|, ограничивающей продолжение, и \mintinline{kotlin}|throw|, которая позволяет выкинуть частичное продолжения (не захватывая его):
+\[
+    E_1[catch\{E_2[throw(v)], f\}] \to E_1[f(v)]
+\]
+
+Оказывается, ограниченные продолжения первого класса --- крайне могущественная языковая возможность.
+Например, через них можно выразить все монадические и алгебраические эффекты.
+Подробнее поговорим об этом в следующих разделах~\ref{sec:monads} и~\ref{sec:effect-handlers}.
+
+\subsubsection{Delimited continuations operators}
+
+В литературе встречается огромное количество операторов, для работы с ограниченными продолжениями~\cite[приложение А]{hillerstrom2022foundations}.
+Мы рассмотрим классификацию из классической работы~\cite{dyvbig2007monadic}.
+
+
+
+
+
+
+
+
+
 
 % todo https://okmij.org/ftp/continuations/undelimited.html
 
 % todo in haskell
-
-% todo via mutable cell (Representing Monads)
 
 % todo
 
