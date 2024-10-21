@@ -153,7 +153,7 @@ CPS эксплуатирует следующий изоморфизм:
     do ...; Cont \?\framebox{k}? -> ...; ...
 \end{minted}
 Однако, для получения продолжений, как правило, пользуются специальными операторами.
-Классическим примером является \texttt{call/cc}:
+Классическим примером является \texttt{call/cc} (call with current continuation):
 \begin{minted}{haskell}
     callCC :: ((a -> Cont r b) -> Cont r a) -> Cont r a
     callCC f = Cont \k -> runCont (f \x -> Cont \_ -> k x) k
@@ -173,24 +173,45 @@ CPS эксплуатирует следующий изоморфизм:
     \centering
     \includegraphics[width=0.6\linewidth]{/home/yukio/Diary/projs/fpcourse/fp-2024/docs/figs/call-cc}
     \caption{\texttt{call/cc} вызывает функцию \texttt{f} с продолжением \texttt{k}.
-    Аргумент \texttt{k} подставляется вместо вхождения \texttt{call/cc}.}
+    Аргумент \texttt{k} (или результат \texttt{f}) подставляется вместо вхождения \texttt{call/cc}.}
     \label{fig:call-cc}
 \end{figure}
+
+Например, с помощью \texttt{call/cc} можно реализовать кооперативную многозадачность\footnote{\href{https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style\#Example:_coroutines}{(wiki) Continuation-passing style.
+Example: coroutines.}}.
+Однако, считается, что \texttt{call/cc} --- не самый удачный примитив\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
 
 \subsubsection{Continuation semantics}
 
 Существует стиль формальных семантики, называемый \vocab{continuation semantics}.
-Фактически он соответствует написанию определяющих интерпретаторов в CPS стиле.
+Фактически он соответствует написанию определяющих интерпретаторов в CPS.
+
+Заметьте, что то, что мы строили выше, является shallow embedding некоторого языка, заданного в continuation semantics.
+Реализация интерпретатора для deep embedding из~\ref{subsubsec:h-syntax}, например, будет выглядеть следующим образом:
+\begin{minted}{haskell}
+    eval3' :: Term3 ty -> (forall r . (ty -> r) -> r)
+    eval3' term k = case term of
+      Val3 x -> k x
+      Plus l r -> eval3' l \l' -> eval3' r \r' -> k (l' + r')
+      App3 f arg -> eval3' f \f' -> eval3' arg \arg' -> k (f' arg')
+      Lam3 f -> k \arg -> eval3' (f (Val3 arg)) id
+\end{minted}
+
+Язык с CPS интерпретатором легко расширить управляющими конструкциями вроде \texttt{call/cc}.
+Также можно заметить, что реализация интерпретатора стала хвостово-рекурсивной, а стратегии больше не определяется мета-языком~\cite{reynolds1972definitional}.
+
+% todo call/cc
 
 % todo
 
 \subsubsection{Эффективный CPS}
 
-% todo kotlin
+В нашей реализации CPS производится огромное количество аллокаций замыканий, реифицирующих продолжения.
+Однако, если CPS получается автоматической трансляцией, можно делать эффективнее.
+Изначально продолжения придумывались для описания семантики прыжков, но можно пойти и в обратную сторону, реализовав продолжения эффективно для современных машин через \texttt{goto}.
 
-% todo rust
-
-% todo C# generators
+Так, состояние функции целиком один раз аллоцируется в куче, а перемещения по телу реализованы как машина состояний --- с помощью меток и прыжков.
+Таким образом, например, реализованы безстековые корутины в Kotlin\footnote{\url{https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md\#state-machines}}, генераторы в C\#\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}\ldots
 
 \subsection{Дефункционализация продолжений}
 
@@ -208,11 +229,11 @@ CPS эксплуатирует следующий изоморфизм:
 
 \cite{dyvbig2007monadic}
 
+% todo https://okmij.org/ftp/continuations/undelimited.html
+
 % todo in haskell
 
 % todo via mutable cell (Representing Monads)
-
-% todo Kotlin stack Jumps
 
 % todo
 
