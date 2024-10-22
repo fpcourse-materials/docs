@@ -323,7 +323,7 @@ Haskell позволяет указать явно, что речь идёт о 
     '(:) :: forall k . k -> [k] -> [k]
 \end{minted}
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     %! suppress = Quote
     \begin{tabular}{|c|c|c|}
@@ -374,7 +374,7 @@ Haskell позволяет указать явно, что речь идёт о 
 Это нужно для расширения возможностей Haskell в сторону программирования с зависимыми типами путём добавления несинтаксических эквивалентностей для кайндов (\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/poly_kinds.html#extension-TypeInType}{TypeInType}).
 $System~FC$ была представлена в работе~\cite{weirich2013system}\footnote{\href{https://www.youtube.com/watch?v=ISGENChlA4M&list=PLvPsfYrGz3wufQguebnCduYgQQ9UMeJRt}{(youtube) Мини-курс на русском языке про развитие Haskell в сторону зависимой типизации.}}\footnote{\href{https://www.youtube.com/watch?v=_HYI7zjkrEs&list=PLvPsfYrGz3wuVAGhNf6-i7uafXg56oqM5&index=1}{(youtube) Мини-курс на русском языке --- система вывода типов Haskell.}}.
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=0.99\textwidth]{figs/types-eq-kinds}
     \caption{Типы и канды --- одно~\cite{bragilevsky-haskell}.}
@@ -474,13 +474,13 @@ Java пытается аккуратно двигаться в сторону в
 Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube) 2017 LLVM Developers’ Meeting: ``Implementing Swift Generics''}} вместе с каждым типовым параметром передаёт value witness table (рис.~\ref{fig:swift-witness-table}).
 Это таблица со всей необходимой информацией, о типе: размер и выравнивание, что нужно сделать при копировании и перемещении объекта (например, инкрементировать счётчик ссылок).
 Таким образом, скомпилированный код постоянно обращается к этой таблице и делает виртуальные вызовы функций из неё (рис.~\ref{fig:swift-generated-code}).
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=0.7\textwidth]{figs/swift-witness-table}
     \caption{Swift value witness table.}
     \label{fig:swift-witness-table}
 \end{figure}
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=0.6\textwidth]{figs/swift-generated-code}
     \caption{Код полиморфной функции, порождаемый компилятором Swift.}
@@ -507,7 +507,7 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
 
 \subsubsection{Классификация значений по runtime представлению}
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=0.5\textwidth]{figs/haskell-value-kinds}
     \caption{Виды значений в Haskell с примерами~\cite{eisenberg2017levity}.}

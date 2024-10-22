@@ -169,7 +169,7 @@ CPS эксплуатирует следующий изоморфизм:
       return (show $ y - 4)
 \end{minted}
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=0.6\linewidth]{/home/yukio/Diary/projs/fpcourse/fp-2024/docs/figs/call-cc}
     \caption{\texttt{call/cc} вызывает функцию \texttt{f} с продолжением \texttt{k}.
@@ -256,6 +256,7 @@ Example: coroutines.}}.
 \]
 
 Оказывается, ограниченные продолжения первого класса --- крайне могущественная языковая возможность.
+Что, может быть, и не так удивительно, ведь через них программисту доступно состояние интерпретатора, изнанка исполнения.
 Например, через них можно выразить все монадические и алгебраические эффекты.
 Подробнее поговорим об этом в следующих разделах~\ref{sec:monads} и~\ref{sec:effect-handlers}.
 
@@ -288,16 +289,29 @@ Example: coroutines.}}.
     \label{fig:push-prompt}
 \end{figure}
 
+Операторы ограниченных продолжений легко понять как \vocab{resumable exceptions}, исключения, которые можно поймать, а программу возобновить с того места, где исключение было выброшено (с некоторым значением).
+Необычно то, что классические операторы ограниченных продолжений принимают код, работающий с частичным продолжением в месте ``кидания исключения'', а не в месте ``поимки''.
+То есть блок обработки пишется не с \mintinline{kotlin}|catch|, а с \mintinline{kotlin}|throw|:
 
+\begin{gather*}
+    E_1[withSubCont \ap p \ap \{E_2[pushSubCont \ap f]\}] \to E_1[f \ap E_2]
+    \\
+    E_1[catch\{E_2[throw \ap v], f\}] \to E_1[f \ap v \ap (\lambda x\ldotp E_2[x])]
+\end{gather*}
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\linewidth]{/home/yukio/Diary/projs/fpcourse/fp-2024/docs/figs/dc-example}
+    \caption{Пример выражения (результат --- $9$).}
+    \label{fig:dc-example}
+\end{figure}
 
+\begin{task}
+    Поредуцируйте пример рис.~\ref{fig:dc-example}.
+\end{task}
 
-
-
-
-% todo in haskell
-
-% todo
+Остальные операторы более-менее выражаются через обсуждённые нами.
+Существует классификаций операторов по признакам --- включает ли захватываемое частичное продолжение ограничение и оставляет ли его за собой~\cite{dyvbig2007monadic}.
 
 \subsubsection{Реализация ограниченных продолжений}
 
@@ -314,6 +328,8 @@ Example: coroutines.}}.
 %\subsubsection{Segmented stack}
 
 % todo
+
+% todo in haskell
 
 \subsection{Использование продолжений}
 
