@@ -176,12 +176,17 @@
         \end{block}
         \begin{itemize}
             \item[\todo] Сделайте пару представителем \mintinline{haskell}|Foldable|
+            \item[\todo] Реализуйте \mintinline{haskell}|foldMap| через \mintinline{haskell}|foldr|
             \item[\todo] Реализуйте \mintinline{haskell}|foldr| через \mintinline{haskell}|foldMap|. Что изменится для \mintinline{haskell}|foldl|?
             \item[\answer] \pause
             \begin{minted}{haskell}
                 instance Foldable ((,) e) where
                   foldMap :: Monoid m => (a -> m) -> (e, a) -> m
                   foldMap f (_, x) = f x
+            \end{minted}
+            \item[\answer] \pause
+            \begin{minted}{haskell}
+                foldMap f xs = foldr (\x acc -> f x <> acc) mempty xs
             \end{minted}
             \item[\answer] \pause
             \begin{minted}{haskell}
@@ -293,7 +298,7 @@
         \pause
         \begin{block}{foldr}
             \begin{itemize}
-                \item[\positive] \pause Работает с бесконечными списками
+                \item[\positive] Работает с бесконечными списками
                 \begin{itemize}
                     \item Правый аргумент \mintinline{haskell}|f| --- результат свёртки на хвосте списка
                     \item Если им не всегда пользоваться, он не будет вычислен
