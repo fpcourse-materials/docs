@@ -189,12 +189,13 @@ Example: coroutines.}}.
 Заметьте, что то, что мы строили выше, является shallow embedding некоторого языка, заданного в continuation semantics.
 Реализация интерпретатора для deep embedding из~\ref{subsubsec:h-syntax}, например, будет выглядеть следующим образом:
 \begin{minted}{haskell}
-    eval3' :: Term3 ty -> (forall r . (ty -> r) -> r)
+    eval3' :: Term3 ty -> (forall r . (ty -> Maybe r) -> Maybe r)
     eval3' term k = case term of
       Val3 x -> k x
       Plus l r -> eval3' l \l' -> eval3' r \r' -> k (l' + r')
       App3 f arg -> eval3' f \f' -> eval3' arg \arg' -> k (f' arg')
       Lam3 f -> k \arg -> eval3' (f (Val3 arg)) id
+      Abort -> Nothing
 \end{minted}
 
 Язык с CPS интерпретатором расширить управляющими конструкциями вроде \texttt{call/cc}.
@@ -223,9 +224,13 @@ Example: coroutines.}}.
 
 \subsection{Дефункционализация продолжений}
 
+\cite{ager2003functional, huet1997zipper, mcbride2001derivative}
+
 \footnote{\url{https://ncatlab.org/nlab/show/defunctionalization}}
 
 \cite{reynolds1972definitional}
+
+% todo link to youtube
 
 % todo zipper and nested continuations
 
@@ -313,7 +318,9 @@ Example: coroutines.}}.
 Остальные операторы более-менее выражаются через обсуждённые нами.
 Существует классификаций операторов по признакам --- включает ли захватываемое частичное продолжение ограничение и оставляет ли его за собой~\cite{dyvbig2007monadic}.
 
-\subsubsection{Реализация ограниченных продолжений}
+%\subsubsection{Реализация ограниченных продолжений}
+
+% todo in paper
 
 %\subsubsection{State machine}
 
