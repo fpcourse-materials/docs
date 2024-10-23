@@ -56,7 +56,7 @@
 
 \subsection{Continuation-passing style (CPS)}
 
-Базовым способом получить в программе продолжение первого класса --- написать программу в стиле CPS.
+Базовым способом получить в программе продолжение первого класса --- написать программу в CPS.
 CPS эксплуатирует следующий изоморфизм:
 \begin{minted}{haskell}
     to :: a -> (forall r . (a -> r) -> r)
@@ -185,6 +185,7 @@ Example: coroutines.}}.
 
 Существует стиль формальных семантики, называемый \vocab{continuation semantics}.
 Фактически он соответствует написанию определяющих интерпретаторов в CPS\footnote{\url{https://ncatlab.org/nlab/show/continuation-passing+style}}.
+CPS эксплицирует продолжения, иначе они были бы полностью в ведении какого-нибудь более базового интерпретатора в башне.
 
 Заметьте, что то, что мы строили выше, является shallow embedding некоторого языка, заданного в continuation semantics.
 Реализация интерпретатора для deep embedding из~\ref{subsubsec:h-syntax}, например, будет выглядеть следующим образом:
@@ -244,7 +245,7 @@ Example: coroutines.}}.
 
 \subsection{Delimited continuations}
 
-Ранее мы рассматривали \vocab{неограниченные (undelimited) продолжения} (или subcontinuations), которые представляют собой весь остаток программы до её конца.
+Ранее мы рассматривали \vocab{неограниченные (undelimited) продолжения}, которые представляют собой весь остаток программы до её конца.
 В том числе, мы рассматривали оператор \texttt{call/cc}, который реифицирует неограниченное продолжение в виде функции для непосредственного использования пользователем.
 Однако, предоставление пользователю неограниченных продолжений ведёт к множеству проблем и не очень полезно на практике~\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
 
@@ -270,7 +271,7 @@ Example: coroutines.}}.
 В литературе встречается огромное количество операторов, для работы с ограниченными продолжениями~\cite[приложение А]{hillerstrom2022foundations}.
 Мы рассмотрим классификацию из классической работы~\cite{dyvbig2007monadic}.
 
-Работа вводит следующий набор синтаксических конструкций (рис.~\ref{fig:prompt-syntax}) для работы с ограниченными продолжениями в дополнение к чистому call-by-value лямбда-исчислению.
+Работа вводит следующий набор синтаксических конструкций (рис.~\ref{fig:prompt-syntax} и~\ref{fig:dc-operational}) для работы с ограниченными продолжениями в дополнение к чистому call-by-value лямбда-исчислению.
 Исторически в лиспах неограниченные продолжения были ограничены лишь REPL, отсюда название ограничений --- ``prompt''.
 
 \begin{figure}[h]
@@ -278,6 +279,13 @@ Example: coroutines.}}.
     \includegraphics[width=0.75\linewidth]{figs/prompt-syntax}
     \caption{Синтаксис $\lambda$-исчисления с примитивами для работы с продолжениями.}
     \label{fig:prompt-syntax}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{/home/yukio/Diary/projs/fpcourse/fp-2024/docs/figs/dc-operational}
+    \caption{Операционная семантика.}
+    \label{fig:dc-operational}
 \end{figure}
 
 \begin{itemize}
@@ -338,7 +346,7 @@ Example: coroutines.}}.
 
 % todo in haskell
 
-\subsection{Использование продолжений}
+%\subsection{Использование продолжений}
 
 % todo trampolining
 
@@ -382,7 +390,7 @@ Example: coroutines.}}.
 
 % todo difference lists
 
-% todo The Essence of Cornpiling with Continuations
+% todo The Essence of Compiling with Continuations
 
 % todo calculating correct compilers
 
