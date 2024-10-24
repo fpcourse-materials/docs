@@ -128,11 +128,11 @@
             \item[\todo] Реализуйте группировку пользователей по уровню подписки (\mintinline{haskell}|Data.Map.insertWith :: (a -> a -> a) -> k -> a -> Mak k a -> Map k a|)
             \item[\answer] \pause
              \begin{minted}{haskell}
-                 prod xs ys = foldr (*) 1 $ zipWith (+) xs ys
+                 prod xs ys = foldr (+) 1 $ zipWith (*) xs ys
              \end{minted}
             \item[\answer] \pause
             \begin{minted}{haskell}
-                group = foldr (\user -> Map.insertWith (++) [subscr user] user) Map.empty
+                group = foldr (\user -> Map.insertWith (++) (subscr user) [user]) Map.empty
             \end{minted}
         \end{itemize}
     \end{frame}

@@ -223,13 +223,17 @@ CPS эксплицирует продолжения, иначе они были 
 Даже в таком виде CPS остаётся тяжеловесной трансформацией, способной замедлить исполнение кода на порядки.
 Дело, в частности, в том, что переменные в таком подходе сложно размещать в регистрах (у функций много точек выходов и входов\footref{note:kotlin-state}), приходится постоянно записывать их в RAM --- производить spilling\footnote{\url{https://en.wikipedia.org/wiki/Register_allocation}}.
 
-\subsection{Дефункционализация продолжений}
+% todo объяснение через дефункционализацию
 
-\cite{ager2003functional, huet1997zipper, mcbride2001derivative}
+% todo move to implementation section
 
-\footnote{\url{https://ncatlab.org/nlab/show/defunctionalization}}
-
-\cite{reynolds1972definitional}
+%\subsection{Дефункционализация продолжений}
+%
+%\cite{ager2003functional, huet1997zipper, mcbride2001derivative}
+%
+%\footnote{\url{https://ncatlab.org/nlab/show/defunctionalization}}
+%
+%\cite{reynolds1972definitional}
 
 % todo link to youtube
 
@@ -378,8 +382,6 @@ CPS эксплицирует продолжения, иначе они были 
 
 % todo implementing while & break
 
-% todo
-
 % todo control operator, runtime наизнанку
 
 % todo sicp
@@ -387,8 +389,6 @@ CPS эксплицирует продолжения, иначе они были 
 % todo CPS трансформация интерпретаторов
 
 % todo SPJ compiling without continuations
-
-% todo difference lists
 
 % todo The Essence of Compiling with Continuations
 
