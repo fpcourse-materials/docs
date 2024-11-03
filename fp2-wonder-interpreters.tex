@@ -1,9 +1,56 @@
+%! suppress = MissingLabel
+
+Как мы убедились ранее (см.~\ref{subsec:all-interpreters}), программирование состоит из написания новых и новых интерпретаторов поверх друг друга.
+Интерпретаторы задают семантику новых языков (см~\ref{subsubsec:semantics}).
+В классическом виде язык задаётся как множество деревьев, а интерпретатор отправляет деревья в объект мета-языка.
+Если язык встроенный, то такой подход называют deep embedding (см.~\ref{subsubsec:edsl}).
+\[
+    \sembr{\bullet} : L \to D
+\]
+
+Можно заметить, что в конечном итоге мы используем только элемент домена, в который интерпретатор отображает программу.
+Сама программа же представляет собой лишь удобную синтаксическую запись элемента домена и является промежуточным шагом, а не самоцелью.
+В то же время доменом в случае встроенных языков, заданных интерпретаторами, являются объекты мета-языка.
+Можем ли мы миновать стадию интерпретации собственного синтаксиса и сразу строить объект домена в синтаксисе мета-языка?
+Да, такое встраивание называется shallow embedding, о нём эта глава.
+
+\subsection{Формальный путь в зазеркалье}
+
+\subsubsection{Алгебраическое представление типа}
+
+% todo reason isomorphically
+% todo connection with cardinalities
+
+% todo isomorphism
+
+\cite[глава 1]{maguire-types}
+
+% todo
+
+\subsection{Tagless final интерпретаторы}
+
+% todo
+
+\subsection{Использование зазеркалья в реальности}
+
+\subsubsection{Expression problem}
+
+% todo
 
 
 
 
 
 
+
+% todo presentation by valera
+
+
+% todo canonnical sums and products
+
+% todo deforestation of a syntax
+
+% todo visitor pattern
 
 
 
@@ -26,8 +73,6 @@
 
 % todo pull and push
 
-% todo expression problem
-
 % todo are custom patterns in haskell connected to this?
 
 % todo вместо того, чтобы доставлять объект к месту деконструирования, доставляем мето деконструирования к месту конструирования
@@ -43,15 +88,15 @@
 % todo Tagless-final интерпретаторы
 
 % todo codata, pattern-matching
-% todo custom patterns
 
 % todo Extensibility for the Masses: Practical Extensibility with Object Algebras
 
 % todo fusion и дефорестация
 % todo haskell inlining
-% todo RULES
 % todo Oleg about fusion and streams
 % todo fused effects
+
+% todo codensity
 
 % todo Reading circle about fusion
 % todo short cut to deforestation
