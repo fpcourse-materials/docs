@@ -1,0 +1,172 @@
+%! suppress = MissingImport
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+
+\title[Где в жизни продолжение]{Где в жизни продолжение}
+\author[Андрей Стоян]{Андрей Стоян}
+\institute[ИТМО ИПКН]{ИТМО ИПКН}
+\date{осень 2024}
+
+\begin{document}
+
+    \setcounter{framenumber}{-1}
+    \maketitle
+
+
+%    \section{Введение}
+
+    \begin{frame}[fragile]{Что есть в теории языков программирования?}
+        % Выбор темы, нужно понять что есть
+        \begin{itemize}
+            \item[\practical] Статический анализ и верификация программ
+            \item[\practical] Динамическая семантика программ
+            \item[\practical] Построение языковых инструментов: интерпретаторы, компиляторы\ldots
+            \item[\practical] Алгоритмы: парсинг, сборка мусора\ldots
+            \item[\practical] \ldots
+            \item[\answer] \pause Поиск простой общей сути разных вещей
+        \end{itemize}
+    \end{frame}
+
+
+%    \section{Кто такие продолжения}
+
+    \begin{frame}[fragile]{Продолжения (continuations)}
+        \begin{figure}[t]
+            \centering
+            \includegraphics[width=0.6\textwidth]{figs/discoveries-of-continuations}
+        \end{figure}
+        \begin{itemize}
+            \item Абстрактная концепция, зонтичный термин
+            \item Придумано, чтобы дать денотационную (математическую) семантику \texttt{LABEL} и \texttt{GOTO}
+        \end{itemize}
+        \pause
+        \begin{block}{Continuation (C. P. Wadsworth)}
+            \centering
+            \large
+            \vspace{0.5em}
+            ``The meaning of the rest of the program''
+            \vspace{0.5em}
+        \end{block}
+        \begin{itemize}
+            \item Если конкретнее, продолжение --- структура данных
+            \item Содержит всё необходимое для вычислителя, чтобы продолжать вычисление
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Продолжения в языке выражений}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}{0.465\textwidth}
+                \begin{itemize}
+                    \item Вычислитель ищет вычислимое подвыражение (redex)
+                    \item Внешнее выражение сохраняется как ``выражение с дыркой'' --- продолжение
+                    \item Продолжение возобновляется с результатом
+                \end{itemize}
+            \end{column}%
+            \begin{column}{0.55\textwidth}
+                \begin{figure}[h]
+                    \centering
+                    \includegraphics[width=0.7\textwidth]{figs/cont-expr}
+                \end{figure}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}[fragile]{Операции, работающие с продолжениями}
+        \vspace{2em}
+        \begin{description}
+            \item[\texttt{exit}] Выбрасывает продолжение программы
+            \item[\texttt{break}] Возобновляет продолжение после цикла
+            \item[\texttt{continue}] Возобновляет продолжение до цикла
+            \item[\texttt{return}] Возобновляет продолжение вызывающей функции
+        \end{description}
+        \begin{figure}[h]
+            \centering
+            \includegraphics[width=0.35\textwidth]{figs/cont-exit}
+        \end{figure}
+    \end{frame}
+
+    \begin{frame}[fragile]{Ограниченные продолжения (delimited continuations)}
+        \begin{itemize}
+            \item Продолжение целиком --- это не очень полезная и безопасная конструкция
+            \item Как правило, работают с ограниченными продолжениями --- до некоторой точки
+        \end{itemize}
+        \begin{figure}[h]
+            \centering
+            \includegraphics[width=0.8\textwidth]{figs/cont-try-catch}
+        \end{figure}
+    \end{frame}
+
+    \begin{frame}[fragile]{Продолжения первого класса}
+        % Хоть и звучит магически, это же кишки интерпретатора
+        \begin{itemize}
+            \item Для многих приложений нужно из программы иметь доступ к её продолжению
+            \item Продолжение --- ``выражение с дыркой''\ldots
+            \item Можно представить как функцию первого класса!
+            \item Либо язык должен предоставлять специальные примитивы
+            \item[\eg] \texttt{call-cc}, \texttt{shift/reset}, \texttt{prompt/control}
+            \item Либо можно переписать программу в CPS
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Continuation passing style (CPS)}
+        \begin{itemize}
+            \item Пусть программа не возвращает резуль
+        \end{itemize}
+        % todo функции высших порядков
+        % todo изоморфизм
+        kek
+    \end{frame}
+
+    \begin{frame}[fragile]{Асинхронное программирование, callback'и}
+        kek % todo
+    \end{frame}
+
+    \begin{frame}[fragile]{Монада Cont, Futures}
+        kek
+    \end{frame}
+
+    \begin{frame}[fragile]{Дефункционализация}
+        \begin{itemize}
+            \item Метод избавления от функций высших порядков
+            \item Для каждой функции первого класса заводим по конструктору данных
+            \item Каждое применение заменяем на вызов интерпретатора
+        \end{itemize}
+        % todo карнитка
+    \end{frame}
+
+    \begin{frame}[fragile]{Дефункционализация продолжений}
+        kek
+    \end{frame}
+
+    % todo что-то про чистые функции
+
+    % todo first-class продолжения
+
+    % todo продолжения для выражений
+
+    % todo CPS и колбеки
+
+    % todo монада Cont
+
+    % todo дефункционализация (функции высших порядков)
+
+    % todo стеки это продолжения
+
+    % todo дефункционализация продолжений и бессековые корутины
+
+    % todo зипперы и алгебраическая запись типа
+
+    % todo реакт
+
+    % todo алгебраические эффекты и хендлеры
+
+    % todo заключение
+
+\end{document}
