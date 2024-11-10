@@ -114,7 +114,7 @@
     \begin{frame}[fragile]{Continuation passing style (CPS)}
         % Метафора криворукого друга
         \begin{itemize}
-            \item В каждую функцию передаём продолжение --- что делать с результатом
+            \item В каждую функцию явно передаём продолжение --- что делать с результатом
             \item Будем в качестве аргумента принимать дополнительно функцию
             \item Вместо возвращения результата, будем передавать его в данную функцию
             \item Изоморфизм \mintinline{haskell}|a -> b #$\simeq$# (b -> r) -> (a -> r)| (следствие леммы Йонеды)
@@ -169,6 +169,7 @@
             \item Будем не принимать
 
         \end{itemize}
+        % todo
     \end{frame}
 
     \begin{frame}[fragile]{Дефункционализация}
@@ -190,11 +191,11 @@
             \end{column}\hfill%
             \begin{column}{0.485\textwidth}
                 \begin{minted}{haskell}
-            data FSym = IsRed | Equals Int
+                    data FSym = IsRed | Equals Int
 
-            apply sym x = case sym of
-              IsRed -> isRed x
-              Equals y -> x == y
+                    apply sym x = case sym of
+                      IsRed -> isRed x
+                      Equals y -> x == y
                 \end{minted}
             \end{column}
         \end{columns}
@@ -246,10 +247,27 @@
     \end{frame}
 
     \begin{frame}[fragile]{Корутины}
-        kek
+        \begin{itemize}
+            \item Языковая реализация логических потоков исполнения
+            \item Код, который может приостанавливаться и возобновляться в нужный момент
+            \item Да, это всё про манипуляцию продолжениями
+            \begin{minted}{kotlin}
+                suspend fun <T> suspendCoroutine(block: (Continuation<T>) -> Unit): T
+            \end{minted}
+            \item Бесстековые (stackless) корутины
+            \begin{itemize}
+                \item C помощью CPS трансляции отбираем контроль у рантайма
+                \item Экономим аллокации, сплющивая фреймы продолжений в машину состояний
+                \item C++, Rust, C\#, Kotlin, JavaScript, Haskell\ldots
+            \end{itemize}
+            \item Стековые (stackful) корутины
+            \begin{itemize}
+                \item Стек --- продолжение
+                \item Учим рантайм копировать стеки по требованию
+                \item Haskell, Java, Go\ldots
+            \end{itemize}
+        \end{itemize}
     \end{frame}
-
-    % todo дефункционализация продолжений и бессековые корутины
 
     % todo зипперы и алгебраическая запись типа
 
