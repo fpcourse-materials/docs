@@ -113,6 +113,7 @@
 
     \begin{frame}[fragile]{Continuation passing style (CPS)}
         % Метафора криворукого друга
+        %! suppress = EscapeHashOutsideCommand
         \begin{itemize}
             \item В каждую функцию явно передаём продолжение --- что делать с результатом
             \item Будем в качестве аргумента принимать дополнительно функцию
@@ -162,14 +163,25 @@
             \begin{minted}{haskell}
                 andThen :: F a -> (a -> F b) -> F b
             \end{minted}
-            \item Для структуры \mintinline{haskell}|Future a = (a -> r) -> r| можно определить \mintinline{haskell}|andThen| (монада \mintinline{haskell}|Cont|)
+            \item Следующий тип можно сделать монадой, \mintinline{haskell}|andThen| будет накапливать продолжения
             \begin{minted}{haskell}
+                data Cont r a = Cont ((a -> r) -> r)
                 andThen comp k = \k' -> comp \x -> (k x) k'
             \end{minted}
-            \item Будем не принимать
-
+            \item Монады позволяют линеаризовать код
+            \begin{minted}{haskell}
+                request1 x
+                  `andThen` \y -> request2 y
+                  `andThen` \z -> request3 z
+            \end{minted}
+            \item В качестве альтернативы callback'ам вводят монаду \mintinline{haskell}|Future/Promise/Deferred|
+            \begin{minted}{js}
+                myPromise
+                  .then(handleFulfilledA, handleRejectedA)
+                  .then(handleFulfilledB, handleRejectedB)
+                  .then(handleFulfilledC, handleRejectedC);
+            \end{minted}
         \end{itemize}
-        % todo
     \end{frame}
 
     \begin{frame}[fragile]{Дефункционализация}
@@ -221,10 +233,10 @@
             \end{column}\hfill%
             \begin{column}[t]{0.485\textwidth}
                 \begin{minted}{haskell}
-                    data Cont = Halt | Cont Int Cont
+                    data Cont = Hole | Cont Int Cont
 
                     fac :: Int -> Int
-                    fac n = facCps n #\framebox{Halt}#
+                    fac n = facCps n #\framebox{Hole}#
 
                     facCps :: Int -> Cont -> Int
                     facCps n k = if n <= 1 then prod k else
@@ -269,12 +281,60 @@
         \end{itemize}
     \end{frame}
 
-    % todo зипперы и алгебраическая запись типа
+    \begin{frame}[fragile]{Алгебраические эффекты и хендлеры}
+        \begin{itemize}
+            \item Механизм конструирования встроенных предметных языков
+            \item Выражается через ограниченные продолжения первого класса
+        \end{itemize}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{block}{Генераторы}
+                    \begin{minted}{haskell}
+                        fun toList(f : () -> <yield<a>|e> ())
+                            : e list<a>
+                          with handler
+                            return(_) []
+                            ctl yield(x) Cons(x, resume(()))
+                          f()
 
-    % todo реакт
+                        val xs = toList
+                          yield(1)
+                          yield(2)
+                          yield(3)
+                        println(xs) // [1,2,3]
+                    \end{minted}
+                \end{block}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{block}{Состояние}
+                    \begin{minted}{haskell}
+                        fun withState(st : s,
+                            f : () -> <state<s>|e> a) : e a
+                          with ctl get() resume(st)
+                          with ctl set(st') mask<get>
+                            with ctl get() resume(st')
+                            resume(())
+                          f()
 
-    % todo алгебраические эффекты и хендлеры
+                        val x = withState(1)
+                          set(get() + 1)
+                          get()
+                        println(x) // 2
+                    \end{minted}
+                \end{block}
+            \end{column}
+        \end{columns}
+    \end{frame}
 
-    % todo заключение
+    \begin{frame}[fragile]{Заключение}
+        \begin{itemize}
+            \item Продолжения не сложные по сути
+            \item Помогают понимать код со сложным потоком управления
+            \item CPS позволяет полностью захватить контроль над продолжениями для магии
+            \item Стек является нативным продолжением и не потребляется CPS программами
+            \item С помощью продолжений первого класса можно выразить множество языковых фичей
+        \end{itemize}
+    \end{frame}
 
 \end{document}
