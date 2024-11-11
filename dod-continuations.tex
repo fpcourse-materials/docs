@@ -68,7 +68,7 @@
             \begin{column}{0.55\textwidth}
                 \begin{figure}[h]
                     \centering
-                    \includegraphics[width=0.7\textwidth]{figs/cont-expr}
+                    \includegraphics[width=0.63\textwidth]{figs/cont-expr}
                 \end{figure}
             \end{column}
         \end{columns}
@@ -84,7 +84,7 @@
         \end{description}
         \begin{figure}[h]
             \centering
-            \includegraphics[width=0.35\textwidth]{figs/cont-exit}
+            \includegraphics[width=0.31\textwidth]{figs/cont-exit}
         \end{figure}
     \end{frame}
 
@@ -95,7 +95,7 @@
         \end{itemize}
         \begin{figure}[h]
             \centering
-            \includegraphics[width=0.8\textwidth]{figs/cont-try-catch}
+            \includegraphics[width=0.7\textwidth]{figs/cont-try-catch}
         \end{figure}
     \end{frame}
 
@@ -168,7 +168,7 @@
                 data Cont r a = Cont ((a -> r) -> r)
                 andThen comp k = \k' -> comp \x -> (k x) k'
             \end{minted}
-            \item Монады позволяют линеаризовать код
+            \item \pause Монады позволяют линеаризовать код
             \begin{minted}{haskell}
                 request1 x
                   `andThen` \y -> request2 y
@@ -335,6 +335,15 @@
             \item Стек является нативным продолжением и не потребляется CPS программами
             \item С помощью продолжений первого класса можно выразить множество языковых фичей
         \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile, noframenumbering]{}
+        \begin{figure}
+            \centering
+            \LARGE
+            \vspace{2em}
+            Спасибо за внимание!
+        \end{figure}
     \end{frame}
 
 \end{document}
