@@ -232,6 +232,9 @@ TODO % todo преобразования
 
 TODO % todo пример
 
+% todo Можно вообще избавиться от data в программе.
+% todo Вместо того, чтобы доставлять объект к месту деконструирования, доставляем меcто деконструирования к месту конструирования
+
 Если зафиксировать интерпретацию, то функции-аргументы можно реализовать статически и просто ссылаться на них в терме.
 Таким образом, про объявление функций можно думать как про расширение некоторого встроенного предметного языка.
 Сравните:
@@ -243,7 +246,7 @@ TODO % todo пример
         \hline
         Синтаксис языка задаётся набором допустимых нод дерева                                                  & Декларация функции задаёт новую ноду дерева: вызов этой функции       \\
         \hline
-        Интерпретатор при виде каждой ноды выполняет соответствующий код на мета-языке (ветку паттерн-матчинга) после вычисления поддеревьев & Интерпретатор при виде вызова выполняет код тела функции после вычисления аргументов
+        Интерпретатор при виде каждой ноды выполняет соответствующий код на мета-языке (ветку паттерн-матчинга) после вычисления поддеревьев & Интерпретатор при виде вызова выполняет код тела функции после вычисления аргументов \\
         \hline
     \end{tabular}
 \end{figure}
@@ -256,27 +259,127 @@ TODO % todo пример
 
 \subsection{Tagless final интерпретаторы}
 
+Если вернуться к каррированной версии типа термов, то теперь это тип, принимающий кортеж функций.
+А кортеж функций --- можно заменить на класс типов.
+Тогда декларация класса будет задавать синтаксис встроенного языка, а инстансы для доменов --- реализацию.
+Этот подход называется \vocab{tagless final encoding}\footnote{\url{https://okmij.org/ftp/tagless-final/}} и фактически это кодирование данных по Чёрчу с классами типов и набором трюков~\cite{carette2007finally, kiselyov2012typed}.
 
+\subsubsection{Tagless final meta-circular evaluator}
 
-Это Church encoding с классами типов.
+Повторим рассмотренный ранее язык в tagless final стиле.
 
+\begin{minted}{haskell}
+     data Term3 ty where
+       Val3 :: ty -> Term3 ty
+       Plus :: Term3 Int -> Term3 Int -> Term3 Int
+       App3 :: Term3 (arg -> res) -> Term3 arg -> Term3 res
+       Lam3 :: (Term3 arg -> Term3 res) -> Term3 (arg -> res)
 
-% todo
+     example3 :: Term3 Int
+     example3 = (Lam3 \x -> x `Plus` Val3 41) `App3` Val3 1
 
-% todo meta-circular
+     eval3 :: Term3 ty -> ty
+\end{minted}
 
-% todo композиционность и её восстановление через эксплицирование контекстных зывисимостей.
+\begin{minted}{haskell}
+    class Term d where
+      type C d ty :: Constraint
+      val :: C d ty => ty -> d ty
+      plus :: d Int -> d Int -> d Int
+      app :: d (arg -> res) -> d arg -> d res
+      lam :: (d arg -> d res) -> d (arg -> res)
 
-% todo вместо того, чтобы доставлять объект к месту деконструирования, доставляем меcто деконструирования к месту конструирования
+    example :: (Term d, C d Int) => d Int
+    example = (lam \x -> x `plus` val 41) `app` val 1
+
+    instance Term Identity where
+      type C Identity ty = ()
+      val = Identity
+      plus = liftA2 (+)
+      app = liftA2 ($)
+      lam = coerce
+
+    instance Term (Const String) where
+      type C (Const String) ty = Show ty
+      val = Const . show
+      plus (Const l) (Const r) = Const $ "(" ++ l ++ " + " ++ r ++ ")"
+      app (Const f) (Const arg) = Const $ "(" ++ f ++ " " ++ arg ++ ")"
+      lam f = Const $ "(" ++ "\\x -> " ++ getConst (f (Const "x")) ++ ")"
+\end{minted}
+
+TODO % todo
+
+\subsubsection{Встречаем старых друзей}
+
+Аппликатив --- операция применения, монада --- let-in.
+
+\begin{minted}{haskell}
+    class StateLang s d | d -> s where
+      co :: a -> d a
+      put :: s -> d ()
+      get :: d s
+      appl :: d (arg -> res) -> d arg -> d res
+      letIn :: d a -> (a -> d b) -> d b
+
+    data StateD s a = StateD { runStateD :: s -> (s, a) }
+
+    instance StateLang s (StateD s) where
+      co x = StateD \s -> (s, x)
+      put s = StateD \_ -> (s, ())
+      get = StateD \s -> (s, s)
+      appl (StateD f) (StateD arg) = StateD \s ->
+        let (s', f') = f s in let (s'', arg') = arg s' in (s'', f' arg')
+      letIn (StateD comp) k = StateD \s ->
+        let (s', x) = comp s in runStateD (k x) s'
+
+    exampleState :: StateLang Int d => d ()
+    exampleState =
+      get `letIn` \x ->
+      put (x + 1)
+\end{minted}
+
+TODO % todo
+
+\subsubsection{Некомпозиционные семантики}
+
+\vocab{Семантика} называется \vocab{композиционной}, если значение сложного выражения определяется его структурой и семантикой его подструктур.
+
+Всякие преобразования кода не композиционные.
+Для примера рассмотрим протаскивание унарных отрицаний:
+\begin{minted}{haskell}
+    data Expr1 = Lit Int | Add Expr1 Expr1 | Neg Expr1 deriving Show
+
+    transform1 :: Expr1 -> Expr1
+    transform1 = \case
+      Lit x -> Lit x
+      Neg (Lit x) -> Lit (-x)
+      Add l r -> Add (transform1 l) (transform1 r)
+      Neg (Neg e) -> transform1 e
+      Neg (Add l r) -> Add (transform1 (Neg l)) (transform1 (Neg r))
+\end{minted}
+
+Чтобы восстановить композиционность семантики, нужно экплицировать контекстные зависимости
+\begin{minted}{haskell}
+    class Expr2 d where
+      lit :: Int -> d
+      add :: d -> d -> d
+      neg :: d -> d
+
+    data Ctx = CtxPos | CtxNeg
+
+    instance Expr2 d => Expr2 (Ctx -> d) where
+      lit x CtxNeg = lit (-x)
+      lit x CtxPos = lit x
+      neg e CtxNeg = e CtxPos
+      neg e CtxPos = e CtxNeg
+      add l r ctx = add (l ctx) (r ctx)
+\end{minted}
+
+TODO % todo
 
 % todo bananas in space и что там было про функции и зачем
 
 \subsection{Использование зазеркалья в реальности}
-
-% todo visitor pattern
-% todo reactive programming https://youtu.be/sTSQlYX5DU0?si=Ybxux16h5Vt1LnC4
-
-% todo pull and push
 
 \subsubsection{Expression problem}
 
@@ -285,7 +388,7 @@ TODO % todo пример
 
 % todo Extensibility for the Masses: Practical Extensibility with Object Algebras
 
-% todo
+TODO % todo
 
 \subsubsection{Deforestation \& fusion}
 
@@ -303,17 +406,26 @@ TODO % todo пример
 
 % todo FRP
 
-% todo visitors
 
-% todo
+
+TODO % todo
 
 \subsubsection{Codata}
+
+% todo visitor pattern
+
+% todo visitors
 
 % todo codata, copattern-matching
 % todo are custom patterns in haskell connected to this?
 
-% todo
+TODO % todo
 
 \subsubsection{Threaded code}
 
-% todo https://en.wikipedia.org/wiki/Threaded_code
+TODO % todo https://en.wikipedia.org/wiki/Threaded_code
+
+
+% todo reactive programming https://youtu.be/sTSQlYX5DU0?si=Ybxux16h5Vt1LnC4
+
+% todo pull and push

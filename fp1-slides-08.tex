@@ -244,7 +244,7 @@
     \begin{frame}[fragile]{Композиция функторов --- функтор}
         \begin{itemize}
             \item[\todo] Докажите
-            \item[\todo] \pause
+            \item[\todo] \mintinline{haskell}|Compose [Just 1]|
             \item[\answer] \pause
             \begin{minted}{haskell}
                 instance (Functor f, Functor g) => Functor (Compose f g) where
