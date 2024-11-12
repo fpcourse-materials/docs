@@ -242,9 +242,9 @@ TODO % todo пример
     \centering
     \begin{tabular}{|p{0.45\linewidth}|p{0.45\linewidth}|}
         \hline
-        Deep                                                                                                    & Shallow                                                    \\
+        Deep                                                                                                                                 & Shallow                                                                              \\
         \hline
-        Синтаксис языка задаётся набором допустимых нод дерева                                                  & Декларация функции задаёт новую ноду дерева: вызов этой функции       \\
+        Синтаксис языка задаётся набором допустимых нод дерева                                                                               & Декларация функции задаёт новую ноду дерева: вызов этой функции                      \\
         \hline
         Интерпретатор при виде каждой ноды выполняет соответствующий код на мета-языке (ветку паттерн-матчинга) после вычисления поддеревьев & Интерпретатор при виде вызова выполняет код тела функции после вычисления аргументов \\
         \hline
@@ -383,8 +383,9 @@ TODO % todo
 
 \subsubsection{Expression problem}
 
+\url{https://homepages.inf.ed.ac.uk/wadler/papers/expression/expression.txt}
+
 % todo wadler the expression problem
-% todo https://homepages.inf.ed.ac.uk/wadler/papers/expression/expression.txt
 
 % todo Extensibility for the Masses: Practical Extensibility with Object Algebras
 
@@ -392,21 +393,21 @@ TODO % todo
 
 \subsubsection{Deforestation \& fusion}
 
+TODO\cite{wadler1988deforestation,gill1993short} % todo short cut to deforestation
+TODO\cite{meijer1991functional}
+TODO\cite{coutts2007stream} % todo stream fusion from lists to streams to nothing at all
+
 % todo Reading circle about fusion
 
 % todo haskell inlining
 % todo Oleg about fusion and streams
-% todo fused effects
 
-% todo short cut to deforestation
-% todo stream fusion from lists to streams to nothing at all
 % todo call-pattern specialization for Haskell programs
 
 % todo https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html
 
 % todo FRP
-
-
+% todo reactive programming https://youtu.be/sTSQlYX5DU0?si=Ybxux16h5Vt1LnC4
 
 TODO % todo
 
@@ -424,8 +425,5 @@ TODO % todo
 \subsubsection{Threaded code}
 
 TODO % todo https://en.wikipedia.org/wiki/Threaded_code
-
-
-% todo reactive programming https://youtu.be/sTSQlYX5DU0?si=Ybxux16h5Vt1LnC4
 
 % todo pull and push
