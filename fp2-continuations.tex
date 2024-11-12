@@ -15,20 +15,25 @@
 
 \begin{figure}[h]
     \centering
-    \begin{tabular}{|c|c|}
-        \hline
-        Фокус               & Продолжение           \\
-        \hline
-        $((2 + 3) - 4) * 5$ & $\boxempty$           \\
-        $(2 + 3) - 4$       & $\boxempty * 5$       \\
-        $2 + 3$             & $(\boxempty - 4) * 5$ \\
-        $5$                 & $(\boxempty - 4) * 5$ \\
-        $5 - 4$             & $\boxempty * 5$       \\
-        $1$                 & $\boxempty * 5$       \\
-        $1 * 5$             & $\boxempty$           \\
-        $5$                 & $\boxempty$           \\
-        \hline
-    \end{tabular}
+    \begin{subfigure}[h]{0.4\linewidth}
+        \includegraphics[width=0.8\textwidth]{figs/cont-expr}
+    \end{subfigure}
+    \begin{subfigure}[h]{0.4\linewidth}
+        \begin{tabular}{|c|c|}
+            \hline
+            Фокус               & Продолжение           \\
+            \hline
+            $((2 + 3) - 4) * 5$ & $\boxempty$           \\
+            $(2 + 3) - 4$       & $\boxempty * 5$       \\
+            $2 + 3$             & $(\boxempty - 4) * 5$ \\
+            $5$                 & $(\boxempty - 4) * 5$ \\
+            $5 - 4$             & $\boxempty * 5$       \\
+            $1$                 & $\boxempty * 5$       \\
+            $1 * 5$             & $\boxempty$           \\
+            $5$                 & $\boxempty$           \\
+            \hline
+        \end{tabular}
+    \end{subfigure}
 \end{figure}
 
 Практически говоря, продолжение представляет собой некоторую структуру данных, сохраняющее всё что нужно, чтобы продолжить исполнение программы с определённого места.
@@ -44,6 +49,16 @@
     \item Конструкция \mintinline{kotlin}|return| позволяет восстановить исполнение в месте, где функция была вызвана;
     \item Конструкции \mintinline{kotlin}|break| и \mintinline{kotlin}|continue| восстанавливают продолжение после цикла и до\ldots
 \end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \begin{subfigure}[h]{0.29\linewidth}
+        \includegraphics[width=1\textwidth]{figs/cont-exit}
+    \end{subfigure}
+    \begin{subfigure}[h]{0.7\linewidth}
+        \includegraphics[width=1\textwidth]{figs/cont-try-catch}
+    \end{subfigure}
+\end{figure}
 
 В примерах выше конструкции языка управляют продолжениями неявно.
 Однако, иногда вводят операторы, позволяющие явно оперировать продолжениями.
