@@ -63,11 +63,14 @@
     \end{frame}
 
     \sectionplan{Аппликативные функторы}
-    
-    \begin{frame}[fragile]{Больше, чем результат}
+
+    \begin{frame}[fragile]{Больше, чем результат \popslide}
         \begin{block}{Moggi's principle}
             \begin{center}
+                \large
+                \vspace{0.3em}
                 <<Computations of type $\alpha$ correspond to values of type $f\ap\alpha$>>
+                \vspace{0.3em}
             \end{center}
         \end{block}
         %! suppress = EscapeUnderscore
@@ -98,11 +101,11 @@
             \item[\answer] \pause
             \begin{minted}{haskell}
                 liftA3 :: Applicative f => (a -> b -> c -> d) -> f a -> f b -> f c -> f d
-                liftA2 f x y z = liftA2 ($) (liftA2 f x y) z
+                liftA3 f x y z = liftA2 ($) (liftA2 f x y) z
             \end{minted}
         \end{itemize}
     \end{frame}
-    
+
     \begin{frame}[fragile]{Аппликатив \mintinline{haskell}|Either|}
         \begin{minted}{haskell}
             class Applicative f where
@@ -166,11 +169,11 @@
                 liftA4 f a b c d = pure f <*> a <*> b <*> c <*> d
             \end{minted}
             \begin{itemize}
-                \item \mintinline{haskell}|pure f      :: f (a -> b -> c -> d -> r)|
-                \item \mintinline{haskell}|pure f <*> a     :: f (b -> c -> d -> r)|
-                \item \mintinline{haskell}|pure f <*> a <*> b    :: f (c -> d -> r)|
-                \item \mintinline{haskell}|pure f <*> a <*> b <*> c   :: f (d -> r)|
-                \item \mintinline{haskell}|pure f <*> a <*> b <*> c <*> d  :: (f r)|
+                \item \mintinline{haskell}|pure f :: f (a -> b -> c -> d -> r)|
+                \item \mintinline{haskell}|pure f <*> a :: f (b -> c -> d -> r)|
+                \item \mintinline{haskell}|pure f <*> a <*> b :: f (c -> d -> r)|
+                \item \mintinline{haskell}|pure f <*> a <*> b <*> c :: f (d -> r)|
+                \item \mintinline{haskell}|pure f <*> a <*> b <*> c <*> d :: (f r)|
             \end{itemize}
             \item Боллее идеоматично пользоваться \texttt{pure f <*> x = f <\$> x}
         \end{itemize}
@@ -188,7 +191,7 @@
         \vspace{0.5em}
         Так что слово ``контекст'' мы будем понимать по-разному в зависимости от контекста.
     \end{frame}
-    
+
     \sectionplan{Композиция типов}
 
     \begin{frame}[fragile]{Функции на типах}
@@ -230,10 +233,10 @@
         \end{minted}
         \begin{itemize}
             \item[\todo] \pause \mintinline{haskell}|GHCi> :t Compose [Just 42]|
-            \item[\answer] \pause \mintinline{haskell}|Compose [] Maybe Int|
             \item[\todo] \pause \mintinline{haskell}|GHCi> :t Compose [Just [42]]|
-            \item[\answer] \pause \mintinline{haskell}|Compose [] Maybe [Int]|
             \item[\todo] \pause \mintinline{haskell}|GHCi> :t Componse (Compose [Just [42]])|
+            \item[\answer] \pause \mintinline{haskell}|Compose [] Maybe Int|
+            \item[\answer] \pause \mintinline{haskell}|Compose [] Maybe [Int]|
             \item[\answer] \pause \mintinline{haskell}|Compose (Compose [] Maybe) [] Int|
         \end{itemize}
     \end{frame}
@@ -241,6 +244,7 @@
     \begin{frame}[fragile]{Композиция функторов --- функтор}
         \begin{itemize}
             \item[\todo] Докажите
+            \item[\todo] \pause
             \item[\answer] \pause
             \begin{minted}{haskell}
                 instance (Functor f, Functor g) => Functor (Compose f g) where
@@ -248,7 +252,6 @@
                   --   :: (a -> b) -> f (g a)        -> f (g b)
                   fmap f = Compose . fmap (fmap f) . getCompose
             \end{minted}
-            \item[\todo] \pause
             \begin{minted}{haskell}
                 GHCi> length <$> Compose [Just [42]]
             \end{minted}
