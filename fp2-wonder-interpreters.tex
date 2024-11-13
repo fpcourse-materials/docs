@@ -151,7 +151,10 @@ $X$ является рекурсивным типом с формой $F$, ес
 Катаморфизм сначала обрабатывает рекурсивные ссылки, добираясь к ним с помощью \mintinline{haskell}|fmap|, и сворачивает поддеревья, оставляя результаты вместо бывших вхождений поддеревьев.
 Таким образом, получается тип формы, у которого вместо рекурсивных ссылок уже значения нужного типа \texttt{a}, а его уже можно непосредственно свернуть с помощью f-алгебры.
 
-% todo картинка из презы
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/cataStep.excalidraw}
+\end{figure}
 
 \begin{task}
     Убедитесь, что печатающая алгебра действительно сворачивает терм в строчку.
@@ -206,7 +209,7 @@ f-коалгебра по некоторому зерну вычисляет с�
 
 % todo каноническое представление типа
 
-% todo
+TODO % todo
 
 \subsubsection{Прибытие в зазеркалье}
 
@@ -253,7 +256,11 @@ TODO % todo пример
 
 Общие рассуждения про shallow embeddings, свёртки и библиотеки можно почитать в~\cite{gibbons2013functional, gibbons2014folding}.
 
-% todo деревянный язык это бейзлайн
+Можно заметить, что термы в зазеркалье можно представлять как объекты с единственным методом \texttt{visit}, а инстанс соответствующего класса типов --- visitor.
+
+% todo visitor pattern
+
+TODO % todo деревянный язык это бейзлайн
 
 % todo connections to polarity https://ncatlab.org/nlab/show/polarity+in+type+theory
 
@@ -393,9 +400,47 @@ TODO % todo
 
 \subsubsection{Deforestation \& fusion}
 
-TODO\cite{wadler1988deforestation,gill1993short} % todo short cut to deforestation
-TODO\cite{meijer1991functional}
-TODO\cite{coutts2007stream} % todo stream fusion from lists to streams to nothing at all
+\vocab{Дефорестация} --- процесс избавления программы от (промежуточных) деревьев~\cite{wadler1988deforestation} (рис.~\ref{fig:deforestation-examples}).
+Дефорестация является частным случаем суперкомпиляции~\cite{supercomp}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.55\textwidth]{figs/deforestation-examples}
+    \caption{Примеры работы дефорестирующего алгоритма~\cite{wadler1988deforestation}.}
+    \label{fig:deforestation-examples}
+\end{figure}
+
+Однако, алгоритм дефорестации имеет проблемы: он либо имеет шанс не завершиться на рекурсивных определениях, либо ограничен программами очень специального вида.
+Поэтому для Haskell был предложен другой способ, работающий только на списках, дефорестирующий с помощью алгебраических свойств списочных трансформаций\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}~\cite{gill1993short}.
+
+Вместо использования множества алгебраических правил, определяем универсальный способ конструирования и деконструирования списка.
+Деконструируем с помощью \mintinline{haskell}|foldr|:
+\begin{minted}{haskell}
+    foldr f ini . map g ?$\equiv$? foldr (f . g) ini
+\end{minted}
+
+Конструируем с помощью \mintinline{haskell}|build|.
+Можно заметить, что на вход передаётся список Чёрча, отсюда не удивителен закон:
+\begin{minted}{haskell}
+    build :: (forall b . (a -> b -> b) -> b -> b) -> [a]
+    build g = g (:) []
+
+    foldr f ini (build g) ?$\equiv$? g f ini
+\end{minted}
+
+% todo \cite{meijer1991functional}
+
+TODO % todo пример
+
+\subsubsection{Streams \& reactive programming}
+
+Если пойти в обратную сторону относительно анаморфизма, то получим структуру данных, заданную через развёртку.
+Такая структура даже в энергичном языке может быть потенциально бесконечной.
+\begin{minted}{haskell}
+    anaInv :: Fix f -> ?$\exists$?s . (s -> f s, s)
+\end{minted}
+
+TODO\cite{coutts2007stream, kiselyov2022highest} % todo stream fusion from lists to streams to nothing at all
 
 % todo Reading circle about fusion
 
@@ -404,8 +449,6 @@ TODO\cite{coutts2007stream} % todo stream fusion from lists to streams to nothin
 
 % todo call-pattern specialization for Haskell programs
 
-% todo https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html
-
 % todo FRP
 % todo reactive programming https://youtu.be/sTSQlYX5DU0?si=Ybxux16h5Vt1LnC4
 
@@ -413,14 +456,14 @@ TODO % todo
 
 \subsubsection{Codata}
 
-% todo visitor pattern
-
-% todo visitors
+\url{https://reasonablypolymorphic.com/blog/review-codata/index.html}
 
 % todo codata, copattern-matching
 % todo are custom patterns in haskell connected to this?
 
-TODO % todo
+% todo когда использовать дату, а когда - кодату
+
+TODO~\cite{downen2019codata} % todo
 
 \subsubsection{Threaded code}
 
