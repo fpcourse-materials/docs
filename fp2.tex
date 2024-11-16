@@ -207,151 +207,51 @@
     \clearpage
 
 
-    \section{Метапрограммирование и специализация}
+    \section{Datatype-generic programming}
 
     \input{fp2-derivings}
 
     \clearpage
 
 
+    \section{Персистентность и оптика}
+
+    \input{fp2-optics}
+
+    \clearpage
+
+
     \section{Дополнительные главы монад} \label{sec:monads}
 
-    % todo merriage of effects and monads
-
-    % todo ncatlabs
-
-    % todo Monads and algebras
-
-    % todo оригинальная статья
-
-    % todo связь с континуэйшенами
-
-    % todo mother of all monads
-
-    % todo Stackless Scala with free monads
-
-    % todo monadic reflection
-    % todo monadic reflection & direct style (lib from scala)
-
-    % todo free monads, freer monads
-
-    % todo монады не композируются, но фримонады - композируются
-
-    % todo semantic domains have monad structure
-
-    % todo https://github.com/lampepfl/monadic-reflection/blob/main/TUTORIAL.md
-
-    % todo C# expression trees
-    % todo F# что-то про монады и forM
-
-    % todo call by push value
-
-    % todo monads in pythong with nice syntax
-
-    % todo lazyness
-    % todo direct style
-
-    % todo Monads and composable continuations by Phill Wadler
-
-    % todo Representing Monads Filinsky
-    % todo paper delimited continuations in WebAssembly
-
-    % todo
+    \input{fp2-monads}
 
 
     \section{Хендлеры эффектов} \label{sec:effect-handlers}
 
-    % todo monad error is a bullshit
-
-    % todo https://homepages.inf.ed.ac.uk/wadler/papers/expression/expression.txt
-
-    % todo https://www.eff-lang.org/handlers-tutorial.pdf
-
-    % todo алгебраические эффекты
-    % todo связь с delimited continuations
-    % todo стратегии компиляции, связь с codata
-    % todo эффекты высших порядков
-    % todo full vs shallow embeddings
-    % todo abstracting definitional interpreters & github semantics
-    % todo fused effects and CPS
-
-    % todo expression problem
-
-    % todo compare open type families & extensible interpreters
-
-    % todo Polymorphic Symmetric Multiple Dispatch with Variance
-
-    % todo \textit{multimethods}
-
-    % todo  custom schedulers
-
-%    Languages with \textit{multimethods}, like Common Lisp’s CLOS, Dylan, and Julia do support adding both new types and operations easily.
-%    What they typically sacrifice is either static type checking, or separate compilation.
-
-    % todo ZIO, TS Effect
-
-
-    % todo
+    \input{fp2-handlers}
 
 
     \section{Системы эффектов} \label{sec:effect-systems}
 
-    % todo
+    \input{fp2-effect-systems}
 
 
     \section{Корутины}
 
-    % todo structured concurrency
-
-    % todo
+    \input{fp2-coroutines}
 
 
     \section{Компилятор GHC и runtime}
 
-    % todo Working with Source Plugins paper
-
-    % todo \href{https://gitlab.haskell.org/ghc/ghc/-/wikis/commentary/compiler/generated-code}{\color{blue} I know kung fu: learning STG by example}
-
-    % todo
-
-
-    \section{Оптика}
-
-    % todo there are pierce lenses
-
-    % todo http://www.timphilipwilliams.com/posts/2019-07-25-minecraft.html
-
-    % todo profunctor optics
-    % todo van laarhoven CPS optics
-
-    % todo
-
+    \input{fp2-ghc-internals}
 
     % todo куда-нибудь запихнуть algebra driven design, quick check и доклад про проперти-тесты
-    % todo expression problem somewhere
-    % todo где-то должно быть содержание книжки про типы Sandy Maguire, data families
     % todo Perhaps Not The Answer You Were Expecting But You Asked For It
     % todo link to SICP
 
-    % todo сказать где-нибудь про вариантность и изоморфизм
-
-    % todo вставить куда-нибудь ссылку на F for Functor
-
     % todo зависимые типы в Haskell
 
-    % todo где-то нужно про систему кайндов, константы, полиморфизм... Походу Haskell types 101.
-
     % todo рассовать упражнений по конспекту
-
-    % todo inner and outer iteration - The essence of the iterator pattern
-
-    % todo call-by-push value and how it is related to effects
-
-    % todo Higher-Order Type-Level Programming in Haskell
-
-    % todo как полиморфные кайнды связаны с levity-полиморфизмом
-
-    % todo type families & saturation
 
 
     \begin{center}
@@ -361,7 +261,6 @@
     \end{center}
 
 
-    % todo что-то сделать с порядком
     \newpage
     \bibliography{bib}
 

@@ -1,20 +1,36 @@
 %! suppress = MissingLabel
 
+Ранее мы говорили о том, что всё, что пишут программисты, --- интерпретаторы.
+Оказывается, многие из них можно получать автоматически, выйдя на новый уровень обобщения.
+А код, который может не быть написан, --- не должен быть написан.
+
+Как правило, такая ситуация возникает, когда интерпретация полностью определяется описанием (формой) типа.
+То есть тем, какие конструкторы данных для него определены, с какими полями, как они называются\ldots
+Такими интерпретациями являются, например, сериализация в конеретный формат (e.g. json), структурное равенство и т.д.
+
+Решением является поддержка в языке \vocab{структурного полиморфизма} \vocab{(structural polymorphism)}~\cite[глава 13]{maguire-types} или \vocab{datatype-generic программирование}~\cite{backhousedatatype}, как это иногда называют.
+
 % todo не хотим писать код, который можно не писать
 
-\subsection{Datatype-generic programming}
+Можно вообразить язык, в котором data-generic программирование является обычным программированием~\cite{chapman2010gentle}.
+Для этого берётся язык с зависимыми типами, с выделенной вселенной описаний \mintinline{haskell}|Desc|.
+Конкретные типы же получаются применением функции интерпретации \mintinline{haskell}|Desc -> Type|.
+Таким образом, параметрический полиморфизм воплощается обобщением по типу, а структурный полиморфизм --- обобщением по его описанию.
 
-q\cite{maguire-types, backhousedatatype, chapman2010gentle}
+
+q\cite{backhousedatatype}
 
 % todo generics and Gibbons paper about abstractions
 
 % todo Derivable type classes paper
 
-% todo the gentle art of levitation
-
 TODO % todo
 
 \subsection{Специализация}
+
+\[
+    \sembr{\sembr{spec}(p, x)}(y) \equiv \sembr{p}(x, y)
+\]
 
 % todo специализация в Haskell
 
@@ -70,3 +86,5 @@ TODO % todo SOP & variadics
 TODO % todo
 
 % todo Kotlinx serialization
+
+% todo datatype-generic для интерпретаторов зазеркалья
