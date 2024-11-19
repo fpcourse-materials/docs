@@ -18,6 +18,11 @@
     \right)
 \]
 
+Решением является \vocab{функциональная оптика}.
+Она позволяет фокусироваться на некоторые свойства объекта и персистентно восстанавливать целый объект с новым значением свойств.
+Разные средства фокусировки классифицируют как различные \vocab{оптические девайсы} по интерфейсу использования.
+Так, \vocab{линзы} позволяют сфокусироваться на поле типа-произведения, \vocab{призмы} --- типа-суммы, \vocab{траверсы} --- коллекции\ldots
+
 \subsection{Персистентные структуры данных}
 
 Структуры данных разделяют на \vocab{изменяемые (mutable)} и \vocab{неизменяемые (immutable)}.
@@ -66,22 +71,98 @@
 То есть каждая структура данных должна поддерживать две фазы своей жизни.
 Например, так сделано в Scala, где у многих персистентных коллекций есть \mintinline{scala}|Builder| версия.
 
-\subsection{Линзы}
+\subsection{Простейшие линзы и призмы}
 
-Линзы являются простейшим примером оптики.
-Исторически\footnote{\url{https://github.com/ekmett/lens/wiki/History-of-Lenses}}, первые линзы были придуманы, чтобы удобнее было работать с изменяемым состоянием при написании игры\footnote{\href{https://web.archive.org/web/20140402193032/https://lukepalmer.wordpress.com/2007/07/26/making-haskell-nicer-for-game-programming/}{(post) Making Haskell nicer for game programming}}\footnote{\href{https://web.archive.org/web/20120303223802/https://lukepalmer.wordpress.com/2007/08/05/haskell-state-accessors-second-attempt-composability/}{(post) Haskell State Accessors (second attempt: Composability)}}.
+Линзы являются простейшим примером оптического девайса.
+Исторически\footnote{\url{https://github.com/ekmett/lens/wiki/History-of-Lenses}}, одно из первых упоминаний линз --- блог-пост, описывающий попытку удобнее работать с изменяемым состоянием при написании игры\footnote{\href{https://web.archive.org/web/20140402193032/https://lukepalmer.wordpress.com/2007/07/26/making-haskell-nicer-for-game-programming/}{(post) Making Haskell nicer for game programming}}\footnote{\href{https://web.archive.org/web/20120303223802/https://lukepalmer.wordpress.com/2007/08/05/haskell-state-accessors-second-attempt-composability/}{(post) Haskell State Accessors (second attempt: Composability)}} (линзы в играх продолжают радовать\footnote{\url{http://www.timphilipwilliams.com/posts/2019-07-25-minecraft.html}}).
+Примерно в то же время линзы были предложены для двустороннего программирования --- стиля программирования, в котором новое целое восстанавливалось после извлечения и изменения части~\cite{foster2008quotient}.
 
+Простейшую линзу образуют пара функций:
+\begin{minted}{haskell}
+    data SimpleLens' s a = SimpleLens'
+      { get' :: s -> a
+      , set' :: s -> a -> s
+      }
+\end{minted}
 
+Линзы можно композировать и обращаться к вложенным полям произведений.
+Так, могут являться морфизмами в категории типов.
+\begin{minted}{haskell}
+    instance Category SimpleLens' where
+      id :: SimpleLens' s s
+      id = SimpleLens' { get' = id, set' = flip const }
 
+      (.) :: SimpleLens' a b -> SimpleLens' s a -> SimpleLens' s b
+      l1 . l2 = SimpleLens'
+        { get' = get' l1 . get' l2
+        , set' = \s x -> set' l2 s (set' l1 (get' l2 s) x)
+        }
+\end{minted}
 
-\subsection{Разнообразие оптических девайсов}
+Например, можно легко изменить возраст пользователя:
+\begin{minted}{haskell}
+    newtype Age = Age { _getAge :: Int }
+    data User = User { _userName :: String, _userAge :: Age }
 
-% todo there are pierce lenses
+    userAge :: SimpleLens' User Age
+    userAge = SimpleLens' { get' = _userAge, set' = \s x -> s { _userAge = x } }
 
-% todo http://www.timphilipwilliams.com/posts/2019-07-25-minecraft.html
+    getAge :: SimpleLens' Age Int
+    getAge = SimpleLens' { get' = _getAge, set' = \s x -> s { _getAge = x } }
 
-% todo profunctor optics
-% todo van laarhoven CPS optics
+    ghci> set (getAge . userAge) user 1
+\end{minted}
+
+Также, отличают полиморфные линзы, которые позволяют пересоздавать структуру с новыми типовыми параметрами:
+\begin{minted}{haskell}
+    data SimpleLens s t a b = SimpleLens
+      { get :: s -> a
+      , set :: s -> b -> t
+      }
+\end{minted}
+
+Пара функций должна удовлетворять законам линз, чтобы составлять линзу.
+TODO % todo
+
+Можно заметить, что линза в таком представлении является комонадой коалгеброй коstate.
+TODO % todo
+\begin{minted}{haskell}
+    data Store a s = Store (a, a -> s)
+    data LensCostate s a = LensCostate (s -> Store a s)
+\end{minted}
+
+Призмы можно определить аналогично.
+\begin{minted}{haskell}
+    data SimplePrism' s a = SimplePrism'
+      { preview' :: s -> Maybe a
+      , review' :: s -> a -> s
+      }
+
+    data SimplePrism s t a b = SimplePrism
+      { preview :: s -> Maybe a
+      , review :: s -> b -> t
+      }
+\end{minted}
+
+Можно заметить, что такое задание линз и призм не очень хорошо композируется.
+А именно, композиция линз с линзами должна давать линзу, а линз с призмами --- призму.
+Но на Haskell это выразить не получится.
+
+TODO % todo
+
+\subsection{Линзы ван Лаарховена}
+
+TODO semantic editor combinators\footnote{\url{http://conal.net/blog/posts/semantic-editor-combinators}} % todo
+
+TODO van Laarhoven lens\footnote{\url{https://www.twanvl.nl/blog/haskell/cps-functional-references}}\footnote{\href{http://r6.ca/blog/20120623T104901Z.html}{(post) Polymorphic Update with van Laarhoven Lenses}} % todo
+
+TODO lens\footnote{\url{http://lens.github.io/}} % todo
+
+\subsection{Разнообразие оптических девайсов, \texttt{optics}}
+
+TODO библиотека optics\footnote{\url{https://hackage.haskell.org/package/optics-0.4.2.1/docs/Optics.html}} % todo
+
+TODO data-generic optics\footnote{\url{https://hackage.haskell.org/package/optics-core-0.4.1.1/docs/Optics-Label.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_record_update.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_labels.html}}
 
 % todo internal iteration
 
@@ -91,8 +172,10 @@
 
 % todo zippers
 
-% todo generic optics and literals
+% todo сравнение с datatype generic programming
 
 % todo оптика как альтернатива стримам?
+
+% todo first-class patterns should also be able to re-build the values that they match, Pattern Synonyms paper
 
 % todo
