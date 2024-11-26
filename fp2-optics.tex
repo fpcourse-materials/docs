@@ -71,31 +71,46 @@
 То есть каждая структура данных должна поддерживать две фазы своей жизни.
 Например, так сделано в Scala, где у многих персистентных коллекций есть \mintinline{scala}|Builder| версия.
 
-\subsection{Простейшие линзы и призмы}
+\subsection{Простейшая оптика}
 
 Линзы являются простейшим примером оптического девайса.
-Исторически\footnote{\url{https://github.com/ekmett/lens/wiki/History-of-Lenses}}, одно из первых упоминаний линз --- блог-пост, описывающий попытку удобнее работать с изменяемым состоянием при написании игры\footnote{\href{https://web.archive.org/web/20140402193032/https://lukepalmer.wordpress.com/2007/07/26/making-haskell-nicer-for-game-programming/}{(post) Making Haskell nicer for game programming}}\footnote{\href{https://web.archive.org/web/20120303223802/https://lukepalmer.wordpress.com/2007/08/05/haskell-state-accessors-second-attempt-composability/}{(post) Haskell State Accessors (second attempt: Composability)}} (линзы в играх продолжают радовать\footnote{\url{http://www.timphilipwilliams.com/posts/2019-07-25-minecraft.html}}).
-Примерно в то же время линзы были предложены для двустороннего программирования --- стиля программирования, в котором новое целое восстанавливалось после извлечения и изменения части~\cite{foster2008quotient}.
+Они позволяют гарантированно обозревать одно свойство и устанавливать его.
 
-Простейшую линзу образуют пара функций:
+Изначально линзы были предложены как решение проблемы view-update в базах данных~\cite{bohannon2006relational, foster2008quotient}.
+А именно --- как нужно изменить реальную базу при изменении view.
+Или как восстанавливать целое после извлечения и изменения части.
+Линзы тут являются средством двустороннего программирования --- позволяют одновременно описывать как view, так и способ обновления.
+
+Параллельно\footnote{\url{https://github.com/ekmett/lens/wiki/History-of-Lenses}}, линзы упоминаются в серии блог-постов, описывающих попытку удобнее работать с изменяемым состоянием при написании игр\footnote{\href{https://web.archive.org/web/20140402193032/https://lukepalmer.wordpress.com/2007/07/26/making-haskell-nicer-for-game-programming/}{(post) Making Haskell nicer for game programming}}\footnote{\href{https://web.archive.org/web/20120303223802/https://lukepalmer.wordpress.com/2007/08/05/haskell-state-accessors-second-attempt-composability/}{(post) Haskell State Accessors (second attempt: Composability)}} (линзы в играх продолжают радовать\footnote{\url{http://www.timphilipwilliams.com/posts/2019-07-25-minecraft.html}}).
+
+\subsubsection{Линзы --- costate coalgebra comonad}
+
+Простейшую линзу образуют пара функций --- просмотр и установка свойства:
 \begin{minted}{haskell}
     data SimpleLens' s a = SimpleLens'
-      { get' :: s -> a
+      { view' :: s -> a
       , set' :: s -> a -> s
       }
 \end{minted}
 
+На эти функции накладываются естественные законы:
+\begin{minted}{haskell}
+    view l (set l s x) ?$\equiv$? x
+    set l s (view l s) ?$\equiv$? s
+    set l (view l s x) y ?$\equiv$? set l s y
+\end{minted}
+
 Линзы можно композировать и обращаться к вложенным полям произведений.
-Так, могут являться морфизмами в категории типов.
+Так, они могут быть морфизмами в категории типов.
 \begin{minted}{haskell}
     instance Category SimpleLens' where
       id :: SimpleLens' s s
-      id = SimpleLens' { get' = id, set' = flip const }
+      id = SimpleLens' { view' = id, set' = flip const }
 
       (.) :: SimpleLens' a b -> SimpleLens' s a -> SimpleLens' s b
       l1 . l2 = SimpleLens'
-        { get' = get' l1 . get' l2
-        , set' = \s x -> set' l2 s (set' l1 (get' l2 s) x)
+        { view' = view' l1 . view' l2
+        , set' = \s x -> set' l2 s (set' l1 (view' l2 s) x)
         }
 \end{minted}
 
@@ -105,44 +120,75 @@
     data User = User { _userName :: String, _userAge :: Age }
 
     userAge :: SimpleLens' User Age
-    userAge = SimpleLens' { get' = _userAge, set' = \s x -> s { _userAge = x } }
+    userAge = SimpleLens' { view' = _userAge, set' = \s x -> s { _userAge = x } }
 
     getAge :: SimpleLens' Age Int
-    getAge = SimpleLens' { get' = _getAge, set' = \s x -> s { _getAge = x } }
+    getAge = SimpleLens' { view' = _getAge, set' = \s x -> s { _getAge = x } }
 
     ghci> set (getAge . userAge) user 1
 \end{minted}
 
-Также, отличают полиморфные линзы, которые позволяют пересоздавать структуру с новыми типовыми параметрами:
+Можно обобщить линзы до полиморфных линз, которые позволяют пересоздавать структуру с новыми типовыми параметрами:
 \begin{minted}{haskell}
     data SimpleLens s t a b = SimpleLens
-      { get :: s -> a
+      { view :: s -> a
       , set :: s -> b -> t
       }
-\end{minted}
 
-Пара функций должна удовлетворять законам линз, чтобы составлять линзу.
-TODO % todo
+    _1 :: SimpleLens (a, c) (b, c) a b
+    _1 = SimpleLens { view = \(x, _) -> x, set = \(x, c) y -> (y, c) }
+\end{minted}
 
 Можно заметить, что линза в таком представлении является комонадой коалгеброй коstate.
-TODO % todo
+Действительно, пару функций можно заменить на функцию, возвращающую пару.
+Эта пара~--- коstate, инвертировав стрелки в \mintinline{haskell}|State s a| получим \mintinline{haskell}|Either s a -> s| или \mintinline{haskell}|Store a s|.
 \begin{minted}{haskell}
     data Store a s = Store (a, a -> s)
-    data LensCostate s a = LensCostate (s -> Store a s)
+    data DataLens s a = DataLens (s -> Store a s)
 \end{minted}
 
-Призмы можно определить аналогично.
+Если определить инстанс комонады для \mintinline{haskell}|Store a s| и выписать законы совместимости с коалгеброй, мы получим в точности законы линз.
+
+\subsubsection{Призмы}
+
+Призмы позволяют получить свойство, которое может отсутствовать, и устанавливать его при наличии.
+Так, конкретное поле типа-суммы может не удаться извлечь, при передаче не ожидаемого конструктора.
+
+Простые призмы можно определить аналогично линзам, с учётом возможного отсутствия свойства:
+
 \begin{minted}{haskell}
     data SimplePrism' s a = SimplePrism'
       { preview' :: s -> Maybe a
       , review' :: s -> a -> s
       }
+\end{minted}
 
+Полиморфная призма должна предоставить структуру с обновлённым типом в случае неуспеха просмотра:
+\begin{minted}{haskell}
     data SimplePrism s t a b = SimplePrism
-      { preview :: s -> Maybe a
+      { preview :: s -> Either t a
       , review :: s -> b -> t
       }
 \end{minted}
+
+Можно определить призму для работы с содержимым конструктора \mintinline{haskell}|Left|:
+\begin{minted}{haskell}
+    _Left :: SimplePrism (Either a c) (Either b c) a b
+    _Left = SimplePrism
+      { preview = \case Left a -> Right a; Right c -> Left (Right c)
+      , review = \case Left _ -> Left; Right c -> const (Right c)
+      }
+\end{minted}
+
+Композиция призм определяется естественным образом.
+
+\subsubsection{Композиция линз и призм}
+
+
+
+
+
+
 
 Можно заметить, что такое задание линз и призм не очень хорошо композируется.
 А именно, композиция линз с линзами должна давать линзу, а линз с призмами --- призму.
@@ -162,11 +208,13 @@ TODO lens\footnote{\url{http://lens.github.io/}} % todo
 
 TODO библиотека optics\footnote{\url{https://hackage.haskell.org/package/optics-0.4.2.1/docs/Optics.html}} % todo
 
-TODO data-generic optics\footnote{\url{https://hackage.haskell.org/package/optics-core-0.4.1.1/docs/Optics-Label.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_record_update.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_labels.html}}
+TODO data-generic optics\footnote{\url{https://hackage.haskell.org/package/optics-core-0.4.1.1/docs/Optics-Label.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_record_update.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_labels.html}} % todo
+
+% todo немножко profunctor optics
 
 % todo internal iteration
 
-% todo transducars
+% todo transducers
 
 % todo слайды Беляева
 

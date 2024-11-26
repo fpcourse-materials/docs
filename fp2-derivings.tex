@@ -8,7 +8,7 @@
 То есть тем, какие конструкторы данных для него определены, с какими полями, как они называются\ldots
 Такими интерпретациями являются, например, сериализация в конеретный формат (e.g. json), структурное равенство и т.д.
 
-Решением является поддержка в языке \vocab{структурного полиморфизма} \vocab{(structural polymorphism)}~\cite[глава 13]{maguire-types} или \vocab{datatype-generic программирование}~\cite{backhousedatatype}, как это иногда называют.
+Решением является поддержка в языке \vocab{структурного полиморфизма} \vocab{(structural polymorphism)}~\cite[глава 13]{maguire-types} или \vocab{datatype-generic программирование}, как это иногда называют.
 
 % todo не хотим писать код, который можно не писать
 
@@ -16,8 +16,6 @@
 Для этого берётся язык с зависимыми типами, с выделенной вселенной описаний \mintinline{haskell}|Desc|.
 Конкретные типы же получаются применением функции интерпретации \mintinline{haskell}|Desc -> Type|.
 Таким образом, параметрический полиморфизм воплощается обобщением по типу, а структурный полиморфизм --- обобщением по его описанию.
-
-
 
 % todo generics and Gibbons paper about abstractions
 
@@ -43,6 +41,14 @@ TODO % todo
 
 % todo modal types for staged programming
 
+% todo haskell SPECIALIZE
+
+TODO\cite{liu2023incremental} % todo
+
+\subsection{Ad-hoc решения}
+
+% todo Kotlinx serialization
+
 TODO % todo
 
 \subsection{Подходы к datatype-generic в Haskell}
@@ -59,7 +65,7 @@ TODO % todo https://ora.ox.ac.uk/objects/uuid:cd041aa0-8d69-4f18-bce2-6d75244b69
 
 % todo Staging with Class
 
-TODO % todo
+TODO\footnote{\url{https://markkarpov.com/tutorial/th.html}} % todo
 
 \subsubsection{Deriving strategies}
 
@@ -68,11 +74,11 @@ TODO % todo
 
 % todo https://ryanglscott.github.io/2018/06/22/quantifiedconstraints-and-the-trouble-with-traversable/
 
-TODO
+TODO\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/deriving_strategies.html}} % todo
 
 \subsubsection{GHC.Generics}
 
-TODO % todo
+TODO\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/generics.html}} % todo
 
 \subsubsection{Sum Of Products}
 
@@ -83,7 +89,5 @@ TODO % todo SOP & variadics
 % todo SYB
 
 TODO % todo
-
-% todo Kotlinx serialization
 
 % todo datatype-generic для интерпретаторов зазеркалья
