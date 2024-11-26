@@ -23,6 +23,8 @@
 Разные средства фокусировки классифицируют как различные \vocab{оптические девайсы} по интерфейсу использования.
 Так, \vocab{линзы} позволяют сфокусироваться на поле типа-произведения, \vocab{призмы} --- типа-суммы, \vocab{траверсы} --- коллекции\ldots
 
+Существует множество библиотек оптики как для Haskell\footnote{\url{https://hackage.haskell.org/package/optics-0.1/docs/Optics.html}}\footnote{\url{http://lens.github.io/}}\footnote{\url{https://github.com/marcosh/existential-optics/tree/main}}, так и для других языков: Kotlin\footnote{\url{https://arrow-kt.io/}}, Scala\footnote{\url{https://github.com/optics-dev/Monocle}}, Swift\footnote{\url{https://github.com/swiftlang/swift-evolution/blob/main/proposals/0161-key-paths.md}} (языковая поддержка).
+
 \subsection{Персистентные структуры данных}
 
 Структуры данных разделяют на \vocab{изменяемые (mutable)} и \vocab{неизменяемые (immutable)}.
@@ -221,13 +223,50 @@
 
 \subsection{Разнообразие оптических девайсов, \texttt{optics}}
 
+Различных оптических девайсов можно придумать довольно много.
+Библиотека \texttt{optics} предоставляет абстрактный интерфейс для самых популярных из них (рис.~\ref{fig:optics-hierarchy}).
+Она имеет прекрасную документацию с подробным описанием девайсов\footnote{\url{https://hackage.haskell.org/package/optics-0.4.2.1/docs/Optics.html}}.
 
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{/home/yukio/Diary/projs/fpcourse/fp-2024/docs/figs/optics-hierarchy}
+    \caption{Иерархия оптических девайсов \texttt{optics}.}
+    \label{fig:optics-hierarchy}
+\end{figure}
 
-TODO библиотека optics\footnote{\url{https://hackage.haskell.org/package/optics-0.4.2.1/docs/Optics.html}} % todo
+Примеры:
+\begin{minted}{haskell}
+    data Pet = Cat String | Dog Int deriving Show
+    newtype UserName = UserName { _getUserName :: String } deriving Show
+    data User = User { _userName :: UserName, _userCats :: [Pet] } deriving Show
 
-TODO data-generic optics\footnote{\url{https://hackage.haskell.org/package/optics-core-0.4.1.1/docs/Optics-Label.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_record_update.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_labels.html}} % todo
+    makeLenses ''User
+    makeLenses ''UserName
+    makePrisms ''Pet
 
-\subsection{Другие реализации оптики}
+    exampleUser :: User
+    exampleUser = User (UserName "Bob") [Cat "Kitty", Dog 42, Dog 4]
+
+    exampleName :: User -> User
+    exampleName = over (userName % getUserName) (++ "!")
+
+    exampleIx :: User -> User
+    exampleIx = set (userName % getUserName % ix 2) 'k'
+
+    exampleFold :: User -> Int
+    exampleFold = getSum $ foldMapOf (userName % getUserName % folded) (const 1)
+
+    examplePrint :: User -> IO User
+    examplePrint = traverseOf (userCats % traversed % _Dog) (\x -> x <$ print x)
+\end{minted}
+
+\subsection{Другие представления оптики}
+
+Ранее мы рассмотрели тривиальную оптику составленную непосредственно из кортежа элиминирующих функций (пары разбора-пересборки значений).
+Однако, у такого подхода есть существенные недостатки.
+Во-первых, нужно определять много операций композиции для различных видов оптики.
+То есть композиция девайсов --- что-то гораздо более сложное, чем композиция функций.
+Во-вторых, это представление не очень эффективно, так как сложно представить, что компилятор будет инлайнить вызовы функций из структур данных.
 
 \subsubsection{Semantic editor combinators}
 
@@ -239,10 +278,23 @@ TODO van Laarhoven lens\footnote{\url{https://www.twanvl.nl/blog/haskell/cps-fun
 
 TODO lens\footnote{\url{http://lens.github.io/}} % todo
 
+% todo uniplate
+
 \subsubsection{Profunctor optics}
 
 % todo немножко profunctor optics
 
+
+\subsection{Генерация оптики}
+
+TODO библиотека  % todo
+
+TODO data-generic optics\footnote{\url{https://hackage.haskell.org/package/optics-core-0.4.1.1/docs/Optics-Label.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_record_update.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_labels.html}} % todo
+
+TODO % todo
+
+
+% todo библиотеки с оптикой для других языков
 
 % todo transducers
 
