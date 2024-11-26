@@ -89,7 +89,7 @@
             \item[\todo] Реализуйте монаду списка
             \item[\todo] Реализуйте \mintinline{haskell}|join| для монады списка
             \item[\todo] Реализуйте \mintinline{haskell}|filter|, используя монаду списка
-            \item[\todo] Функция \mintinline{haskell}|next :: Board -> [Board]| выдаёт всевозможные состояния шахматной доски после следующего хода, может ли игра закончиться за \texttt{n} ходов (\mintinline{haskell}|finished :: Board -> Bool|)?
+            \item[\todo] Функция \mintinline{haskell}|next :: Board -> [Board]| выдаёт всевозможные состояния шахматной доски после следующего хода, может ли игра закончиться за \texttt{n} ходов (\mintinline{haskell}|canFinish :: Int -> Board -> Bool|)?
             \item[\answer] \pause
             \begin{minted}{haskell}
                 (>>=) = flip concatMap
@@ -113,7 +113,7 @@
     \begin{frame}[fragile]{``Консоль'' и \mintinline{haskell}|do|-нотация}
         \begin{itemize}
             \item[\todo] Два числа с ``консоли'', поделите одно на другое нацело и распечатайте результат, если остаток не нулевой, распечатайте его тоже
-            \item[\answer] \pause
+            \item[\answer]
         \end{itemize}
         \vspace{-1.7em}
         \begin{columns}[onlytextwidth]
@@ -236,8 +236,8 @@
             \item ``Дождаться'' --- обычно заблокировать нативный поток --- мб очень дорого
             \item Нужно чтобы ``точка с запятой'' запоминала, что сделать по готовности результата вместо блокирования потока исполнения
             \item ``Перегружаем'' оператор ``точка с запятой''!
-            \item[\then] \pause Заводим объект: коробочка, в которой потом появится значение\footnote{Такие объекты называют Future, Promise или Deferred (или ещё десяток минорных вариаций).}
-            \item[\then] \pause Заводим операцию для него: запомни, что сделать по готовности результата
+            \item[\then] Заводим объект: коробочка, в которой потом появится значение\footnote{Такие объекты называют Future, Promise или Deferred (или ещё десяток минорных вариаций).}
+            \item[\then] Заводим операцию для него: запомни, что сделать по готовности результата
         \end{itemize}
         \vspace{-1.7em}
         \begin{columns}

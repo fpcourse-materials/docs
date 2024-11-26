@@ -85,6 +85,8 @@
 
 \subsubsection{Линзы --- costate coalgebra comonad}
 
+% todo картинки
+
 Простейшую линзу образуют пара функций --- просмотр и установка свойства:
 \begin{minted}{haskell}
     data SimpleLens' s a = SimpleLens'
@@ -102,6 +104,7 @@
 
 Линзы можно композировать и обращаться к вложенным полям произведений.
 Так, они могут быть морфизмами в категории типов.
+При таком определении, правда, композиция работает в обратном, от желаемого, порядке.
 \begin{minted}{haskell}
     instance Category SimpleLens' where
       id :: SimpleLens' s s
@@ -159,7 +162,7 @@
 \begin{minted}{haskell}
     data SimplePrism' s a = SimplePrism'
       { preview' :: s -> Maybe a
-      , review' :: s -> a -> s
+      , pset' :: s -> a -> s
       }
 \end{minted}
 
@@ -167,7 +170,7 @@
 \begin{minted}{haskell}
     data SimplePrism s t a b = SimplePrism
       { preview :: s -> Either t a
-      , review :: s -> b -> t
+      , pset :: s -> b -> t
       }
 \end{minted}
 
@@ -176,7 +179,7 @@
     _Left :: SimplePrism (Either a c) (Either b c) a b
     _Left = SimplePrism
       { preview = \case Left a -> Right a; Right c -> Left (Right c)
-      , review = \case Left _ -> Left; Right c -> const (Right c)
+      , pset = \case Left _ -> Left; Right c -> const (Right c)
       }
 \end{minted}
 
@@ -184,35 +187,62 @@
 
 \subsubsection{Композиция линз и призм}
 
+Заведём класс типов, с помощью которого научимся композировать различные комбинации линз и призм.
+Результирующий девайс однозначно определяется операндами композиции.
 
+\begin{minted}{haskell}
+    class Composable o1 o2 o3 | o1 o2 -> o3 where
+      compose :: o1 s t a b -> o2 a b c d -> o3 s t c d
+\end{minted}
 
+Теперь можем естественным образом определить композицию для различных девайсов.
+Можно заметить, что этот подход требует квадратичное количество инстансов от количества оптических девайсов.
 
+\begin{minted}{haskell}
+    instance Composable SimplePrism SimpleLens SimplePrism where
+      compose :: SimplePrism s t a b -> SimpleLens a b c d -> SimplePrism s t c d
+      compose p l = SimplePrism
+        { preview = fmap (view l) . preview p
+        , pset = \s d -> case preview p s of
+            Left t -> t
+            Right a -> pset p s (set l a d)
+        }
 
+    instance Composable SimpleLens SimpleLens SimpleLens where
+      compose :: SimpleLens s t a b -> SimpleLens a b c d -> SimpleLens s t c d
+      compose l2 l1 = SimpleLens
+        { view = view l1 . view l2
+        , set = \s x -> set l2 s (set l1 (view l2 s) x)
+        }
+\end{minted}
 
-
-Можно заметить, что такое задание линз и призм не очень хорошо композируется.
-А именно, композиция линз с линзами должна давать линзу, а линз с призмами --- призму.
-Но на Haskell это выразить не получится.
-
-TODO % todo
-
-\subsection{Линзы ван Лаарховена}
-
-TODO semantic editor combinators\footnote{\url{http://conal.net/blog/posts/semantic-editor-combinators}} % todo
-
-TODO van Laarhoven lens\footnote{\url{https://www.twanvl.nl/blog/haskell/cps-functional-references}}\footnote{\href{http://r6.ca/blog/20120623T104901Z.html}{(post) Polymorphic Update with van Laarhoven Lenses}} % todo
-
-TODO lens\footnote{\url{http://lens.github.io/}} % todo
+В действительности мы определили не совсем призмы\footnote{\url{https://hackage.haskell.org/package/optics-core-0.1/docs/Optics-Prism.html}}, а скорее аффинные траверсы\footnote{\url{https://hackage.haskell.org/package/optics-core-0.1/docs/Optics-AffineTraversal.html}}, которые и получаются в результате композиции линз и призм.
+Призмы же, в отличие от аффинных траверсов, имеют дополнительную операцию \mintinline{haskell}|review :: b -> t|, которая позволяет реконструировать тип-суммы по содержимому компоненты.
 
 \subsection{Разнообразие оптических девайсов, \texttt{optics}}
+
+
 
 TODO библиотека optics\footnote{\url{https://hackage.haskell.org/package/optics-0.4.2.1/docs/Optics.html}} % todo
 
 TODO data-generic optics\footnote{\url{https://hackage.haskell.org/package/optics-core-0.4.1.1/docs/Optics-Label.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_record_update.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_labels.html}} % todo
 
+\subsection{Другие реализации оптики}
+
+\subsubsection{Semantic editor combinators}
+
+TODO semantic editor combinators\footnote{\url{http://conal.net/blog/posts/semantic-editor-combinators}} % todo
+
+\subsubsection{Линзы ван Лаарховена}
+
+TODO van Laarhoven lens\footnote{\url{https://www.twanvl.nl/blog/haskell/cps-functional-references}}\footnote{\href{http://r6.ca/blog/20120623T104901Z.html}{(post) Polymorphic Update with van Laarhoven Lenses}} % todo
+
+TODO lens\footnote{\url{http://lens.github.io/}} % todo
+
+\subsubsection{Profunctor optics}
+
 % todo немножко profunctor optics
 
-% todo internal iteration
 
 % todo transducers
 
@@ -226,4 +256,4 @@ TODO data-generic optics\footnote{\url{https://hackage.haskell.org/package/optic
 
 % todo first-class patterns should also be able to re-build the values that they match, Pattern Synonyms paper
 
-% todo
+% todo data processing
