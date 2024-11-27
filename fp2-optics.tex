@@ -221,7 +221,7 @@
 В действительности мы определили не совсем призмы\footnote{\url{https://hackage.haskell.org/package/optics-core-0.1/docs/Optics-Prism.html}}, а скорее аффинные траверсы\footnote{\url{https://hackage.haskell.org/package/optics-core-0.1/docs/Optics-AffineTraversal.html}}, которые и получаются в результате композиции линз и призм.
 Призмы же, в отличие от аффинных траверсов, имеют дополнительную операцию \mintinline{haskell}|review :: b -> t|, которая позволяет реконструировать тип-суммы по содержимому компоненты.
 
-\subsection{Разнообразие оптических девайсов, \texttt{optics}}
+\subsection{Разнообразие оптических девайсов, \texttt{optics}} \label{subsec:optics}
 
 Различных оптических девайсов можно придумать довольно много.
 Библиотека \texttt{optics} предоставляет абстрактный интерфейс для самых популярных из них (рис.~\ref{fig:optics-hierarchy}).
@@ -239,10 +239,6 @@
     data Pet = Cat String | Dog Int deriving Show
     newtype UserName = UserName { _getUserName :: String } deriving Show
     data User = User { _userName :: UserName, _userCats :: [Pet] } deriving Show
-
-    makeLenses ''User
-    makeLenses ''UserName
-    makePrisms ''Pet
 
     exampleUser :: User
     exampleUser = User (UserName "Bob") [Cat "Kitty", Dog 42, Dog 4]
@@ -262,11 +258,14 @@
 
 \subsection{Другие представления оптики}
 
-Ранее мы рассмотрели тривиальную оптику составленную непосредственно из кортежа элиминирующих функций (пары разбора-пересборки значений).
+Ранее мы рассмотрели тривиальную оптику, составленную непосредственно из кортежа элиминирующих функций (пары разбора-пересборки значений).
 Однако, у такого подхода есть существенные недостатки.
 Во-первых, нужно определять много операций композиции для различных видов оптики.
 То есть композиция девайсов --- что-то гораздо более сложное, чем композиция функций.
 Во-вторых, это представление не очень эффективно, так как сложно представить, что компилятор будет инлайнить вызовы функций из структур данных.
+
+Было приложено много усилий и теорката\footnote{\url{https://bartoszmilewski.com/category/lens/}}, чтобы получить другие представления оптики.
+Некоторые из них являются просто одной функцией, кодирующей все нужные преобразования, а композиция определена как композиция таких функций.
 
 \subsubsection{Semantic editor combinators}
 
@@ -282,10 +281,40 @@ TODO lens\footnote{\url{http://lens.github.io/}} % todo
 
 \subsubsection{Profunctor optics}
 
-% todo немножко profunctor optics
+TODO % todo немножко profunctor optics
+
+% todo ссылки на Бартоша
+
+\subsubsection{Existential (coend) optics}
+
+TODO % todo
 
 
 \subsection{Генерация оптики}
+
+Чтобы использовать оптику для работы со своими структурами данных, нужно так или иначе получить для них реализацию девайсов.
+
+Некоторую специфичную оптику можно написать руками.
+Например, позволяющую работать с нетривиальным свойством значения (знак числа, высота дерева\ldots).
+Библиотеки предоставляют специальные билдеры, упрощающие конструирование\footnote{\url{https://hackage.haskell.org/package/optics-core-0.1/docs/Optics-Lens.html\#v:lens}}.
+
+Некоторая оптика получается автоматически из инстансов стандартных классов типов.
+Например, свёртки и траверсы\footnote{\url{https://hackage.haskell.org/package/optics-core-0.1/docs/Optics-Traversal.html\#g:6}}.
+Дальше уже встаёт вопрос о генерации инстансов классов типов (см.~\ref{sec:datatype-generic}).
+
+Поскольку линзы являются просто обобщением полей, а призмы --- конструкторов, их можно генерировать автоматически с помощью макросов по структуре данных\footnote{\url{https://hackage.haskell.org/package/optics-th-0.1/docs/Optics-TH.html}}.
+Для этого используются конвенции, поля называются с подчёркиванием, а макрос сгенерирует линзы без подчёркивания.
+С призмами наоборот.
+Так, генерация для примера выше (\ref{subsec:optics}) будет выглядеть следующим образом:
+\begin{minted}{haskell}
+    makeLenses ''User
+    makeLenses ''UserName
+    makePrisms ''Pet
+\end{minted}
+
+
+
+
 
 TODO библиотека  % todo
 
