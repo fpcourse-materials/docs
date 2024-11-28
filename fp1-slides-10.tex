@@ -126,7 +126,7 @@
                           readInt >>= \n ->
                           readInt >>= \k ->
                           let (d, m) = n `divMod` k in
-                          writeInt d
+                          writeInt d *>
                           if m == 0 then pure () else
                             writeInt m
                     \end{minted}
