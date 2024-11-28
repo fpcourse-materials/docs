@@ -7,9 +7,9 @@
 
 \[
     d_{out} =
-    U^{Has}\left(
+    U^{App}\left(
     \left<
-    U_{Has}^{API/UI},
+    U_{App}^{API/UI},
     \left<
     p_{API/UI},
     d_{in}
@@ -21,7 +21,11 @@
 Решением является \vocab{функциональная оптика}.
 Она позволяет фокусироваться на некоторые свойства объекта и персистентно восстанавливать целый объект с новым значением свойств.
 Разные средства фокусировки классифицируют как различные \vocab{оптические девайсы} по интерфейсу использования.
-Так, \vocab{линзы} позволяют сфокусироваться на поле типа-произведения, \vocab{призмы} --- типа-суммы, \vocab{траверсы} --- коллекции\ldots
+Например, линза может фокусироваться на знак числа, позволяя его просматривать и устанавливать.
+Это свойство имеет тип \mintinline{haskell}|Bool|:
+\begin{minted}{haskell}
+    sign :: Lens' Int Bool
+\end{minted}
 
 Существует множество библиотек оптики как для Haskell\footnote{\url{https://hackage.haskell.org/package/optics-0.1/docs/Optics.html}}\footnote{\url{http://lens.github.io/}}\footnote{\url{https://github.com/marcosh/existential-optics/tree/main}}, так и для других языков: Kotlin\footnote{\url{https://arrow-kt.io/}}, Scala\footnote{\url{https://github.com/optics-dev/Monocle}}, Swift\footnote{\url{https://github.com/swiftlang/swift-evolution/blob/main/proposals/0161-key-paths.md}} (языковая поддержка).
 
@@ -144,9 +148,8 @@
     _1 = SimpleLens { view = \(x, _) -> x, set = \(x, c) y -> (y, c) }
 \end{minted}
 
-Можно заметить, что линза в таком представлении является комонадой коалгеброй коstate.
-Действительно, пару функций можно заменить на функцию, возвращающую пару.
-Эта пара~--- коstate, инвертировав стрелки в \mintinline{haskell}|State s a| получим \mintinline{haskell}|Either s a -> s| или \mintinline{haskell}|Store a s|.
+Можно заметить, что линза в таком представлении является комонадой коалгеброй коstate\footnote{\href{https://youtu.be/9_iYlp8smc8?si=NLka0vnnhYDdTfgm}{(youtube) Category Theory II 9.1: Lenses.}}.
+Действительно, пару функций можно заменить на функцию, возвращающую пару:
 \begin{minted}{haskell}
     data Store a s = Store (a, a -> s)
     data DataLens s a = DataLens (s -> Store a s)
@@ -164,7 +167,7 @@
 \begin{minted}{haskell}
     data SimplePrism' s a = SimplePrism'
       { preview' :: s -> Maybe a
-      , pset' :: s -> a -> s
+      , review' :: a -> s
       }
 \end{minted}
 
@@ -172,7 +175,7 @@
 \begin{minted}{haskell}
     data SimplePrism s t a b = SimplePrism
       { preview :: s -> Either t a
-      , pset :: s -> b -> t
+      , review :: b -> t
       }
 \end{minted}
 
@@ -181,7 +184,7 @@
     _Left :: SimplePrism (Either a c) (Either b c) a b
     _Left = SimplePrism
       { preview = \case Left a -> Right a; Right c -> Left (Right c)
-      , pset = \case Left _ -> Left; Right c -> const (Right c)
+      , review = Left
       }
 \end{minted}
 
@@ -201,15 +204,6 @@
 Можно заметить, что этот подход требует квадратичное количество инстансов от количества оптических девайсов.
 
 \begin{minted}{haskell}
-    instance Composable SimplePrism SimpleLens SimplePrism where
-      compose :: SimplePrism s t a b -> SimpleLens a b c d -> SimplePrism s t c d
-      compose p l = SimplePrism
-        { preview = fmap (view l) . preview p
-        , pset = \s d -> case preview p s of
-            Left t -> t
-            Right a -> pset p s (set l a d)
-        }
-
     instance Composable SimpleLens SimpleLens SimpleLens where
       compose :: SimpleLens s t a b -> SimpleLens a b c d -> SimpleLens s t c d
       compose l2 l1 = SimpleLens
@@ -218,8 +212,23 @@
         }
 \end{minted}
 
-В действительности мы определили не совсем призмы\footnote{\url{https://hackage.haskell.org/package/optics-core-0.1/docs/Optics-Prism.html}}, а скорее аффинные траверсы\footnote{\url{https://hackage.haskell.org/package/optics-core-0.1/docs/Optics-AffineTraversal.html}}, которые и получаются в результате композиции линз и призм.
-Призмы же, в отличие от аффинных траверсов, имеют дополнительную операцию \mintinline{haskell}|review :: b -> t|, которая позволяет реконструировать тип-суммы по содержимому компоненты.
+Композиция линз и призм образует другой девайс --- аффинные траверсы, которые являются чем-то средним.
+Наличие призмы в композиции не позволяет гарантированно просматривать свойство, а линзы --- создавать новое значение без изначального.
+\begin{minted}{haskell}
+    data AffineTraversal s t a b = AffineTraversal
+      { apreview :: s -> Either t a
+      , aset :: s -> b -> t
+      }
+
+    instance Composable SimplePrism SimpleLens SimplePrism where
+      compose :: SimplePrism s t a b -> SimpleLens a b c d -> SimplePrism s t c d
+      compose p l = SimplePrism
+        { preview = fmap (view l) . preview p
+        , pset = \s d -> case preview p s of
+            Left t -> t
+            Right a -> pset p s (set l a d)
+        }
+\end{minted}
 
 \subsection{Разнообразие оптических девайсов, \texttt{optics}} \label{subsec:optics}
 
@@ -311,10 +320,6 @@ TODO % todo
     makeLenses ''UserName
     makePrisms ''Pet
 \end{minted}
-
-
-
-
 
 TODO библиотека  % todo
 

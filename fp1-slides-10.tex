@@ -67,13 +67,13 @@
             \begin{minted}{haskell}
                 data Person { personName :: String, personCats :: [CatId] }
                 getPerson :: Db -> PersonId -> Either DbError Person
-                getCat :: Db -> CatId -> Either DbError Person
+                getCat :: Db -> CatId -> Either DbError Cat
             \end{minted}
             \item[\answer] \pause
             \begin{minted}{haskell}
                 instance Monad (Either e) where
                   (>>=) :: Either e a -> (a -> Either e b) -> Either e b
-                   m >>= k = case m of Left e -> Left e; Right x -> k x
+                  m >>= k = case m of Left e -> Left e; Right x -> k x
             \end{minted}
             \item[\answer] \pause
             \begin{minted}{haskell}
