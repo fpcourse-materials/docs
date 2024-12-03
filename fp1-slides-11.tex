@@ -30,7 +30,87 @@
         \tableofcontents
     \end{frame}
 
+
+    \sectionplan{Монада Writer}
+
+    \begin{frame}[fragile]{Монада \mintinline{haskell}|Writer|}
+        \begin{minted}{haskell}
+            newtype Writer w a = Writer { runWriter :: (w, a) }
+        \end{minted}
+        \begin{itemize}
+            \item[\todo] Реализуйте \mintinline{haskell}|Functor| для \mintinline{haskell}|Writer|
+            \item[\todo] Реализуйте \mintinline{haskell}|Applicative| для \mintinline{haskell}|Writer|
+            \item[\todo] Реализуйте \mintinline{haskell}|Monad| для \mintinline{haskell}|Writer|
+            \item[\todo] Реализуйте следующий код с помощью монады \mintinline{haskell}|Writer|
+        \end{itemize}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{haskell}
+                    f a b =
+                      let (w1, x) = g a in
+                      let w2 = w1 <> "ou" in
+                      let (w3, y) = h b in
+                      (w2 <> w3, x + y)
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \pause
+                \begin{minted}{haskell}
+                    f a b = runWriter do
+                      x <- g a
+                      tell "ou"
+                      y <- h b
+                      pure (x + y)
+
+                    tell :: w -> Writer w ()
+                    tell w = Writer (w, ())
+                \end{minted}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+
     \sectionplan{Монада Reader}
+
+    \begin{frame}[fragile]{Монада \mintinline{haskell}|Reader|}
+        \begin{minted}{haskell}
+            newtype Reader e a = Reader { runReader e -> a }
+        \end{minted}
+        \begin{itemize}
+            \item[\todo] Реализуйте \mintinline{haskell}|Functor| для \mintinline{haskell}|Reader|
+            \item[\todo] Реализуйте \mintinline{haskell}|Applicative| для \mintinline{haskell}|Reader|
+            \item[\todo] Реализуйте \mintinline{haskell}|Monad| для \mintinline{haskell}|Reader|
+            \item[\todo] Реализуйте следующий код с помощью монады \mintinline{haskell}|Reader|
+        \end{itemize}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{haskell}
+                    f :: Int -> Env -> Int
+                    f a env =
+                      let x = g a env in
+                      let y = intField env in
+                      let z = h env in
+                      x + y + z
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \pause
+                \begin{minted}{haskell}
+                    f :: Int -> Env -> Int
+                    f a = runReader do
+                      x <- g a
+                      y <- asks intField
+                      z <- h
+                      pure (x + y + z)
+
+                    asks :: (e -> e') -> Reader e e'
+                    asks = Reader
+                \end{minted}
+            \end{column}
+        \end{columns}
+    \end{frame}
 
     \begin{frame}[fragile]{Мотивация \mintinline{haskell}|Reader|}
         \vspace{-0.5em}
@@ -73,7 +153,6 @@
                 \item[\negative] Часто реализуется чёрной магией, а не средствами языка
             \end{itemize}
         \end{itemize}
-        \pause
         \vspace{0.5em}
         Можно обойтись монадой \mintinline{haskell}|Reader|!
         \begin{minted}{haskell}
@@ -86,35 +165,35 @@
         \end{minted}
     \end{frame}
 
-    \begin{frame}[fragile]{Монада \mintinline{haskell}|Reader|}
-        \vspace{-0.5em}
-        \pause
-        \begin{itemize}
-            \item Пусть окружение передаётся последним аргументом функции
-            \begin{minted}{haskell}
-                f :: Value -> Env -> Value
-            \end{minted}
-            \item Обернём часть типа как \mintinline{haskell}|newtype|
-            \begin{minted}{haskell}
-                newtype Reader e a = Reader { runReader :: e -> a }
-                f :: Value -> Reader Env Value
-                runF = runReader (f value) env :: Value
-            \end{minted}
-            \item Сделаем оператор, композирующий два вычисления с окружением
-            \begin{minted}{haskell}
-                instance Monad (Reader e) where
-                  (>>=) :: Reader e a -> (a -> Reader e b) -> Reader e b
-                  Reader f >>= k = Reader $ \e -> -- Результирующее вычисление с окружением.
-                    let x = f e             :: a  -- Результат первого вычисления.
-                     in runReader (k x) e -- Продолжили вычисление на результате предыдущего,
-                                          -- передаём окружение и сюда.
-            \end{minted}
-            \item Получаем язык с неявным константным окружением
-            \begin{minted}{haskell}
-                runFF value = do v <- f v0; v' <- f v; f v''
-            \end{minted}
-        \end{itemize}
-    \end{frame}
+%    \begin{frame}[fragile]{Монада \mintinline{haskell}|Reader|}
+%        \vspace{-0.5em}
+%        \begin{itemize}
+%            \item Пусть окружение передаётся последним аргументом функции
+%            \begin{minted}{haskell}
+%                f :: Value -> Env -> Value
+%            \end{minted}
+%            \item Обернём часть типа как \mintinline{haskell}|newtype|
+%            \begin{minted}{haskell}
+%                newtype Reader e a = Reader { runReader :: e -> a }
+%                f :: Value -> Reader Env Value
+%                runF = runReader (f value) env :: Value
+%            \end{minted}
+%            \item Сделаем оператор, композирующий два вычисления с окружением
+%            \begin{minted}{haskell}
+%                instance Monad (Reader e) where
+%                  (>>=) :: Reader e a -> (a -> Reader e b) -> Reader e b
+%                  Reader f >>= k = Reader $ \e -> -- Результирующее вычисление с окружением.
+%                    let x = f e             :: a  -- Результат первого вычисления.
+%                     in runReader (k x) e -- Продолжили вычисление на результате предыдущего,
+%                                          -- передаём окружение и сюда.
+%            \end{minted}
+%            \item Получаем язык с неявным константным окружением
+%            \begin{minted}{haskell}
+%                runFF value = do v <- f v0; v' <- f v; f v''
+%            \end{minted}
+%        \end{itemize}
+%    \end{frame}
+
 
     \sectionplan{Монада State}
 
@@ -122,7 +201,6 @@
         \vspace{-0.5em}
         \vspace{-1em}
         \begin{columns}[onlytextwidth]
-            \pause
             \begin{column}[t]{0.485\textwidth}
                 \begin{block}{Мутабельная структура данных}
                     \begin{minted}{Scala}
@@ -134,7 +212,6 @@
                     \end{minted}
                 \end{block}
             \end{column}\hfill%
-            \pause
             \begin{column}[t]{0.485\textwidth}
                 \begin{block}{Персистентная структура данных}
                     \begin{minted}{haskell}
@@ -149,74 +226,64 @@
         \end{columns}
         \vspace{0.5em}
         \begin{itemize}
-            \item \mintinline{haskell}|add :: (MutableList<T>, T) -> Unit|
-            \begin{itemize}
-                \item Меняет структуру
-                \item Не производит результата
-            \end{itemize}
-            \item \mintinline{haskell}|cons :: Int -> List Int -> List Int|
-            \begin{itemize}
-                \item Возвращает новую структуру
-                \item Старая неизменна
-            \end{itemize}
-            \item \mintinline{haskell}|uncons :: List Int -> (List Int, Int)|
-            \begin{itemize}
-                \item Возвращает новую структуру и результат вычисления
-            \end{itemize}
-        \end{itemize}
-    \end{frame}
-
-    \begin{frame}[fragile]{\mintinline{haskell}|State|: мутабельность как интерфейс над персистентностью}
-        \pause
-        \vspace{-0.5em}
-        \begin{itemize}
-            \item Перепишем типы операций ($|List~Int| = |List~Int| \times 1 = |(List~Int, ())|$)
+            \item Перепишем типы операций
             \begin{minted}{haskell}
                 cons    :: Int -> List Int -> (List Int, () )
                 uncons  ::        List Int -> (List Int, Int)
             \end{minted}
             \item Вынесем общую часть в отдельный тип
             \begin{minted}{haskell}
-                data State s a = State { runState :: s -> (s, a) }
+                newtype State s a = State { runState :: s -> (s, a) }
                 cons'   :: Int -> State (List Int) ()
                 uncons' ::        State (List Int) Int
             \end{minted}
-            \item Зададим оператор, создающий новое вычисление с состоянием как композицию двух
-            \begin{minted}{haskell}
-              instance Monad (State s) where
-                State comp >>= k = State $ \s -> let (s', x) = comp s in runState (k x) s'
-            \end{minted}
-            \begin{itemize}
-                \item Состояние поступает в первое вычисление, изменённое им состояние во второе
-            \end{itemize}
+            \item Монада \mintinline{haskell}|State| --- мутабельность как интерфейс над персистентностью
         \end{itemize}
-        \pause
-        \vspace{-1.5em}
+    \end{frame}
+
+    \begin{frame}[fragile]{Монада \mintinline{haskell}|State|}
+        \begin{minted}{haskell}
+            newtype State s a = State { runState :: s -> (s, a) }
+        \end{minted}
+        \begin{itemize}
+            \item[\todo] Реализуйте \mintinline{haskell}|Functor| для \mintinline{haskell}|State|
+            \item[\todo] Реализуйте \mintinline{haskell}|Applicative| для \mintinline{haskell}|State|
+            \item[\todo] Реализуйте \mintinline{haskell}|Monad| для \mintinline{haskell}|State|
+            \item[\todo] Реализуйте следующий код с помощью монады \mintinline{haskell}|State|
+        \end{itemize}
+        \vspace{-1em}
         \begin{columns}[onlytextwidth]
             \begin{column}[t]{0.485\textwidth}
                 \begin{minted}{haskell}
-                    let (xs,    () ) = emptyList
-                        (xs',   () ) = cons 42 xs
-                        (xs'',  () ) = cons 4 xs'
-                        (xs''', res) = uncons xs''
+                    f :: Int -> Int -> (Int, ())
+                    f a st1 =
+                      let (st2, b) = g a st1 in
+                      let st3 = st2 + 1 in
+                      (st3, ())
                 \end{minted}
             \end{column}\hfill%
             \begin{column}[t]{0.485\textwidth}
+                \pause
                 \begin{minted}{haskell}
-                    do emptyList'
-                       cons' 42
-                       cons' 4
-                       uncons'
+                    f :: Int -> Int -> (Int, ())
+                    f x = runState do
+                      b <- g a
+                      st <- get
+                      put (st + 1)
+                    get :: State s s
+                    get = State \s -> (s, s)
+                    put :: s -> State s ()
+                    put s' = State \s -> (s', ())
                 \end{minted}
             \end{column}
         \end{columns}
     \end{frame}
 
+
     \sectionplan{Монада IO}
 
     \begin{frame}[fragile]{\mintinline{haskell}|IO| как \mintinline{haskell}|State|}
         \vspace{-0.5em}
-        \pause
         \begin{minted}{haskell}
             type IO a = State RealWorld a -- RealWorld -> (a, RealWorld)
         \end{minted}
@@ -241,7 +308,6 @@
 
     \begin{frame}[fragile]{Картинки}
         \vspace{-0.5em}
-        \pause
         \begin{center}
             \includegraphics[width=0.4\textwidth]{figs/io1}
 
@@ -253,7 +319,6 @@
 
     \begin{frame}[fragile]{Чистый язык и ``грязный'' runtime \popslide}
         \vspace{-0.5em}
-        \pause
         \begin{block}{Runtime}
             Два значения, нас интересует второе:
             \begin{itemize}
@@ -313,7 +378,7 @@
 
     \begin{frame}[fragile]{Что посмотреть в транспорте}
         \begin{itemize}
-            \item \href{https://youtu.be/qgfCmQ-2tW0?si=9OBcKAlmGovWzSLp}{\color{blue}  Keynote: Daniel Spiewak - The Case For Effect Systems}
+            \item \href{https://youtu.be/qgfCmQ-2tW0?si=9OBcKAlmGovWzSLp}{\color{blue} Keynote: Daniel Spiewak - The Case For Effect Systems}
             \item \href{https://youtu.be/M0Fe2SRTm5c?si=34lMmVWtRjPg9OYj}{\color{blue} John De Goes: One Monad to Rule Them All }
         \end{itemize}
     \end{frame}
@@ -321,8 +386,8 @@
     \begin{frame}[fragile]{Материалы}
         \begin{itemize}
             \item {\color{blue} \url{https://wiki.haskell.org/IO_inside}}
-            \item {\color{blue}Marlow, Simon. "Parallel and concurrent programming in Haskell." \textit{Central European Functional Programming School}. Berlin, Heidelberg: Springer Berlin Heidelberg, 2011. 339-401.}
             \item \href{https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=2e6c9d76f9cb690dc18019fc894ba9572a8c2812}{\color{blue} Jones, S.P., 2001. Tackling the awkward squad: monadic input/output, concurrency, exceptions, and foreign-language calls in Haskell. NATO SCIENCE SERIES SUB SERIES III COMPUTER AND SYSTEMS SCIENCES, 180, pp.47-96.}
+            \item {\color{blue}Marlow, Simon. "Parallel and concurrent programming in Haskell." \textit{Central European Functional Programming School}. Berlin, Heidelberg: Springer Berlin Heidelberg, 2011. 339-401.}
         \end{itemize}
     \end{frame}
 
