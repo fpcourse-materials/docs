@@ -14,7 +14,7 @@
 Программирование чистыми функциями считается хорошей практикой, так как этот стиль обладает большим количеством хороших свойств.
 Так, композиция чистых функций --- чистая функция; всё, что нужно для понимания кода, явно написано в этом коде; системы типов хорошо работают, предоставляя чистоту абстракции, документацию и частичную спецификацию.
 
-Однако, всё чистым кодом записать не получится, несмотря на все эти свойства и то, что даже ввод-вывод так можно описать~\cite{jones2001tackling}. % todo link to IO paper
+Однако, всё чистым кодом записать не получится, несмотря на все эти свойства и то, что даже ввод-вывод так можно описать~\cite{jones2001tackling}.
 % todo
 \begin{minted}{haskell}
     getList :: Int -> World -> (World, [Int])
@@ -40,7 +40,7 @@
 
 % todo
 
-TODO\footnote{\url{https://okmij.org/ftp/Computation/having-effect.html}} % todo
+TODO недетерминизм и matter of perspective\footnote{\url{https://okmij.org/ftp/Computation/having-effect.html}} % todo
 
 % todo semantic domains have monad structure
 
@@ -49,7 +49,9 @@ TODO\footnote{\url{https://okmij.org/ftp/Computation/having-effect.html}} % todo
 \vocab{Монада} --- это тройка $(m, \eta : a \to m a, \mu : m (m a) \to m a)$\footnote{\url{https://ncatlab.org/nlab/show/monad+(in+computer+science)}}.
 % todo diagrams
 
-TODO\cite{moggi1988computational, wadler1990comprehending}
+Монады для структурирования семантики~\cite{moggi1988computational}, монады как обобщение list comprehension~\cite{wadler1990comprehending}, monads to structure functional programs~\cite{wadler1992essence} % todo
+
+<<Computations of type $\alpha$ correspond to values of type $f\ap\alpha$>>, Moggi's principle. % todo
 
 % todo lalalang
 
@@ -86,7 +88,7 @@ TODO\cite{liang1995monad} % todo
 % todo reflection without remorse
 
 % todo C# expression trees
-% todo F# что-то про монады и forM
+% todo F# что-то про монады и forM https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/computation-expressions
 
 % todo https://blog.poisson.chat/posts/2019-10-27-continuation-submonads.htm
 
