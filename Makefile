@@ -131,6 +131,14 @@ sem14h:
 sem14p:
 	sh build-slides.sh 1 14 pause
 
+sem-fin: sem-fin-h sem-fin-p
+
+sem-fin-h:
+	sh build-slides.sh 1 fin handout
+
+sem-fin-p:
+	sh build-slides.sh 1 fin pause
+
 handouttrue:
 	echo "\handouttrue" > flags.tex
 

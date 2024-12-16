@@ -1,0 +1,84 @@
+%! suppress = EscapeHashOutsideCommand
+%! suppress = Quote
+%! suppress = MissingImport
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+
+\title[Эпилог]{Эпилог}
+\date{осень 2024}
+
+\begin{document}
+
+    \setcounter{framenumber}{-1}
+    \mymaketitle
+
+    \begin{frame}[fragile]{Зачёты и формальности}
+        \begin{block}{Зачёт}
+            \begin{itemize}
+                \item Дорешивание разобранных задач за полцены
+                \item Дорешивание неразобранных за полный балл\footnote{Не все указаны в табличке, приходите и напоминайте, что не разбирали.}
+                \item Если не хватит (что вряд ли) можно приходить за новыми задачками
+            \end{itemize}
+        \end{block}
+        \begin{block}{Экзамен}
+            \begin{itemize}
+                \item Определяет оценку за курс, для допуска нужен зачёт
+                \item Можно договариваться с ДН и с нами про консультации
+                \item Команде курса показывает, насколько у них что-то (не)получилось
+                \item Вам --- насколько вы усвоили материал + возможность привести всё в порядок
+                \item Кураторам --- сколько вам плотить деняк
+            \end{itemize}
+        \end{block}
+    \end{frame}
+
+    \begin{frame}[fragile]{Понравился Haskell, что дальше?}
+        \begin{itemize}
+            \item Материалы со слайдов
+            \item Виталий Брагилевский ``Haskell in depth''
+            \item Sandy Maguire ``Thinking with types: typelevel programming in Haskell''
+            \item Sandy Maguire ``Algebra Driven Design''
+            \item Simon Marlow ``Concurrent programming in Haskell''
+            \item Много (очень) пейперов!
+            \item Можно поискать стажировку и работу: \href{https://www.tweag.io/}{\color{blue}tweag.io}, \href{https://serokell.io/}{\color{blue}serokell}, \href{https://biocad.ru/}{\color{blue}biocad}, \href{https://sirius-courses.ru/}{\color{blue}Сириус.Курсы}\ldots
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}{Мне понравился курс, что со мной не так?}
+        Главное не паникуйте, вдох-выдох. Это почти нормально. Возможно, вы PL'щик и вам стоит пойти на трек языков программирования.
+
+        \vspace{1em}
+        Что там изучать? $\bullet$ Типы в языках программирования $\bullet$~Компиляторы $\bullet$ Программирование с зависимыми типами $\bullet$~Гомотопическая теория типов (HOTT) $\bullet$~Виртуальные машины $\bullet$~Метапрограммирование $\bullet$ Формальная верификация $\bullet$ Статический анализ $\bullet$ Семантика ЯПов $\bullet$ Теория категорий $\bullet$ \ldots
+
+        \vspace{1em}
+        Временами это удовольствие совсем на любителя. Но если ваше сердечко лежит к языкам, очень вероятно, что вы найдете в них местечко себе по вкусу.
+    \end{frame}
+
+    \begin{frame}[fragile]{Задачка}
+        \begin{center}
+            \begin{tabular}{c}
+                \onslide<2-> Вы ходили на пары \\
+                \onslide<2-> Задавали вопросы \\
+                \onslide<2-> Делали домашки \\
+                \onslide<2-> Запрашивали помощь \\
+                \onslide<2-> И помогали друг другу \\
+                \hline
+                \onslide<3-> А значит, вы большие молодцы $\heartsuit$
+            \end{tabular}
+        \end{center}
+    \end{frame}
+
+    \begin{frame}{}
+        \vspace{2em}
+        \pause
+        \begin{center}
+            \includegraphics[width=0.45\textwidth]{figs/iknowhaskell}
+        \end{center}
+    \end{frame}
+
+\end{document}

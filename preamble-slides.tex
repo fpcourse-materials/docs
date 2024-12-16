@@ -22,12 +22,12 @@
 % https://tikz.dev/tikz-graphs
 \usetikzlibrary{positioning, shapes.geometric, arrows, automata, graphs}
 \tikzset{
-    expr/.style={ellipse, draw=gray!60, fill=gray!5, very thick, minimum size=7mm, yshift=0.7cm},
-    hexpr/.style={ellipse, draw=gray!60, fill=blue!15, very thick, minimum size=7mm, yshift=0.7cm},
-    stmt/.style={rectangle, draw=gray!60, fill=gray!5, very thick, minimum size=5mm, yshift=0.7cm},
-    decl/.style={rectangle, draw=blue!60, fill=gray!5, very thick, minimum size=5mm, yshift=0.7cm},
-    hdecl/.style={rectangle, draw=blue!60, fill=blue!15, very thick, minimum size=5mm, yshift=0.7cm},
-    subtree/.style={shape border rotate=90, isosceles triangle, draw=gray!60, fill=gray!5, very thick, minimum size=5mm, yshift=0.0cm},
+expr/.style={ellipse, draw=gray!60, fill=gray!5, very thick, minimum size=7mm, yshift=0.7cm},
+hexpr/.style={ellipse, draw=gray!60, fill=blue!15, very thick, minimum size=7mm, yshift=0.7cm},
+stmt/.style={rectangle, draw=gray!60, fill=gray!5, very thick, minimum size=5mm, yshift=0.7cm},
+decl/.style={rectangle, draw=blue!60, fill=gray!5, very thick, minimum size=5mm, yshift=0.7cm},
+hdecl/.style={rectangle, draw=blue!60, fill=blue!15, very thick, minimum size=5mm, yshift=0.7cm},
+subtree/.style={shape border rotate=90, isosceles triangle, draw=gray!60, fill=gray!5, very thick, minimum size=5mm, yshift=0.0cm},
 }
 \usepackage{blkarray}
 \usepackage{graphicx}
@@ -115,16 +115,16 @@
 % Table of contents format
 % https://tex.stackexchange.com/questions/642927/format-table-of-contents-in-beamer
 \setbeamertemplate{section in toc}{%
-        {\color{blue}\inserttocsectionnumber.}
-    \inserttocsection\par%
+{\color{blue}\inserttocsectionnumber.}
+\inserttocsection\par%
 }
 \setbeamertemplate{subsection in toc}{%
-        {\color{blue}\hspace{1em}\scriptsize\raise1.25pt\hbox{\donotcoloroutermaths$\blacktriangleright$}}
-    \inserttocsubsection\par%
+{\color{blue}\hspace{1em}\scriptsize\raise1.25pt\hbox{\donotcoloroutermaths$\blacktriangleright$}}
+\inserttocsubsection\par%
 }
 \setbeamertemplate{subsubsection in toc}{%
-        {\color{blue}\hspace{2em}\tiny\raise1.25pt\hbox{\donotcoloroutermaths$\blacktriangleright$}}
-    \inserttocsubsubsection\par%
+{\color{blue}\hspace{2em}\tiny\raise1.25pt\hbox{\donotcoloroutermaths$\blacktriangleright$}}
+\inserttocsubsubsection\par%
 }
 % ------------------------------------------------
 
@@ -141,10 +141,10 @@
 \makeatletter
 \let\save@measuring@true\measuring@true
 \def\measuring@true{%
-    \save@measuring@true
-    \def\beamer@sortzero##1{\beamer@ifnextcharospec{\beamer@sortzeroread{##1}}{}}%
-    \def\beamer@sortzeroread##1<##2>{}%
-    \def\beamer@finalnospec{}%
+\save@measuring@true
+\def\beamer@sortzero##1{\beamer@ifnextcharospec{\beamer@sortzeroread{##1}}{}}%
+\def\beamer@sortzeroread##1<##2>{}%
+\def\beamer@finalnospec{}%
 }
 %! suppress = Makeatletter
 \makeatother
@@ -152,14 +152,14 @@
 
 % Sections
 \newcommand{\sectionplan}[1]{\section{#1}%
-    \begin{frame}[noframenumbering]{Содержание}
-        \tableofcontents[currentsection]
-    \end{frame}
+\begin{frame}[noframenumbering]{Содержание}
+\tableofcontents[currentsection]
+\end{frame}
 }
 \newcommand{\subsectionplan}[1]{\subsection{#1}%
-    \begin{frame}[noframenumbering]{Содержание}
-        \tableofcontents[currentsubsection]
-    \end{frame}
+\begin{frame}[noframenumbering]{Содержание}
+\tableofcontents[currentsubsection]
+\end{frame}
 }
 % ------------------------------------------------
 
@@ -185,12 +185,12 @@
 % https://tex.stackexchange.com/questions/70448/dont-count-backup-slides
 \usepackage{appendixnumberbeamer}
 \newcommand{\backupbegin}{
-    \newcounter{framenumbervorappendix}
-    \setcounter{framenumbervorappendix}{\value{framenumber}}
+\newcounter{framenumbervorappendix}
+\setcounter{framenumbervorappendix}{\value{framenumber}}
 }
 \newcommand{\backupend}{
-    \addtocounter{framenumbervorappendix}{-\value{framenumber}}
-    \addtocounter{framenumber}{\value{framenumbervorappendix}}
+\addtocounter{framenumbervorappendix}{-\value{framenumber}}
+\addtocounter{framenumber}{\value{framenumbervorappendix}}
 }
 % ------------------------------------------------
 
@@ -229,6 +229,15 @@
 \newcommand{\tlist}[1]{\term{[}#1\term{]}} % list-term
 % * Legacy
 %\newcommand{\err}[0]{\textcolor{red}{ошибка}} % compilation error
+
+\newcommand{\mymaketitle}{
+\setcounter{framenumber}{-1}
+\begingroup
+\setbeamertemplate{headline}{}
+\setbeamertemplate{footline}{}
+\maketitle
+\endgroup
+}
 
 % ------------------------------------------------
 
