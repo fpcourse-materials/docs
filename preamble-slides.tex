@@ -215,6 +215,9 @@ subtree/.style={shape border rotate=90, isosceles triangle, draw=gray!60, fill=g
 \NB[1][0.3]{N\kern-#1em{B}} % default kern amount: -0.3em
 \renewcommand{\emph}[1]{{\color{blue} \textit{#1}}}
 \newcommand{\vocab}[1]{\textbf{#1}} % item: important new word
+\newcommand{\sembr}[1]{\llbracket{#1}\rrbracket} % semantic brackets
+\newcommand{\funcExpr}[1]{\begingroup\color{blue}#1\endgroup}
+\newcommand{\predicate}[1]{\begingroup\color{red}#1\endgroup}
 % * Lambda calculi
 \newcommand{\comb}[1]{\mathbf{#1}} % defined combinator
 \newcommand{\term}[1]{\mathbf{#1}} % predefined lambda-term reference
