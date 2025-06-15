@@ -7,14 +7,14 @@ slides:
 	make sem-all
 	make clean-slides
 
-clean-slides:
+clean-meta:
 	rm -i --force flags.tex
 	rm -i --force *.aux *.log *.nav *.out
 	rm -i --force *.snm *.synctex.gz *.toc *.vrb *.pyg
 	rm -ri --force _minted*
 	rm -i --force *.synctex* *-pause.tex
 
-clean-all: clean-slides
+clean-all: clean-meta
 	rm -i --force *.pdf
 
 sem-all: sem14 sem13 sem12 sem11 sem10 sem9 sem8 sem7 sem6 sem5 sem4 sem3 sem2 sem1
