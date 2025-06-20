@@ -1,7 +1,8 @@
 В этой главе собраны некоторые общие знания о типах.
 
-Разделы~\ref{subsec:isomorphism}, ~\ref{subsec:type-algebra}, ~\ref{subsec:variance} в основном следуют~\cite[глава 1]{maguire-types}.
+Разделы~\ref{subsec:isomorphism}, ~\ref{subsec:cardinality}, ~\ref{subsec:type-algebra}, ~\ref{subsec:variance} в основном следуют~\cite[глава 1]{maguire-types}.
 С категорным взглядом на происходящее можно ознакомиться в~\cite{hinze2010reason}.
+Мы же будем придерживаться теоретико-множественной интерпретации типов.
 
 \subsection{Изоморфизм} \label{subsec:isomorphism}
 
@@ -10,7 +11,7 @@
 Но как выбрать тип?
 Для начала поймём, когда два типа взаимозаменимы, для этого рассмотрим понятия изоморфизма.
 
-Два типа \texttt{A} и \texttt{B} называются \vocab{изоморфными} (обозначают \texttt{A $\iso$ B}) тогда и только тогда, когда существует такая пара функций \texttt{to :: A -> B} и \texttt{from :: B -> A}, что\footnote{Под равенством термов можно понимать разное, например, $\alpha\beta\gamma$-эквивалентность. Мы будем пользоваться \vocab{экстенсиональным равенством}~--- две функции равны, когда равны их результаты на всех входах.} % todo link more
+Два типа \texttt{A} и \texttt{B} называются \vocab{изоморфными} (обозначают \texttt{A $\iso$ B}) тогда и только тогда, когда существует такая пара функций \texttt{to :: A -> B} и \texttt{from :: B -> A}, что\footnote{Под равенством термов можно понимать разное, например, $\alpha\beta\gamma$-эквивалентность. Мы будем пользоваться \vocab{экстенсиональным равенством}~--- две функции равны, когда равны их результаты на всех входах. \url{https://ncatlab.org/nlab/show/function+extensionality}}
 \begin{minted}{c}
     to . from = id
     from . to = id
@@ -73,32 +74,29 @@
 \end{itemize}
 
 Функциональную стрелку называют экспоненциальным типом.
-Действительно, количество обитателей \mintinline{haskell}|A -> B| вычисляется как \[|A \to B| = |B|^{|A|}\]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Действительно, комбинаторно количество обитателей \mintinline{haskell}|A -> B| вычисляется как \[|A \to B| = |B|^{|A|}\]
 
 \subsection{Алгебраическое представление типа} \label{subsec:type-algebra}
 
+Как мы увидели выше, чтобы показать наличие изоморфизма между двумя типами можно либо предъявить пару взаимообратных функций, либо показать, что кардинальности этих двух типов совпадают.
+В этом разделе мы научимся типу сопоставлять некоторую алгебраическую запись, отражающую его структуру и кардинальность.
+Так, мы сможем алгебраическими преобразованиями получать эквивалентные записи, из которых будем восстанавливать типы, заведомо изоморфные данному\footnote{\url{https://codewords.recurse.com/issues/three/algebra-and-calculus-of-algebraic-data-types}}.
 
 
 
 
-% todo algebraic data types are relations between data https://stanford-cs242.github.io/f18/lectures/02-2-algebraic-data-types.html
-% todo https://codewords.recurse.com/issues/three/algebra-and-calculus-of-algebraic-data-types
 
-\begin{figure}[h!]
+
+
+
+
+
+
+
+
+
+
+\begin{figure}[h]
     \centering
     \includegraphics[width=0.4\textwidth]{figs/school-alg}
     \caption{Законы школьной алгебры ностальгии ради~\cite{hinze2010reason}.}
