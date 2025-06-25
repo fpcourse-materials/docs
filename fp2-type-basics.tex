@@ -1,10 +1,8 @@
 В этой главе собраны некоторые общие знания о типах.
 
-Разделы~\ref{subsec:variance}, ~\ref{subsec:isomorphism}, ~\ref{subsec:cardinality}, ~\ref{subsec:type-algebra} в основном следуют~\cite[глава 1]{maguire-types}.
-С категорным взглядом на происходящее можно ознакомиться в~\cite{hinze2010reason}.
-Мы же будем придерживаться теоретико-множественной интерпретации типов.
+Разделы~\ref{subsec:variance}, ~\ref{subsec:isomorphism} в основном следуют~\cite[глава 1]{maguire-types}.
 
-\subsection{Полярности и вариантность} \label{subsec:variance}
+\subsection{Полярности и вариантность} \label{subsec:variance} % todo
 
 В этом параграфе мы будем рассматривать тему с точки зрения программирования~\cite[глава 3]{maguire-types}, не отдавая должного теории категорий.
 Восполнить пробел можно с помощью замечательной статьи, написанной в жанре пьесы~\cite{hinze2012functional}.
@@ -36,7 +34,7 @@
 \end{figure}
 
 Типовой конструктор можно объявить ковариантным или контравариантным функтором (или никаким из них) относительно типового параметра в зависимости от вида декларации соответствующих конструкторов данных.
-А именно, от \vocab{полярности}\footnote{\url{https://existentialtype.wordpress.com/2012/08/25/polarity-in-type-theory/}}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}} позиций, в которых входит этот типовой параметр в декларации.
+А именно, от \vocab{полярности}\footnote{\url{https://existentialtype.wordpress.com/2012/08/25/polarity-in-type-theory/}}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}} позиций, в которых входит этот типовой параметр.
 
 Попробуем развить интуитивное понимание полярностей.
 Рассмотрим некоторое вычисление типа \texttt{F a}.
@@ -108,6 +106,9 @@
 
 \subsection{Изоморфизм} \label{subsec:isomorphism}
 
+Мы будем придерживаться теоретико-множественной интерпретации типов.
+С категорным взглядом на происходящее можно ознакомиться в~\cite{hinze2010reason}.
+
 Пусть нам нужно спроектировать функцию или модель данных.
 Мы начинаем с декларации типа, как её выбрать и из каких вариантов?
 Для начала поймём, когда два типа взаимозаменимы, для этого рассмотрим понятия изоморфизма.
@@ -134,7 +135,7 @@
 Несмотря на смысловую взаимозаменимость, для кодирования информации о том, передал ли пользователь программе определённый флаг, мы, скорее всего, воспользуемся типом \mintinline{haskell}|Bool| ввиду нефункциональных соображений о читабельности кода.
 Аналогично можно рассматривать соображения эффективности.
 
-\subsection{Кардинальность: суммы, произведения, экспоненты} \label{subsec:cardinality}
+\subsubsection{Кардинальность: суммы, произведения, экспоненты} \label{subsubsec:cardinality}
 
 Типы можно воспринимать как синтаксис для записи множеств, а населяющие их термы~--- как синтаксические записи элементов этих множеств.
 Так терм \mintinline{haskell}|(True, False)|~--- запись элемента множества пар, записываемого в синтаксисе типов как \mintinline{haskell}|(Bool, Bool)| (вместо математического $\mathbb{B}\times\mathbb{B}$).
@@ -148,11 +149,11 @@
 \begin{center}
     \begin{tabular}{|l|c|}
         \hline
-        Тип и его декларация & кардинальность \\
+        Тип и его декларация                                                                                                                                                                            & кардинальность \\
         \hline
-        \mintinline{haskell}{data Void} & $0$ \\
+        \mintinline{haskell}{data Void}                                                                                                                                                                 & $0$            \\
         \mintinline{haskell}{data Unit = Unit}\footnote{\mintinline{haskell}|Unit| записывается в Haskell с помощью специального синтаксиса \mintinline{haskell}|()|, означающем как бы пустой кортеж.} & $1$ \\
-        \mintinline{haskell}{data Bool = False | True} & $2$ \\
+        \mintinline{haskell}{data Bool = False | True}                                                                                                                                                  & $2$            \\
         \hline
     \end{tabular}
 \end{center}
@@ -161,10 +162,10 @@
 \begin{center}
     \begin{tabular}{|l|c|}
         \hline
-        Тип & кардинальность \\
+        Тип                                                      & кардинальность   \\
         \hline
-        \mintinline{haskell}{data Either a b = Left a | Right b} & $|a| + |b|$ \\
-        \mintinline{haskell}{data Pair a b = Pair a b} & $|a| \times |b|$ \\
+        \mintinline{haskell}{data Either a b = Left a | Right b} & $|a| + |b|$      \\
+        \mintinline{haskell}{data Pair a b = Pair a b}           & $|a| \times |b|$ \\
         \hline
     \end{tabular}
 \end{center}
@@ -189,7 +190,7 @@
 
 Прежде чем работать с некоторым объектом предметной области, информацию о нём, в соответствии со вторым правилом, следует привести в максимально структурное представление, дающее наибольшее количество гарантий\footnote{\url{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}}.
 
-\subsection{Алгебраическое представление типа} \label{subsec:type-algebra}
+\subsubsection{Алгебраическое представление типа} \label{subsubsec:type-algebra}
 
 Как мы увидели выше, чтобы показать наличие изоморфизма между двумя типами можно либо предъявить пару взаимообратных функций, либо показать, что кардинальности этих двух типов совпадают.
 В этом разделе мы научимся сопоставлять типу некоторую алгебраическую запись, отражающую его структуру и кардинальность.
@@ -199,15 +200,15 @@
 \begin{center}
     \begin{tabular}{|p{0.5\textwidth}|c|}
         \hline
-        Тип & алгебраическая формула \\
+        Тип                                                      & алгебраическая формула      \\
         \hline
-        \mintinline{haskell}{data Void} & $0$ \\
-        \mintinline{haskell}{data Unit = Unit} & $1$ \\
-        \mintinline{haskell}{data Bool = False | True} & $1 + 1$ (обозначим как $2$) \\
-        \mintinline{haskell}{data Maybe a = Nothing | Just a} & $1 + a$ \\
-        \mintinline{haskell}{data Either a b = Left a | Right b} & $a + b$ \\
-        \mintinline{haskell}{data Pair a b = Pair a b} & $a \times b$ \\
-        \mintinline{haskell}{a -> b} & $b^a$ \\
+        \mintinline{haskell}{data Void}                          & $0$                         \\
+        \mintinline{haskell}{data Unit = Unit}                   & $1$                         \\
+        \mintinline{haskell}{data Bool = False | True}           & $1 + 1$ (обозначим как $2$) \\
+        \mintinline{haskell}{data Maybe a = Nothing | Just a}    & $1 + a$                     \\
+        \mintinline{haskell}{data Either a b = Left a | Right b} & $a + b$                     \\
+        \mintinline{haskell}{data Pair a b = Pair a b}           & $a \times b$                \\
+        \mintinline{haskell}{a -> b}                             & $b^a$                       \\
         \hline
     \end{tabular}
 \end{center}
