@@ -71,6 +71,8 @@
 
 \subsection{Continuation-passing style (CPS)}
 
+% todo higher-order CPS
+
 Базовым способом получить в программе продолжение первого класса --- написать программу в CPS.
 CPS эксплуатирует следующий изоморфизм:
 \begin{minted}{haskell}
@@ -327,7 +329,7 @@ CPS эксплицирует продолжения, иначе они были 
 Необычно то, что классические операторы ограниченных продолжений принимают код, работающий с частичным продолжением в месте ``кидания исключения'', а не в месте ``поимки''.
 То есть блок обработки пишется не с \mintinline{kotlin}|catch|, а с \mintinline{kotlin}|throw|:
 
-\begin{gather*}
+\begin{gather*}ч
     E_1[withSubCont \ap p \ap \{E_2[pushSubCont \ap f]\}] \to E_1[f \ap E_2]
     \\
     E_1[catch\{E_2[throw \ap v], f\}] \to E_1[f \ap v \ap (\lambda x\ldotp E_2[x])]

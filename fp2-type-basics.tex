@@ -1,142 +1,8 @@
 В этой главе собраны некоторые общие знания о типах.
 
-Разделы~\ref{subsec:isomorphism}, ~\ref{subsec:cardinality}, ~\ref{subsec:type-algebra}, ~\ref{subsec:variance} в основном следуют~\cite[глава 1]{maguire-types}.
+Разделы~\ref{subsec:variance}, ~\ref{subsec:isomorphism}, ~\ref{subsec:cardinality}, ~\ref{subsec:type-algebra} в основном следуют~\cite[глава 1]{maguire-types}.
 С категорным взглядом на происходящее можно ознакомиться в~\cite{hinze2010reason}.
 Мы же будем придерживаться теоретико-множественной интерпретации типов.
-
-\subsection{Изоморфизм} \label{subsec:isomorphism}
-
-Пусть нам нужно спроектировать функцию.
-Мы начинаем с записи типа, как первой аппроксимации нужной семантики.
-Но как выбрать тип?
-Для начала поймём, когда два типа взаимозаменимы, для этого рассмотрим понятия изоморфизма.
-
-Два типа \texttt{A} и \texttt{B} называются \vocab{изоморфными} (обозначают \texttt{A $\iso$ B}) тогда и только тогда, когда существует такая пара функций \texttt{to :: A -> B} и \texttt{from :: B -> A}, что\footnote{Под равенством термов можно понимать разное, например, $\alpha\beta\gamma$-эквивалентность. Мы будем пользоваться \vocab{экстенсиональным равенством} для функций~--- две функции равны, когда равны их результаты на всех входах. \url{https://ncatlab.org/nlab/show/function+extensionality}}
-\begin{minted}{c}
-    to . from = id
-    from . to = id
-\end{minted}
-
-Иначе говоря, между обитателями таких типов можно установить взаимно-однозначное соответствие.
-Легко понять, что со смысловой точки зрения не принципиально, какой из изоморфных типов использовать --- их можно заменять друг на друга добавляя вызовы функций перехода.
-Такие два типа заключают в себе одинаковое ``количество информации''.
-Например, типы \mintinline{haskell}|Bool| и \mintinline{haskell}|Maybe ()| в этом смысле совершенно взаимозаменимы.
-Покажем это, предъявив пару взаимообратных функций\footnote{Нужно не забыть показать взаимообратность функций, но это делается тривиально перебором входов (может быть с помощью индукции) и редукцией.}:
-\begin{minted}{haskell}
-    to :: Bool -> Maybe ()
-    to b = if b then Just () else Nothing
-
-    from :: Maybe () -> Bool
-    from m = case m of Nothing -> False; Just () -> True
-\end{minted}
-
-Несмотря на смысловую взаимозаменимость, для кодирования информации о том, передал ли пользователь программе определённый флаг, мы, скорее всего, воспользуемся типом \mintinline{haskell}|Bool| ввиду нефункциональных соображений о читабельности кода.
-Аналогично можно рассматривать соображения эффективности.
-
-\subsection{Кардинальность: суммы, произведения, экспоненты} \label{subsec:cardinality}
-
-Типы можно воспринимать как синтаксис для записи множеств, а населяющие их термы~--- как синтаксические записи элементов этих множеств.
-Так терм \mintinline{haskell}|(True, False)|~--- запись элемента множества пар, записываемого в синтаксисе типов как \mintinline{haskell}|(Bool, Bool)| (вместо математического $\mathbb{B}\times\mathbb{B}$).
-Или же терм \mintinline{haskell}|\x -> x + 1| является записью функции прибавляющей единицу из множества функций над целыми числами, записываемого как \mintinline{haskell}|Integer -> Integer| (вместо математического $\mathbb{Z}\to\mathbb{Z}$).
-
-Заметим, что два типа изоморфны, если соответствующие им множества имеют одинаковое количество элементов.
-Более того, таких изоморфизмов $n!$ в случае конечности множеств.
-Научимся определять количество таких элементов.
-С помощью $|\cdot|$ будем записывать \vocab{кардинальность} типа~--- количество элементов в соответствующем множестве.
-
-Рассмотрим следующие типы:
-\begin{minted}{haskell}
-    data Void
-    data Unit = Unit -- Вместо Unit в Haskell пишут ().
-    data Bool = False | True
-\end{minted}
-
-Количество элементов в этих типах очевидно:
-\begin{itemize}
-    \item $|Void| = 0$ --- тип не населён.
-    \item $|Unit| = 1$ --- один одноимённый обитатель.
-    \item $|Bool| = 2$ --- очевидно, два терма.
-\end{itemize}
-
-Идея алгебраических типов данных в том, что сложные типы можно строить из простых с помощью операции $+$ (``или'') и операции $\times$ (``и'')\footnote{\url{https://stanford-cs242.github.io/f18/lectures/02-2-algebraic-data-types.html}}.
-Рассмотрим следующие декларации:
-\begin{minted}{haskell}
-    data Example = FirstAlternative Bool | AnotherOne Unit Bool Bool
-    data Either a b = Left a | Right b
-    data Pair a b = Pair a b
-\end{minted}
-
-Посчитаем количество обитателей различных типов:
-\begin{itemize}
-    \item $|Example| = |Bool| + |Unit| \times |Bool| \times |Bool| = 2 + 1 \times 2 \times 2 = 6$ --- вы можете убедиться в справедливости заключения перебрав все термы типа \mintinline{haskell}|Example| вручную.
-    \item $|Either \ap Unit\ap (Eigher \ap Bool\ap Bool)| = |Unit| + (|Bool| + |Bool|) = 5$.
-    \item $|Pair\ap (Either\ap Bool\ap Unit)\ap (Pair\ap Unit\ap Void)| = (|Bool| + |Unit|) \times (|Unit| \times |Void|) = 0$ ~--- тип \mintinline{haskell}|Void| не населён, как и кортеж, его включающий.
-\end{itemize}
-
-Функциональную стрелку называют экспоненциальным типом.
-Действительно, комбинаторно количество обитателей \mintinline{haskell}|A -> B| вычисляется как \[|A \to B| = |B|^{|A|}\]
-
-\subsection{Алгебраическое представление типа} \label{subsec:type-algebra}
-
-Как мы увидели выше, чтобы показать наличие изоморфизма между двумя типами можно либо предъявить пару взаимообратных функций, либо показать, что кардинальности этих двух типов совпадают.
-В этом разделе мы научимся типу сопоставлять некоторую алгебраическую запись, отражающую его структуру и кардинальность.
-Так, мы сможем алгебраическими преобразованиями получать эквивалентные записи, из которых будем восстанавливать типы, заведомо изоморфные данному\footnote{\url{https://codewords.recurse.com/issues/three/algebra-and-calculus-of-algebraic-data-types}}.
-
-Рассмотрим построение алгебраической записи по структуре типа:
-\begin{itemize}
-    \item \mintinline{haskell}|Unit| записывается как $1$.
-    \item \mintinline{haskell}|Bool| записываем как $1 + 1$ (рассматриваем как размеченное объединение двух \mintinline{haskell}|Unit|'ов).
-    \item Используем удобные обозначения $2 \equiv 1 + 1, 3 \equiv 1 + 1 + 1$ и т.д.
-    \item В целом суммы записываем через значок $+$: для \mintinline{haskell}|Either a b| записываем $a + b$.
-    \item Для произведений используем значок $\times$: для \mintinline{haskell}|(a, b)| записываем $a \times b$.
-    \item Для экспонент используем возведение в степень: для \mintinline{haskell}|a -> b| записываем $b^a$.
-\end{itemize}
-
-Рассмотрим немного примеров:
-\begin{itemize}
-    \item \mintinline{haskell}|Int8| записываем $256$.
-    \item \mintinline{haskell}|Maybe a| записываем $1 + a$.
-    \item \mintinline{haskell}|(Bool, Either Bool a)| записываем $2 \times (2 + a)$.
-    \item \mintinline{haskell}|(a, b) -> c| записываем $c^{a\times b}$.
-\end{itemize}
-
-\begin{task}
-    Запишите в алгебраическом виде следующий тип:
-    \begin{minted}{haskell}
-        data T a b = Undefined | Defined a (a -> b)
-    \end{minted}
-\end{task}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.4\textwidth]{figs/school-alg}
-    \caption{Законы школьной алгебры ностальгии ради~\cite{hinze2010reason}.}
-    \label{fig:school-alg}
-\end{figure}
-
-% todo isomorphismы и кардинальности
-% todo reason isomorphically
-% todo connection with cardinalities
-
-
-
-% todo каноническое представление типа
-
-TODO % todo
 
 \subsection{Полярности и вариантность} \label{subsec:variance}
 
@@ -239,6 +105,164 @@ TODO % todo
 \begin{task}
     Убедитесь в вашем любимом языке с поддержкой вариантности, что минус на минус даёт плюс.
 \end{task}
+
+\subsection{Изоморфизм} \label{subsec:isomorphism}
+
+Пусть нам нужно спроектировать функцию или модель данных.
+Мы начинаем с декларации типа, как её выбрать и из каких вариантов?
+Для начала поймём, когда два типа взаимозаменимы, для этого рассмотрим понятия изоморфизма.
+
+Два типа \texttt{A} и \texttt{B} называются \vocab{изоморфными} (обозначают \texttt{A $\iso$ B}) тогда и только тогда, когда существует такая пара функций \texttt{to :: A -> B} и \texttt{from :: B -> A}, что\footnote{Под равенством термов можно понимать разное, например, $\alpha\beta\gamma$-эквивалентность. Мы будем пользоваться \vocab{экстенсиональным равенством} для функций~--- две функции равны, когда равны их результаты на всех входах. \url{https://ncatlab.org/nlab/show/function+extensionality}}
+\begin{minted}{c}
+    to . from = id
+    from . to = id
+\end{minted}
+
+Иначе говоря, между обитателями таких типов можно установить взаимно-однозначное соответствие.
+Легко понять, что со смысловой точки зрения не принципиально, какой из изоморфных типов использовать --- их можно заменять друг на друга добавляя вызовы функций перехода.
+Такие два типа заключают в себе одинаковое ``количество информации''.
+Например, типы \mintinline{haskell}|Bool| и \mintinline{haskell}|Maybe ()| в этом смысле совершенно взаимозаменимы.
+Покажем это, предъявив пару взаимообратных функций\footnote{Нужно не забыть показать взаимообратность функций, но это делается тривиально перебором входов (может быть с помощью индукции) и редукцией.}:
+\begin{minted}{haskell}
+    to :: Bool -> Maybe ()
+    to b = if b then Just () else Nothing
+
+    from :: Maybe () -> Bool
+    from m = case m of Nothing -> False; Just () -> True
+\end{minted}
+
+Несмотря на смысловую взаимозаменимость, для кодирования информации о том, передал ли пользователь программе определённый флаг, мы, скорее всего, воспользуемся типом \mintinline{haskell}|Bool| ввиду нефункциональных соображений о читабельности кода.
+Аналогично можно рассматривать соображения эффективности.
+
+\subsection{Кардинальность: суммы, произведения, экспоненты} \label{subsec:cardinality}
+
+Типы можно воспринимать как синтаксис для записи множеств, а населяющие их термы~--- как синтаксические записи элементов этих множеств.
+Так терм \mintinline{haskell}|(True, False)|~--- запись элемента множества пар, записываемого в синтаксисе типов как \mintinline{haskell}|(Bool, Bool)| (вместо математического $\mathbb{B}\times\mathbb{B}$).
+Или же терм \mintinline{haskell}|\x -> x + 1| является записью функции прибавляющей единицу из множества функций над целыми числами, записываемого как \mintinline{haskell}|Integer -> Integer| (вместо математического $\mathbb{Z}\to\mathbb{Z}$).
+
+Заметим, что два типа изоморфны, если соответствующие им множества имеют одинаковое количество элементов.
+Более того, таких изоморфизмов $n!$ в случае конечности множеств.
+Научимся определять количество таких элементов.
+С помощью $|\cdot|$ будем записывать \vocab{кардинальность} типа~--- количество элементов в соответствующем множестве.
+
+\begin{center}
+    \begin{tabular}{|l|c|}
+        \hline
+        Тип и его декларация & кардинальность \\
+        \hline
+        \mintinline{haskell}{data Void} & $0$ \\
+        \mintinline{haskell}{data Unit = Unit}\footnote{\mintinline{haskell}|Unit| записывается в Haskell с помощью специального синтаксиса \mintinline{haskell}|()|, означающем как бы пустой кортеж.} & $1$ \\
+        \mintinline{haskell}{data Bool = False | True} & $2$ \\
+        \hline
+    \end{tabular}
+\end{center}
+
+Идея алгебраических типов данных в том, что сложные типы можно строить из простых с помощью операции $+$ (``или'') и операции $\times$ (``и'')\footnote{\url{https://stanford-cs242.github.io/f18/lectures/02-2-algebraic-data-types.html}}:
+\begin{center}
+    \begin{tabular}{|l|c|}
+        \hline
+        Тип & кардинальность \\
+        \hline
+        \mintinline{haskell}{data Either a b = Left a | Right b} & $|a| + |b|$ \\
+        \mintinline{haskell}{data Pair a b = Pair a b} & $|a| \times |b|$ \\
+        \hline
+    \end{tabular}
+\end{center}
+
+Посчитаем количество обитателей различных типов (вы можете убедиться в справедливости заключения перебрав все термы вручную):
+\begin{itemize}
+    \item \mintinline{haskell}{|Either Unit (Eigher Bool Bool)| = |Unit| + (|Bool| + |Bool|) = 5}.
+    \item \mintinline{haskell}{Pair (Either Bool Unit) (Pair Unit Void)| = 0} ~--- тип \mintinline{haskell}|Void| не населён, как и кортеж, его включающий.
+    \item Если \mintinline{haskell}{data Example = FirstAlternative Bool | AnotherOne Unit Bool Bool}, то \\\mintinline{haskell}{|Example| = |Bool| + |Unit| * |Bool| * |Bool| = 2 + 1 * 2 * 2 = 6}.
+\end{itemize}
+
+Функциональную стрелку называют экспоненциальным типом.
+Действительно, комбинаторно количество обитателей \mintinline{haskell}|A -> B| вычисляется как \[|A \to B| = |B|^{|A|}\]
+
+Так как проектировать типы?
+Тому есть несколько соображений:
+\begin{itemize}
+    \item В типе должно быть не меньше элементов, чем в предметной области, все необходимые объекты были представимы.
+    \item В типе должно быть как можно меньше элементов, которых нет в предметной области, чтобы пространство ошибок было минимальным.
+    \item Далее среди изоморфных типов выбирается оптимальный исходя из функциональных и нефункциональных требований.
+\end{itemize}
+
+Прежде чем работать с некоторым объектом предметной области, информацию о нём, в соответствии со вторым правилом, следует привести в максимально структурное представление, дающее наибольшее количество гарантий\footnote{\url{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}}.
+
+\subsection{Алгебраическое представление типа} \label{subsec:type-algebra}
+
+Как мы увидели выше, чтобы показать наличие изоморфизма между двумя типами можно либо предъявить пару взаимообратных функций, либо показать, что кардинальности этих двух типов совпадают.
+В этом разделе мы научимся сопоставлять типу некоторую алгебраическую запись, отражающую его структуру и кардинальность.
+Так, мы сможем синтаксическими преобразованиями формул получать эквивалентные записи, из которых будем восстанавливать типы, заведомо изоморфные данному\footnote{\url{https://codewords.recurse.com/issues/three/algebra-and-calculus-of-algebraic-data-types}}.
+
+В основу алгебраического представления положим вычисление кардинальности типов:
+\begin{center}
+    \begin{tabular}{|p{0.5\textwidth}|c|}
+        \hline
+        Тип & алгебраическая формула \\
+        \hline
+        \mintinline{haskell}{data Void} & $0$ \\
+        \mintinline{haskell}{data Unit = Unit} & $1$ \\
+        \mintinline{haskell}{data Bool = False | True} & $1 + 1$ (обозначим как $2$) \\
+        \mintinline{haskell}{data Maybe a = Nothing | Just a} & $1 + a$ \\
+        \mintinline{haskell}{data Either a b = Left a | Right b} & $a + b$ \\
+        \mintinline{haskell}{data Pair a b = Pair a b} & $a \times b$ \\
+        \mintinline{haskell}{a -> b} & $b^a$ \\
+        \hline
+    \end{tabular}
+\end{center}
+
+\begin{task}
+    Запишите в алгебраическом виде следующий тип:
+    \begin{minted}{haskell}
+        data T a b = Undefined | Defined a (a -> b)
+    \end{minted}
+\end{task}
+
+В качестве отношения эквивалентности, будем использовать изоморфизм соответствующих типов.
+В такой интерпретации, классические свойства операций сохраняются (рис.~\ref{fig:school-alg}).
+Действительно, например:
+\begin{minted}{haskell}
+    -- ?$(c^b)^a \iso c^{a\times b}$?
+    to :: (a -> b -> c) -> (a, b) -> c
+    to = uncurry
+    from :: ((a, b) -> c) -> a -> b -> c
+    from = curry
+\end{minted}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.4\textwidth]{figs/school-alg}
+    \caption{Законы школьной алгебры ностальгии ради~\cite{hinze2010reason}.}
+    \label{fig:school-alg}
+\end{figure}
+
+\begin{task}
+    Покажите, что $(a + b) + c \iso a + (b + c)$.
+\end{task}
+
+\begin{task}
+    Покажите, что $c^{a + b} \iso c^a\times c^b$.
+\end{task}
+
+Интересным наблюдением может быть то, что функции можно использовать как структуры данных, в соответствие с изоморфизмом $c^{a + b} \iso c^a\times c^b$.
+Действительно, в таком случае аргумент функции выступает индексом (его кардинальность должна совпадать с размером коллекции).
+Это очень важный изоморфизм, мы к нему вернёмся, чтобы проложить путь к tagless-final интерпретаторам и коданным в главе~\ref{sec:wonder-interpreters}.
+\begin{minted}{haskell}
+    -- ?$a \times a \iso a^2$?
+    get :: (a, a) -> (Bool -> a)
+    get (x, y) idx = if idx then x else y
+    tabulate :: (Bool -> a) -> (a, a)
+    tabulate f = (f True, f False)
+\end{minted}
+
+\vocab{Каноническим предствлением типа (canonical representaion)} называют сумму произведений типов:
+\[
+    \sum_{i}\prod_{j} t_{ij}
+\]
+Каноническое представление является своего рода нормальной формой, в которой можно записывать алгебраические типы (любой алгебраический тип можно по правилам привести к ней).
+Легко узнать в нём вид \mintinline{haskell}{data} деклараций в Haskell.
+В дальнейшем мы воспользуемся каноническим представлением для обобщённой работы с типами (глава.~\ref{sec:datatype-generic}).
 
 \subsection{Рекурсивные типы и схемы} \label{subsec:recursive-types}
 
