@@ -984,3 +984,50 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 \end{minted}
 
 % todo record fields, OverloadedLabels, scope resolve via overloading
+
+% todo
+%Далеко не во всех языках есть полиморфизм высших кайндов, но иногда он нужен.
+%Например, если мы хотим объявить абстрактный тип \mintinline{haskell}|Monad|.
+%Заметим, что тип кайнда \mintinline{haskell}|Type -> Type| --- это функция на типах, принимающая один тип, и возвращающая другой.
+%Соответственно, функция, абстрагированная по такому типу~--- функция высшего порядка, в некотором смысле.
+%Но мы уже знаем технику избавления от них --- дефункцинализация~\cite{defunctionalization-slides, yallop2014lightweight}.
+%Рассмотрим пример на языке Kotlin.
+%
+%Будем представлять типовую аппликацию в виде отдельного типа \mintinline{kotlin}|Apply<Sym, T>|.
+%Установим изоморфизм между \mintinline{kotlin}|List<T>| и \mintinline{kotlin}|Apply<ListSym, T>|:
+%\begin{minted}{kotlin}
+%    class Apply<Sym, T>(val value: Any)
+%    object ListSym
+%
+%    fun <T> List<T>.to(): Apply<ListSym, T> = Apply(this)
+%    fun <T> Apply<ListSym, T>.from(): List<T> = this.value as List<T>
+%\end{minted}
+%
+%Теперь мы можем объявить интерфейс монад и задать реализацию для списка с помощью синглтона (реализации классов типов подробнее см.~\ref{subsubsec:tc-dict}):
+%\begin{minted}{kotlin}
+%    interface Monad<M> {
+%        fun <T> pure(x: T): Apply<M, T>
+%        infix fun <T, R> Apply<M, T>.bind(k: (T) -> Apply<M, R>): Apply<M, R>
+%    }
+%
+%    object ListMonad : Monad<ListSym> {
+%        override fun <T> pure(x: T): Apply<ListSym, T> = listOf(x).to()
+%        override fun <T, R> Apply<ListSym, T>.
+%                bind(k: (T) -> Apply<ListSym, R>): Apply<ListSym, R> =
+%            this.from().flatMap { k(it).from() }.to()
+%    }
+%\end{minted}
+%
+%И наконец мы можем писать функции над произвольными монадами:
+%\begin{minted}{haskell}
+%    fun <M> Monad<M>.go(x: Apply<M, Int>): Apply<M, Int> =
+%        x bind { pure(it + 1) } bind { pure(it + 2) }
+%
+%    fun test(xs: List<Int>): List<Int> = ListMonad.go(xs.to()).from()
+%\end{minted}
+%
+%Не лишним будет отметить, что результирующий код выглядит несколько чудовищно.
+%Скорее всего, использование этой техники не окупает себя и нужно выбирать другой стиль программирования.
+%Однако иметь этот инструмент в ящике не будет лишним.
+
+% todo equality constraint и всё что через него выражается
