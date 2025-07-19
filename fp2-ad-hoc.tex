@@ -600,368 +600,371 @@ Haskell предоставляет явный синтаксис для объя
     type Constraint = CONSTRAINT LiftedRep
 \end{minted}
 
-%\subsection{Использование классов типов}
-%
-%Часто языки, имеющие что-то напоминающее классы типов, стремятся выразить через них как можно больше других языковых возможностей (в частности, язык Rust этим активно пользуется).
-%К тому же, классы типов являются ядром реализации многих инструментов и техник.
-%Рассмотрим в этом параграфе некоторые избранные примеры.
-%
-%\subsubsection{Сериализация}
-%
-%Классическим примером использования классов типов является сериализация.
-%Проблема в том, что десериализация производится, когда самого объекта ещё нет (ущербный Java подход заполнения объекта дефолтными значениями с последующей мутацией мы не рассматриваем).
-%Поэтому нет возможности написать ООП интерфейс Serializable.
-%
-%Стандартная библиотека сериализации в Kotlin\footnote{\url{https://github.com/Kotlin/kotlinx.serialization}} предоставляет сущность \mintinline{kotlin}|KSerializer|, которая является интерфейсом для отдельного объекта-сериализатора нашего типа (для эффективности тут используется CPS в виде потоков событий encoder и decoder, вернёмся к этому подходу далее):
-%\begin{minted}{kotlin}
-%    interface KSerializer<T> {
-%        fun serialize(encoder: Encoder, value: T)
-%        fun deserialize(decoder: Decoder): T
-%    }
-%\end{minted}
-%
-%Очевидно, чтобы сконструировать сериализатор полиморфного типа, нужны сериализаторы типов-параметров.
-%Что уже отчётливо напоминает классы типов.
-%\begin{minted}{kotlin}
-%    class PairSerializer(
-%        keySerializer: KSerializer<K>,
-%        valueSerializer: KSerializer<V>,
-%    ): KSerializer<Pair<K, V>> { ... }
-%\end{minted}
-%
-%Однако в Kotlin нет классов типов, а значит создавать сериализаторы придётся вручную.
-%С этим, однако несколько помогает пачка технологий: \mintinline{kotlin}|inline fun|, \mintinline{kotlin}|reified| дженерики, рефлексия и компиляторный плагин библиотеки, который, однако не безопасен с точки зрения типов.
-%
-%\subsubsection{Экзистенциальные типы} \label{subsubsec:existentials}
-%
-%Можно задать тип данных с полиморфным конструктором и мономорфным типом.
-%С его помощью можно, например, заполнить гомогенную коллекцию гетерогенными элементами.
-%\begin{minted}{haskell}
-%    data Any where
-%      Any :: forall a . a -> Any  -- (exists a . a) -> Any
-%
-%    list :: [Any]
-%    list = [Any 42, Any "Hello", Any (Just Nothing)]
-%\end{minted}
-%
-%В месте деконструирования \mintinline{haskell}|Any|, будет доступно значение некоторого неизвестного типа.
-%Очевидно, с таким значением ничего сделать нельзя.
-%Однако, помимо значения, можно положить в структуру данных свидетельство о том, что этот неизвестный тип удовлетворяет некоторому классу типов.
-%Подобно fat pointers в Rust.
-%\begin{minted}{haskell}
-%    data Has (c :: Type -> Constraint) where
-%      Has :: c a => a -> Has c
-%\end{minted}
-%
-%Значение типа \mintinline{haskell}|Has| свидетельствует о том, что существует некоторый населённый тип \texttt{a}, который принадлежит определённому классу типов.
-%Например, рассмотрим \mintinline{haskell}|Show|:
-%\begin{minted}{haskell}
-%    showAll :: [Has Show] -> String
-%    showAll = List.intercalate "," . map \(Has x) -> show x
-%\end{minted}
-%
-%В общем случае, чтобы элиминировать такой тип данных нужны типы высших рангов:
-%\begin{minted}{haskell}
-%    foldHas :: Has c -> (forall a . c a => a -> b) -> b
-%    foldHas (Has x) k = k x
-%\end{minted}
-%
-%Подробнее можно посмотреть в~\cite[глава 7]{maguire-types}.
-%
-%\subsubsection{Коерции и роли} \label{subsubsec:coercions}
-%
-%Haskell имеет поддержку \vocab{generative type abstractions} в виде \mintinline{haskell}|newtype| деклараций.
-%Эта техника позволяет задавать доменно-специфичные типы, которые во время исполнения не отличимы от оборачиваемых типов, но позволяют различать их.
-%Так, мы можем ввести обёртки для чисел, которые в предметной области представляют собой идентификаторы различных сущностей.
-%Теперь система типов не даст их перепутать.
-%\begin{minted}{haskell}
-%    newtype ModuleId = ModuleId Int64
-%    newtype CourceId = CourceId Int64
-%\end{minted}
-%
-%Существует крайне недооценённая практика программирования\footnote{\url{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}}, когда у нас в программе есть чёткая граница, на которой происходит парсинг данных из внешнего мира.
-%После этой стадии сырые неструктурированные данные обогащаются структурой и принимают смысл внутри предметной области.
-%Либо же мы отвергаем эти данные как некорректные.
-%В оставшейся же части программы мы уже пользуемся типизированными данными, свойства которых уже установлены и гарантированы.
-%Например, мы можем быть уверены, что число \mintinline{haskell}|ModuleId| строго больше нуля.
-%
-%Однако, если у нас есть коллекция обёрнутых данных, а мы хотим с ней поработать как с коллекцией сырых, то нам придётся трансформировать коллекцию, несмотря на то, что эта трансформация ничего не делает.
-%Оптимизатор Haskell не справится её элиминировать, потому что работает с типизированным промежуточным представлением и не сможет избавиться от преобразования, меняющего тип.
-%\begin{minted}{haskell}
-%    newtype [Html] = Html { unHtml :: String }
-%
-%    linesH :: Html -> [Html]
-%    linesH = map Html . lines . ?\framebox{map}? unHtml
-%\end{minted}
-%
-%Поэтому в Haskell есть механизм безопасных коерций между типами, у которых одинаковое представление во время исполнения.
-%Это реализовано с помощью магического класса типов \mintinline{haskell}|Coercible|.
-%Его имплементирует компилятор автоматически (см.~\ref{fig:coersions}).
-%\begin{minted}{haskell}
-%    class Coercible from to where
-%      coerce :: from -> to
-%\end{minted}
-%
-%\begin{figure}[h]
-%    \centering
-%    \includegraphics[width=\linewidth]{figs/coersions}
-%    \caption{Принципы построения инстансов \mintinline{haskell}|Coercible|~\cite{breitner2014safe}.}
-%    \label{fig:coersions}
-%\end{figure}
-%
-%Теперь, можем избавиться от лишней трансформации списка:
-%\begin{minted}{haskell}
-%    linesH :: Html -> [Html]
-%    linesH = coerce lines
-%\end{minted}
-%
-%Безопасность коерций обеспечивает \vocab{система ролей}.
-%Каждый типовой параметр имеет специальное свойство --- роль.
-%
-%Роль phantom имеют фантомные типовые параметры.
-%Их можно свободно коерсить (нет пререквизитов для инстансов \mintinline{haskell}|Coercible|):
-%\begin{minted}{haskell}
-%    data Phantom h = Phantom
-%    data NestedPhantom b = MkNP [Phantom b] | SomethingElse
-%
-%    instance Coercible (Phantom a) (Phantom b)
-%    instance Coercible (NestedPhantom a) (NestedPhantom b)
-%\end{minted}
-%
-%Типовой параметр имеет роль representational, если типовой конструктор можно коерсить только при условии, что можно коерсить аргументы:
-%\begin{minted}{haskell}
-%    data Maybe a = Nothing | Just a
-%    instance Coerce a b => Coerce (Maybe a) (Maybe b)
-%\end{minted}
-%
-%Роль nominal имеет типовой параметр, если типовой конструктор можно коерсить только при условии, что аргументы эквивалентны.
-%Это требуется, если типовой аргумент индексирует семейство или констреинт.
-%\begin{minted}{haskell}
-%    type family F a
-%    data Applied a = Applied (F a)
-%    instance (a ?$\sim$? b) => Coercible (Applied a) (Applied b)
-%
-%    data ShowDict a where
-%      ShowDict :: Show a => a -> ShowDict a
-%    instance (a ?$\sim$? b) => Coercible (ShowDict a) (ShowDict b)
-%\end{minted}
-%
-%Иногда компилятор выводит неправильную роль типовому параметру.
-%Например, если инварианты структуры зависят на конкретную имплементацию какого-то класса типов для типового аргумента, что совершенно не видно в декларации самого типа.
-%В таком случае, роли можно указать явно:
-%\begin{minted}{haskell}
-%    type role Map nominal representational
-%    data Map k v = ...
-%\end{minted}
-%
-%Подробнее можно прочитать в~\cite{breitner2014safe} и~\cite[глава 8]{maguire-types}.
-%
-%\subsubsection{Type reflection}
-%
-%Рефлексия --- это языковой механизм получения информации о типах во время исполнения (на уровне термов).
-%Звучит знакомо, и действительно, Haskell реализует этот механизм через классы типов~\cite{peyton2016reflection}.
-%
-%Библиотека предоставляет магический класс типов \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/Type-Reflection.html}{\mintinline{haskell}|Typeable|}, который реализуется компилятором для каждого конкретного типа.
-%Чтобы получить информацию о типе, в скоупе должен быть инстанс \mintinline{haskell}|Typeable| для этого типа.
-%Структура типа представлена типом-суммы \href{https://hackage.haskell.org/package/ghc-internal-9.1001.0/docs/src/GHC.Internal.Data.Typeable.Internal.html#TypeRep}{\mintinline{haskell}|TypeRep|}, который предоставляет возможность дополнительного типового контроля с помощью обобщённых алгебраических типов данных и типовых тегов.
-%\begin{minted}{haskell}
-%    class Typeable a where
-%      typeRep :: TypeRep a
-%\end{minted}
-%
-%Например, следующим образом можно получить имя конструктора типа:
-%\begin{minted}{haskell}
-%    typeName :: forall a. Typeable a => String
-%    typeName = tyConName $ typeRepTyCon $ typeRep $ Proxy @a
-%
-%    ghci> typeName @Int
-%\end{minted}
-%
-%\begin{task}
-%    Объявите класс типов, который позволяет распечатать список типов.
-%\end{task}
-%
-%С помощью структуры представления типа и экзистенциальных типов в Haskell можно эмулировать динамическую типизацию.
-%А именно: любой тип может быть преобразован в \href{}{\mintinline{haskell}|Dynamic|}, а потом безопасно преобразован обратно.
-%\begin{minted}{haskell}
-%    data Dynamic where
-%      Dynamic :: Typeable a => a -> Dynamic
-%
-%    fromDynamic :: Typeable a => Dynamic -> Maybe a
-%\end{minted}
-%
-%Это может быть полезно для определения гетерогенного хранилища ключ-значение:
-%\begin{minted}{haskell}
-%    data Store = Map Key Dynamic
-%    data Ref ty = Ref Key
-%    get :: Store -> Ref ty -> ty
-%\end{minted}
-%
-%\subsubsection{Data reflection}
-%
-%Как мы обсуждали ранее, в свойство когерентности гарантирует, что каждому типу в Haskell соответствует ровно один инстанс определённого класса типов.
-%И единственный способ объявить инстанс в Haskell --- декларацией на верхнем уровне, то есть он не может зависеть ни от каких локальных данных.
-%Однако в Haskell есть библиотека \href{https://hackage.haskell.org/package/reflection-2.1.6/docs/Data-Reflection.html}{Data.Reflection}\footnote{\url{https://www.tweag.io/blog/2017-12-21-reflection-tutorial/}}, которая позволяет создавать локальные инстансы для свежих, чёрной магией\footnote{\url{https://www.schoolofhaskell.com/user/thoughtpolice/using-reflection}} сгенерированных, типов.
-%
-%Она пользуется идеей ``поднятия значений в типы'', обсуждённой нами ранее (см.~\ref{subsubsec:reify}), но в несколько более общем виде.
-%Вместо заведения классов типов вида \mintinline{haskell}|Known_|, вводится один класс типов, индексированный типом термов \texttt{terms}, которые спускаются из типов:
-%\begin{minted}{haskell}
-%    class Reifies ty terms | ty -> terms where
-%      reflect :: Proxy ty -> terms
-%\end{minted}
-%
-%Также библиотека умеет сгенерировать свежий тип и инстанс \mintinline{haskell}|Reifies|, который по этому свежему типу возвращает данное значение типа \texttt{a}.
-%Поскольку он передаётся в функцию высшего ранга, свежий тип не может утечь из скоупа~\cite[7.2, ST trick]{maguire-types}:
-%\begin{minted}{haskell}
-%    reify :: a -> (forall fresh . Reifies fresh a => Proxy fresh -> res) -> res
-%\end{minted}
-%
-%Чтобы воспользоваться нестандартным инстансом класса типов для некого типа \texttt{a}, нужно объявить новый тип (например, с помощью \mintinline{haskell}|newtype|), содержащий данный, и написать для него нужный инстанс (см, например, \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/Data-Ord.html#t:Down}{Down}).
-%Мы не хотим объявлять по новой декларации для каждого случая, поэтому заведём обёртку, похожую на \href{https://hackage.haskell.org/package/tagged-0.8.8/docs/Data-Tagged.html}{Data.Tagged}, которая позволяет добавлять фантомный типовой тег к типу значения.
-%Варьируя тег, можно получить сколь угодно много типов, оборачивающих данный.
-%\begin{minted}{haskell}
-%    newtype Wrapped tag a = Wrapped { unwrap :: a }
-%\end{minted}
-%
-%Объявим тип обёртки \mintinline{haskell}|Wrapped tag a| представителем нужного класса типов.
-%Код для реализации будем с помощью \texttt{reflect} получать по типу тега в виде честного словаря.
-%\begin{minted}{haskell}
-%    data ReifiedOrd a = ReifiedOrd { compare :: a -> a -> Ordering }
-%
-%    instance Reflect tag (ReifiedOrd a) => Ord (Wrapped tag a) where
-%      compare = coerce $ compare $ reflect $ Proxy @tag
-%\end{minted}
-%
-%Наконец, можем вызвать функцию сортировки, подменив локально порядок на обратный:
-%\begin{minted}{haskell}
-%    sort :: Ord a => [a] -> [a]
-%
-%    sortReverse :: forall a . Ord a => [a] -> [a]
-%    sortReverse xs =
-%      let dict = ReifiedOrd { compare = flip compare } in
-%      reify dict \(Proxy :: Proxy fresh) ->
-%        coerce $ sort @(Wrapped fresh a) $ coerce xs
-%\end{minted}
-%
-%\subsubsection{Открытые структуры}
-%
-%В динамических языках можно создавать объекты на ходу, последовательно дописывая в них содержимое, и не вводя предварительно декларацию.
-%В Haskell тоже так можно, используя пары для произведений и \mintinline{haskell}|Either| для сумм.
-%Однако у такой реализации есть два недостатка.
-%Первый --- эффективность, о более эффективных реализациях можно почитать в~\cite[глава 11]{maguire-types}.
-%
-%Другой недостаток --- не очень гибкая типизация.
-%А именно --- порядок полей имеет значение и на типах в Haskell нет отношения подтипизации (например, нельзя передать значение с меньшим количеством полей или вариантов).
-%Но можно заметить, что констреинты лишены этих недостатков.
-%Поэтому можно организовывать тип структуры данных, например, таким образом:
-%\begin{minted}{haskell}
-%    (Int, Double) ?$\rightsquigarrow$? (Member Int d, Member Double d) => Prod d
-%\end{minted}
-%
-%Далее мы вернёмся снова к открытым суммам, потому что они являются важной частью типизации расширяемых интерпретаторов~\cite{swierstra2008data}.
-%
-%\subsubsection{Исключения и открытая иерархия}
-%
-%Важный аспект работы с ошибками --- многие из них обрабатываются единообразно.
-%Таким образом, ошибки должны образовывать иерархию наподобие той, которая в ООП языках получается с помощью наследования, чтобы иметь возможность реагировать сразу на группу ошибок одним кодом.
-%Так, возникает задача моделирования подобной иерархии в Haskell.
-%
-%Более того, статически-типизированные ошибки это активная область исследований, будем говорить об этом в рамках систем эффектов.
-%Классические исключения же динамически типизированные.
-%Особенно хорошо этот вариант подходит для ошибок программиста, которые по-хорошему не должны обрабатываться в программе кроме как закрытием ресурсов.
-%
-%Поддержка исключений присутствует в системе исполнения Haskell как простого и привычного способа обработки исключительных ситуаций: ошибок программиста, исполнения неполного паттерн-матчинга, асинхронных системных сигналов~\cite{marlow2001asynchronous}\ldots
-%Исключения динамически типизированные и образуют иерархию~\cite{marlow2006extensible}.
-%Если породить исключение может и чистый код, так как $\bot$, по семантике Haskell, населяет любой (lifted) тип, то поймать исключение можно только\footnote{\href{https://stackoverflow.com/questions/3642793/why-can-haskell-exceptions-only-be-caught-inside-the-io-monad}{(stackoverflow) Why can Haskell exceptions only be caught inside the IO monad?}} в \mintinline{haskell}|IO|~\cite{jones2001tackling}, используя специальные примитивы языка.
-%
-%Чтобы сделать тип исключением, нужно объявить инстанс \mintinline{haskell}|Exception| для него:
-%\begin{minted}{haskell}
-%    class (Typeable a, Show a) => Exception a where
-%      toException :: a -> SomeException
-%      toException = SomeException
-%
-%      fromException :: SomeException -> Maybe a
-%      fromException (SomeExcetion e) = cast e
-%\end{minted}
-%Где \mintinline{haskell}|SomeException| --- это экзистенциальная обёртка наподобие \mintinline{haskell}|Dynamic|, в которую заворачивается конкретный тип исключения.
-%Ловя \mintinline{haskell}|SomeException|, можно поймать любое исключение (\mintinline{haskell}|cast| всегда сработает).
-%\begin{minted}{haskell}
-%    data SomeException where
-%      SomeException :: Exception a => a -> SomeException
-%
-%    instance Exception SomeException
-%\end{minted}
-%
-%Система исполнения Haskell предоставляет интринсики для кидания и ловли исключений, обернём их для поддержки любого \mintinline{haskell}|Exception| типа:
-%\begin{minted}{haskell}
-%    throw :: Exception e => e -> a
-%    throw = primThrow (toException e)
-%
-%    catch :: Exception e => IO a -> (e -> IO a) -> IO a
-%    catch io handler = io `primCatch` \e -> case fromException e of
-%      Nothing -> throw e
-%      Just e' -> handler e'
-%
-%    ghci> throw "error" `catch` (e :: String) -> putStrLn e
-%\end{minted}
-%
-%В простейшем случае свой тип исключения можно реализовать в две строчки.
-%Чтобы его поймать, нужно либо ловить сам этот тип, либо \mintinline{haskell}|SomeException|, потому что для них обоих \mintinline{haskell}|fromException| на объекте вида \mintinline{haskell}|SomeException MyError| вернёт \mintinline{haskell}|Just|.
-%\begin{minted}{haskell}
-%    data MyError = MyError deriving (Show, Typeable)
-%    instance Exception MyError
-%\end{minted}
-%
-%Добавим исключение \mintinline{haskell}|ArithException| и ещё один более общий тип исключений между ним и \mintinline{haskell}|SomeException| --- \mintinline{haskell}|SomeArithException| (таким образом, будет три способа поймать \mintinline{haskell}|ArithException|).
-%Для этого сделаем \mintinline{haskell}|SomeArithException| экзистенциальной обёрткой, а каждое исключение типа \mintinline{haskell}|ArithException| будем автоматически оборачивать в неё.
-%В \mintinline{haskell}|fromException| на каждом уровне вложенности будем пытаться получить оборачивающий конструктор рекурсивным вызовом.
-%
-%\begin{minted}{haskell}
-%    data SomeArithException where
-%      SomeArithException :: Exception a => a -> SomeArithException
-%
-%    -- SomeException - базовый (реализация по умолчанию)
-%    instance Exception ArithException
-%
-%    data DivisionByZero = DivisionByZero deriving Show
-%    instance Exception DivisionByZero where
-%      toException = toException . SomeArithException
-%      fromException e = do
-%        SomeArithException e' <- fromException e
-%        cast e'
-%\end{minted}
-%
-%Так, во время бросания \mintinline{haskell}|DivisionByZero| будет конструироваться объект вида:
-%\begin{minted}{haskell}
-%    SomeException (SomeArithException DivisionByZero)
-%\end{minted}
-%Реализация \mintinline{haskell}|fromException| для конкретного типа умеет убедиться в наличии соответствующего конструктора в результирующем объекте исключения.
-%
-%\subsubsection{Легковесные частичные стек-трейсы}
-%
-%Забавной эксплуатацией классов типов в Haskell являются легковесные частичные стек-трейсы\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/callstack.html}}.
-%Вообще для сбора трейсов нужна поддержка рантайма, что в случае Haskell усложняется ещё и тем, что модель вычислений, редукция графов, реальных трейсов не содержит и их приходится эмулировать.
-%Для легковесных трейсов же не требуется поддержка рантайма.
-%
-%В GHC определён класс типов \mintinline{haskell}|GHC.Stack.HasCallStack|, позволяющий получить информацию о месте вызова функции.
-%Эту информацию фактически размещает компилятор в процессе вывода инстансов.
-%Если в месте вызова доступна информация с уровня выше, компилятор распространяет её дальше.
-%Таким образом, доступна информация только на определённую глубину стека вызовов.
-%\begin{minted}{haskell}
-%    myHead :: HasCallStack => [a] -> a
-%    myHead []     = error "empty"
-%    myHead (x:xs) = x
-%
-%    bad :: Int
-%    bad = myHead []
-%
-%    ghci> bad
-%    *** Exception: empty
-%    CallStack (from HasCallStack):
-%      error, called at Bad.hs:8:15 in main:Bad
-%      myHead, called at Bad.hs:12:7 in main:Bad
-%      -- no information about bad call site here
-%\end{minted}
+\subsection{Использование классов типов}
+
+Часто языки, имеющие что-то напоминающее классы типов, стремятся выразить через них как можно больше других языковых возможностей и полезных техник.
+Оказывается, это на удивление мощный механизм.
+Рассмотрим в этом параграфе некоторые избранные примеры.
+
+\subsubsection{Сериализация}
+
+Классическим примером использования классов типов является сериализация.
+Проблема в том, что десериализация производится, когда самого объекта ещё нет (ущербный Java подход заполнения объекта дефолтными значениями с последующей мутацией мы не рассматриваем).
+Поэтому нет возможности написать ООП интерфейс Serializable.
+
+Стандартная библиотека сериализации в Kotlin\footnote{\url{https://github.com/Kotlin/kotlinx.serialization}} предоставляет сущность \mintinline{kotlin}|KSerializer|, которая является интерфейсом для отдельного объекта-сериализатора нашего типа (для эффективности тут используется CPS в виде потоков событий encoder и decoder, вернёмся к этому подходу далее): % todo ref
+\begin{minted}{kotlin}
+    interface KSerializer<T> {
+        fun serialize(encoder: Encoder, value: T)
+        fun deserialize(decoder: Decoder): T
+    }
+\end{minted}
+
+Очевидно, чтобы сконструировать сериализатор полиморфного типа, нужны сериализаторы типов-параметров.
+Что уже отчётливо напоминает классы типов.
+\begin{minted}{kotlin}
+    class PairSerializer(
+        keySerializer: KSerializer<K>,
+        valueSerializer: KSerializer<V>,
+    ): KSerializer<Pair<K, V>> { ... }
+\end{minted}
+
+Однако в Kotlin нет классов типов, а значит создавать сериализаторы придётся вручную.
+С этим, однако несколько помогает пачка технологий: \mintinline{kotlin}|inline fun|, \mintinline{kotlin}|reified| дженерики, рефлексия и компиляторный плагин библиотеки, который, однако не безопасен с точки зрения типов.
+
+\subsubsection{Экзистенциальные типы} \label{subsubsec:existentials}
+
+Можно задать тип данных с полиморфным конструктором и мономорфным типом.
+С его помощью можно, например, заполнить гомогенную коллекцию гетерогенными элементами.
+\begin{minted}{haskell}
+    data Any where
+      Any :: forall a . a -> Any  -- логически эквивалентно (exists a . a) -> Any
+
+    list :: [Any]
+    list = [Any 42, Any "Hello", Any (Just Nothing)]
+\end{minted}
+
+В месте деконструирования \mintinline{haskell}|Any|, будет доступно значение некоторого неизвестного типа.
+Очевидно, с таким значением ничего сделать нельзя.
+Однако, помимо значения, можно положить в структуру данных свидетельство о том, что этот неизвестный тип удовлетворяет некоторому классу типов.
+Подобно fat pointers в Rust.
+\begin{minted}{haskell}
+    data Has (c :: Type -> Constraint) where
+      Has :: c a => a -> Has c
+\end{minted}
+
+Значение типа \mintinline{haskell}|Has| свидетельствует о том, что существует некоторый населённый тип \texttt{a}, который принадлежит определённому классу типов.
+Например, рассмотрим \mintinline{haskell}|Show|:
+\begin{minted}{haskell}
+    showAll :: [Has Show] -> String
+    showAll = List.intercalate "," . map \(Has x) -> show x
+\end{minted}
+
+В общем случае, чтобы элиминировать такой тип данных нужны типы высших рангов:
+\begin{minted}{haskell}
+    foldHas :: Has c -> (forall a . c a => a -> b) -> b
+    foldHas (Has x) k = k x
+\end{minted}
+
+Подробнее можно посмотреть в~\cite[глава 7]{maguire-types}.
+
+\subsubsection{Коерции и роли} \label{subsubsec:coercions}
+
+Haskell имеет поддержку \vocab{generative type abstractions} в виде \mintinline{haskell}|newtype| деклараций.
+Эта техника позволяет задавать доменно-специфичные типы, которые во время исполнения не отличимы от оборачиваемых типов, но позволяют различать их.
+Так, мы можем ввести обёртки для чисел, которые в предметной области представляют собой идентификаторы различных сущностей.
+Теперь система типов не даст их перепутать.
+\begin{minted}{haskell}
+    newtype ModuleId = ModuleId Int64
+    newtype CourceId = CourceId Int64
+\end{minted}
+
+Существует крайне недооценённая практика программирования\footnote{\url{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}}, когда у нас в программе есть чёткая граница, на которой происходит парсинг данных из внешнего мира.
+После неё сырые неструктурированные данные обогащаются структурой и принимают смысл внутри предметной области.
+Либо же мы отвергаем эти данные как некорректные.
+В оставшейся же части программы мы уже пользуемся типизированными данными, свойства которых уже установлены и гарантированы.
+Например, мы можем быть уверены, что число \mintinline{haskell}|ModuleId| строго больше нуля.
+
+Однако, если у нас есть коллекция обёрнутых данных, а мы хотим с ней поработать как с коллекцией сырых, то нам придётся трансформировать коллекцию, несмотря на то, что эта трансформация ничего не делает.
+Оптимизатор Haskell не справится её элиминировать, потому что работает с типизированным промежуточным представлением и не сможет избавиться от преобразования, меняющего тип.
+\begin{minted}{haskell}
+    newtype [Html] = Html { unHtml :: String }
+
+    linesH :: Html -> [Html]
+    linesH = map Html . lines . ?\framebox{map}? unHtml
+\end{minted}
+
+Поэтому в Haskell есть механизм безопасных коерций между типами, у которых одинаковое представление во время исполнения.
+Это реализовано с помощью магического класса типов \mintinline{haskell}|Coercible|.
+Его имплементирует компилятор автоматически (см.~\ref{fig:coersions}).
+\begin{minted}{haskell}
+    class Coercible from to where
+      coerce :: from -> to
+\end{minted}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figs/coersions}
+    \caption{Принципы построения инстансов \mintinline{haskell}|Coercible|~\cite{breitner2014safe}.}
+    \label{fig:coersions}
+\end{figure}
+
+Теперь, можем избавиться от лишней трансформации списка:
+\begin{minted}{haskell}
+    linesH :: Html -> [Html]
+    linesH = coerce lines
+\end{minted}
+
+Безопасность коерций обеспечивает \vocab{система ролей}.
+Каждый типовой параметр имеет специальное свойство --- роль.
+
+Роль phantom имеют фантомные типовые параметры.
+Их можно свободно коерсить (нет пререквизитов для инстансов \mintinline{haskell}|Coercible|):
+\begin{minted}{haskell}
+    data Phantom h = Phantom
+    data NestedPhantom b = MkNP [Phantom b] | SomethingElse
+
+    instance Coercible (Phantom a) (Phantom b)
+    instance Coercible (NestedPhantom a) (NestedPhantom b)
+\end{minted}
+
+Типовой параметр имеет роль representational, если типовой конструктор можно коерсить только при условии, что можно коерсить аргументы:
+\begin{minted}{haskell}
+    data Maybe a = Nothing | Just a
+    instance Coerce a b => Coerce (Maybe a) (Maybe b)
+\end{minted}
+
+Роль nominal имеет типовой параметр, если типовой конструктор можно коерсить только при условии, что аргументы эквивалентны.
+Это требуется, если типовой аргумент индексирует семейство или констреинт.
+\begin{minted}{haskell}
+    type family F a
+    data Applied a = Applied (F a)
+    instance (a ?$\sim$? b) => Coercible (Applied a) (Applied b)
+
+    data ShowDict a where
+      ShowDict :: Show a => a -> ShowDict a
+    instance (a ?$\sim$? b) => Coercible (ShowDict a) (ShowDict b)
+\end{minted}
+
+Иногда компилятор выводит неправильную роль типовому параметру.
+Например, если инварианты структуры зависят на конкретную имплементацию какого-то класса типов для типового аргумента, что совершенно не видно в декларации самого типа.
+В таком случае, роли можно указать явно:
+\begin{minted}{haskell}
+    type role Map nominal representational
+    data Map k v = ...
+\end{minted}
+
+Подробнее можно прочитать в~\cite{breitner2014safe} и~\cite[глава 8]{maguire-types}.
+
+% todo про value types
+
+\subsubsection{Type reflection} \label{subsubsec:type-reflection}
+
+Рефлексия --- это языковой механизм получения информации о типах во время исполнения (на уровне термов).
+Звучит знакомо, и действительно, Haskell реализует этот механизм через классы типов~\cite{peyton2016reflection}.
+
+Библиотека предоставляет магический класс типов \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/Type-Reflection.html}{\mintinline{haskell}|Typeable|}, который реализуется компилятором для каждого конкретного типа.
+Чтобы получить информацию о типе, в скоупе должен быть инстанс \mintinline{haskell}|Typeable| для этого типа.
+Структура типа представлена типом-суммы \href{https://hackage.haskell.org/package/ghc-internal-9.1001.0/docs/src/GHC.Internal.Data.Typeable.Internal.html#TypeRep}{\mintinline{haskell}|TypeRep|}, который предоставляет возможность дополнительного типового контроля с помощью обобщённых алгебраических типов данных и типовых тегов.
+\begin{minted}{haskell}
+    class Typeable a where
+      typeRep :: TypeRep a
+\end{minted}
+
+Например, следующим образом можно получить имя конструктора типа:
+\begin{minted}{haskell}
+    typeName :: forall a. Typeable a => String
+    typeName = tyConName $ typeRepTyCon $ typeRep $ Proxy @a
+
+    ghci> typeName @Int
+\end{minted}
+
+\begin{task}
+    Объявите класс типов, который позволяет распечатать список типов.
+\end{task}
+
+С помощью структуры представления типа и экзистенциальных типов в Haskell можно эмулировать динамическую типизацию.
+А именно: любой тип может быть преобразован в \href{}{\mintinline{haskell}|Dynamic|}, а потом безопасно преобразован обратно.
+\begin{minted}{haskell}
+    data Dynamic where
+      Dynamic :: Typeable a => a -> Dynamic
+
+    fromDynamic :: Typeable a => Dynamic -> Maybe a
+\end{minted}
+
+Это может быть полезно, например, для определения гетерогенного хранилища ключ-значение:
+\begin{minted}{haskell}
+    data Store = Map Key Dynamic
+    data Ref ty = Ref Key
+    get :: Store -> Ref ty -> Maybe ty
+\end{minted}
+
+% todo deriving typeable
+
+\subsubsection{Data reflection} \label{subsubsec:data-reflection}
+
+Как мы обсуждали ранее, в свойство когерентности гарантирует, что каждому типу в Haskell соответствует ровно один инстанс определённого класса типов.
+И единственный способ объявить инстанс в Haskell --- декларацией на верхнем уровне, то есть он не может зависеть ни от каких локальных данных.
+Однако в Haskell есть библиотека \href{https://hackage.haskell.org/package/reflection-2.1.6/docs/Data-Reflection.html}{Data.Reflection}\footnote{\url{https://www.tweag.io/blog/2017-12-21-reflection-tutorial/}}, которая позволяет создавать локальные инстансы для свежих, чёрной магией\footnote{\url{https://www.schoolofhaskell.com/user/thoughtpolice/using-reflection}} сгенерированных, типов.
+
+Она пользуется идеей ``поднятия значений в типы'', обсуждённой нами ранее (см.~\ref{subsubsec:reify}), но в несколько более общем виде.
+Вместо заведения классов типов вида \mintinline{haskell}|Known_|, вводится один класс типов, индексированный типом термов \texttt{terms}, которые спускаются из типов:
+\begin{minted}{haskell}
+    class Reifies ty terms | ty -> terms where
+      reflect :: Proxy ty -> terms
+\end{minted}
+
+Также, с помощью следующей функции, библиотека позволяет сгенерировать свежий тип и инстанс \mintinline{haskell}|Reifies|, который по этому свежему типу возвращает данное значение типа \texttt{a} (переданное первым аргументом).
+Поскольку он передаётся в функцию высшего ранга, свежий тип не может утечь из скоупа~\cite[7.2, ST trick]{maguire-types}:
+\begin{minted}{haskell}
+    reify :: a -> (forall fresh . Reifies fresh a => Proxy fresh -> res) -> res
+\end{minted}
+
+Чтобы воспользоваться нестандартным инстансом класса типов для некого типа \texttt{a}, нужно объявить новый тип (например, с помощью \mintinline{haskell}|newtype|), содержащий данный, и написать для него нужный инстанс (см, например, \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/Data-Ord.html#t:Down}{Down}).
+Мы не хотим объявлять по новой декларации для каждого случая, поэтому заведём обёртку, похожую на \href{https://hackage.haskell.org/package/tagged-0.8.8/docs/Data-Tagged.html}{Data.Tagged}, которая позволяет добавлять фантомный типовой тег к типу значения.
+Варьируя тег, можно получить сколь угодно много типов, оборачивающих данный.
+\begin{minted}{haskell}
+    newtype Wrapped tag a = Wrapped { unwrap :: a }
+\end{minted}
+
+Объявим тип обёртки \mintinline{haskell}|Wrapped tag a| представителем нужного класса типов.
+Код для реализации будем с помощью \texttt{reflect} получать по типу тега в виде честного словаря.
+\begin{minted}{haskell}
+    data ReifiedOrd a = ReifiedOrd { compare :: a -> a -> Ordering }
+
+    instance Reifies tag (ReifiedOrd a) => Ord (Wrapped tag a) where
+      compare = coerce $ compare $ reflect $ Proxy @tag
+\end{minted}
+
+Наконец, можем вызвать функцию сортировки, подменив локально порядок на обратный:
+\begin{minted}{haskell}
+    sort :: Ord a => [a] -> [a]
+
+    sortReverse :: forall a . Ord a => [a] -> [a]
+    sortReverse xs =
+      let dict = ReifiedOrd { compare = flip compare } in
+      reify dict \(Proxy :: Proxy fresh) ->
+        coerce $ sort @(Wrapped fresh a) $ coerce xs
+\end{minted}
+
+\subsubsection{Открытые структуры}
+
+В динамических языках можно создавать объекты на ходу, последовательно дописывая в них содержимое, и не вводя предварительно декларацию.
+В Haskell тоже так можно, используя пары для произведений и \mintinline{haskell}|Either| для сумм.
+Например, можно добавить новое поле, создав новую пару: \mintinline{haskell}{(oldObj, newField)}.
+
+Однако, такая реализация не оптимальна как с точки зрения эффективности (о более эффективных реализациях можно почитать в~\cite[глава 11]{maguire-types}), так и с точки зрения удобства использования.
+А именно --- порядок полей имеет значение и на типах в Haskell нет отношения подтипизации (например, нельзя передать значение с меньшим количеством полей или вариантов).
+Но можно заметить, что констреинты лишены этих недостатков.
+Поэтому можно организовывать тип структуры данных, например, таким образом:
+\begin{minted}{haskell}
+    (Int, Double) ?заменяем на? (Member Int d, Member Double d) => Prod d
+\end{minted}
+
+Далее мы вернёмся снова к открытым суммам, потому что они являются важной частью типизации расширяемых интерпретаторов~\cite{swierstra2008data}. % todo ref
+
+\subsubsection{Исключения и открытая иерархия}
+
+Важный аспект работы с ошибками заключается в том, что многие из них обрабатываются единообразно.
+Таким образом, ошибки должны образовывать иерархию наподобие той, которая в ООП языках получается с помощью наследования, чтобы иметь возможность реагировать сразу на группу ошибок одним кодом.
+Так, возникает задача моделирования подобной иерархии в Haskell.
+
+Более того, статически типизированные ошибки это активная область исследований, будем говорить об этом в рамках систем эффектов. % todo ref
+Классические исключения же динамически типизированные.
+Особенно хорошо этот вариант подходит для ошибок программиста, которые по-хорошему не должны обрабатываться в программе кроме как закрытием ресурсов. % todo citations
+
+Поддержка исключений присутствует в системе исполнения Haskell как простого и привычного способа обработки исключительных ситуаций: ошибок программиста, исполнения неполного паттерн-матчинга, асинхронных системных сигналов~\cite{marlow2001asynchronous}\ldots
+Исключения динамически типизированные и образуют иерархию~\cite{marlow2006extensible}.
+Если породить исключение может и чистый код, так как $\bot$, по семантике Haskell, населяет любой (lifted) тип, то поймать исключение можно только\footnote{\href{https://stackoverflow.com/questions/3642793/why-can-haskell-exceptions-only-be-caught-inside-the-io-monad}{(stackoverflow) Why can Haskell exceptions only be caught inside the IO monad?}} в \mintinline{haskell}|IO|~\cite{jones2001tackling}, используя специальные примитивы языка.
+
+Чтобы сделать тип исключением, нужно объявить инстанс \mintinline{haskell}|Exception| для него:
+\begin{minted}{haskell}
+    class (Typeable a, Show a) => Exception a where
+      toException :: a -> SomeException
+      toException = SomeException
+
+      fromException :: SomeException -> Maybe a
+      fromException (SomeExcetion e) = cast e
+\end{minted}
+Где \mintinline{haskell}|SomeException| --- это экзистенциальная обёртка наподобие \mintinline{haskell}|Dynamic| (см.\ \ref{subsubsec:type-reflection}), в которую заворачивается конкретный тип исключения.
+Ловя \mintinline{haskell}|SomeException|, можно поймать любое исключение (\texttt{cast} всегда сработает).
+\begin{minted}{haskell}
+    data SomeException where
+      SomeException :: Exception a => a -> SomeException
+
+    instance Exception SomeException
+\end{minted}
+
+Система исполнения Haskell предоставляет интринсики для кидания и ловли исключений, обернём их для поддержки любого \mintinline{haskell}|Exception| типа:
+\begin{minted}{haskell}
+    throw :: Exception e => e -> a
+    throw = primThrow (toException e)
+
+    catch :: Exception e => IO a -> (e -> IO a) -> IO a
+    catch io handler = io `primCatch` \e -> case fromException e of
+      Nothing -> throw e
+      Just e' -> handler e'
+
+    ghci> throw "error" `catch` (e :: String) -> putStrLn e
+\end{minted}
+
+В простейшем случае свой тип исключения можно реализовать в две строчки.
+Чтобы его поймать, нужно либо ловить сам этот тип, либо \mintinline{haskell}|SomeException|, потому что для них обоих \mintinline{haskell}|fromException| на объекте вида \mintinline{haskell}|SomeException MyError| вернёт \mintinline{haskell}|Just|\footnote{\mintinline{haskell}{instance Exception SomeException where fromException = Just}}.
+\begin{minted}{haskell}
+    data MyError = MyError deriving (Show, Typeable)
+    instance Exception MyError
+\end{minted}
+
+Добавим исключение \mintinline{haskell}|ArithException| и ещё один более общий тип исключений между ним и \mintinline{haskell}|SomeException| --- \mintinline{haskell}|SomeArithException| (таким образом, будет три способа поймать \mintinline{haskell}|ArithException|).
+Для этого сделаем \mintinline{haskell}|SomeArithException| экзистенциальной обёрткой, а каждое исключение типа \mintinline{haskell}|ArithException| будем автоматически оборачивать в неё.
+В \mintinline{haskell}|fromException| на каждом уровне вложенности будем пытаться получить оборачивающий конструктор рекурсивным вызовом.
+
+\begin{minted}{haskell}
+    data SomeArithException where
+      SomeArithException :: Exception a => a -> SomeArithException
+
+    -- SomeException - базовый (реализация по умолчанию)
+    instance Exception ArithException
+
+    data DivisionByZero = DivisionByZero deriving Show
+    instance Exception DivisionByZero where
+      toException = toException . SomeArithException
+      fromException e = do
+        SomeArithException e' <- fromException e
+        cast e'
+\end{minted}
+
+Так, во время бросания \mintinline{haskell}|DivisionByZero| будет конструироваться объект вида:
+\begin{minted}{haskell}
+    SomeException (SomeArithException DivisionByZero)
+\end{minted}
+Реализация \mintinline{haskell}|fromException| для конкретного типа умеет убедиться в наличии соответствующего конструктора в результирующем объекте исключения.
+
+\subsubsection{Легковесные частичные стек-трейсы}
+
+Забавной эксплуатацией классов типов в Haskell являются легковесные частичные стек-трейсы\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/callstack.html}}.
+Вообще для сбора трейсов нужна поддержка рантайма, что в случае Haskell усложняется ещё и тем, что модель вычислений, редукция графов, реальных трейсов не содержит и их приходится эмулировать.
+Для легковесных трейсов же не требуется поддержка рантайма.
+
+В GHC определён класс типов \mintinline{haskell}|GHC.Stack.HasCallStack|, позволяющий получить информацию о месте вызова функции.
+Эту информацию фактически размещает компилятор в процессе вывода инстансов.
+Если в месте вызова доступна информация с уровня выше, компилятор распространяет её дальше.
+Таким образом, доступна информация только на определённую глубину стека вызовов.
+\begin{minted}{haskell}
+    myHead :: HasCallStack => [a] -> a
+    myHead []     = error "empty"
+    myHead (x:xs) = x
+
+    bad :: Int
+    bad = myHead []
+
+    ghci> bad
+    *** Exception: empty
+    CallStack (from HasCallStack):
+      error, called at Bad.hs:8:15 in main:Bad
+      myHead, called at Bad.hs:12:7 in main:Bad
+      -- no information about bad call site here
+\end{minted}
 
 % todo record fields, OverloadedLabels, scope resolve via overloading
 
