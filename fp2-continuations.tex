@@ -64,6 +64,8 @@
 
 Перепишем этот интерпретатор в стиле с явными продолжениями, явно выделяя шаги поиска элементарных подвыражений.
 
+% todo reduction semantics, plt redex
+
 \subsubsection{Прямолинейная реализация}
 
 Заведём структуру данных, буквально соответствующую ``выражению с дыркой''.
@@ -102,25 +104,65 @@
       RDiff l k' -> l - k' `appK` result  -- наконец-то вычисляем минус
 \end{minted}
 
+Выражение можно вычислить, запустив \texttt{evalK} на пустом продолжении \mintinline{haskell}{Hole}.
+
+Заметим, что \mintinline{haskell}{K} вместе с \texttt{appK} представляют собой набор дефункционализированных замыканий.
+Вернёмся к этому далее. % todo ref
+
+\subsubsection{Продолжение как стек}
+
+Перепишем структуру данных \mintinline{haskell}{K} эквивалентным образом (см~\ref{subsec:recursive-types}):
+\[
+    \begin{array}{l}
+        K = 1 + K \times Expr + Int \times K \\
+        K = 1 + (Expr + Int) \times K
+    \end{array}
+\]
+Так, продолжение можно представить в виде функционального списка фреймов:
+\begin{minted}{haskell}
+    data Frame = LDiff Expr | RDiff Int
+    type K = [Frame]
+\end{minted}
+Новые фреймы будем добавлять не в конец, как мы делали ранее, а в начало:
+\begin{minted}{haskell}
+    evalK :: Expr -> K -> Int
+    evalK expr k = case expr of
+      Const x -> k `appK` x
+      Diff l r -> eval l (LDiff r : k)
+
+    appK :: K -> Int -> Int
+    appK k result = case k of
+      [] -> result
+      LDiff r : k' -> evalK r (RDiff result : k')
+      RDiff l : k' -> k' `appK` (l - result)
+\end{minted}
+
+Таким образом, мы представили продолжение в виде стека.
+На самом деле аппаратный стек как раз и выполняет роль продолжения (вместе с регистрами).
+
+% todo calculating correct compilers
 
 
 
 
 
-\begin{figure}
-    \centering
-    \begin{tabular}{|c|c|}
-        \hline
-        Фокус               & Продолжение                 \\
-        \hline
-        $(5 - 2) - (3 - 1)$ & $\boxempty$                 \\
-        $5 - 2$             & $\boxempty - (3 - 1)$       \\
-        $5$                 & $(\boxempty - 2) - (3 - 1)$ \\
-        $2$                 & $(5 - \boxempty) - (3 - 1)$ \\
-        $5 - 2$             & $\boxempty - (3 - 1)$       \\
-        \hline
-    \end{tabular}
-\end{figure}
+
+
+
+%\begin{figure}
+%    \centering
+%    \begin{tabular}{|c|c|}
+%        \hline
+%        Фокус         & Продолжение           \\
+%        \hline
+%        $(5 - 2) - 1$ & $\boxempty$           \\
+%        $5 - 2$       & $\boxempty - 1$       \\
+%        $5$           & $(\boxempty - 2) - 1$ \\
+%        $2$           & $(5 - \boxempty) - 1$ \\
+%        $2$           & $(5 - \boxempty) - 1$ \\
+%        \hline
+%    \end{tabular}
+%\end{figure}
 
 %\subsection{Continuation-passing style (CPS)}
 %
