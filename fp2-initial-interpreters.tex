@@ -172,7 +172,7 @@
     Подумайте, зачем нужен \texttt{fmap Just} в последней строчке.
 \end{task}
 
-Соответственно, call-by-name интерпретатор такого лямбда-исчисления будет выглядеть следующим образом:
+Соответственно, call-by-name интерпретатор такого лямбда-исчисления будет выглядеть следующим образом:\footnote{Поскольку мы рассматриваем классическое $\lambda$-исчисление, в качестве результирующего значения мы получаем тоже терм, но в нормальной форме.}
 
 \begin{minted}{haskell}
     eval :: Term var -> Term var
@@ -184,13 +184,12 @@
       Lam t -> Lam (eval t)
 \end{minted}
 
-% todo терм в результате чтобы вычисление могло застрять
-
 Можно заметить, что эта реализация не самая эффективная, потому что мы делаем каждое применение функции лишним проходом по терму.
 
 \subsubsection{Окружение}
 
 Можно делать подстановку значений переменных лениво, распространяя окружение, которое ставит в соответствие свободным переменным термы.
+Лучше в целом пока не стало, но мы получили композиционную семантику из некомпозиционной путём эксплицирования контекстных зависимостей (подробнее далее). % todo ref
 
 \begin{minted}{haskell}
     data Term1 = Var1 String | App1 Term1 Term1 | Lam1 String Term1
@@ -216,7 +215,7 @@
 
 \subsubsection{Замыкания} \label{subsubsec:closures}
 
-Чтобы не делать энергично подстановку в тела функций и сохранить при этом статическое связывание, добавим ещё одну конструкцию, \vocab{замыкание (closure)}\footnote{\url{https://en.wikipedia.org/wiki/Closure_(computer_programming)}}\footnote{Термин closure был предложен Piter Landin, вместе с кучей других вещей.}.
+Чтобы не делать энергично подстановку в тела функций и сохранить при этом статическое связывание, добавим ещё одну конструкцию, \vocab{замыкание (closure)}\footnote{\url{https://en.wikipedia.org/wiki/Closure_(computer_programming)}}\footnote{Термин closure был предложен Piter Landin, вместе с кучей других вещей.}~\cite[глава 11]{nystrom2021crafting}.
 Оно будет хранить контекст, в котором должен исполняться соответствующий терм.
 
 \begin{minted}{haskell}
@@ -228,29 +227,17 @@
     eval1 term env = case term of
       Var1 name -> Map.findWithDefault (Var1 name) name env
       App1 f arg -> case eval1 f env of
-        Closure env' body -> eval1 body (Map.insert name arg $ env' <> env)
+        Closure env' body -> eval1 body (Map.insert name arg $ env <> env')
         t -> App1 t (eval1 arg env)
       Lam1 name body -> Closure env name body
-      t -> t
 \end{minted}
 
-% todo
+Замыкания обычно и используют в промышленных языках как представление времени исполнения функций высших порядков.
+Во время компиляции сначала производят \vocab{closure conversion}~--- функции высших порядков представляют как пару из окружения и указателя на функцию, принимающую окружение дополнительным аргументом.
+Теперь, когда функция не содержит свободных переменных, делают \vocab{lambda lifting}\footnote{\url{https://en.wikipedia.org/wiki/Lambda_lifting}}~--- поднимают её на верхний уровень.
+Подробные примеры можно посмотреть в гарвардских слайдах~\cite{closures-slides}.
 
-%Мы можем свести работу с вложенными функциями к работе с глобальными с помощью \vocab{lambda lifting}: вместо каждой вложенной функции заводим по глобальной.
-%Если вложенная функция имела свободные переменные, добавляем глобальной функции аргумент контекста содержащего значения для этих переменных.
-%\begin{minted}{kotlin}
-%    fun f(x) {
-%        fun g(y) = x + y
-%        return g
-%    }
-%    // lambda lifting породит декларацию
-%    fun g_glob(ctx: GCtx, y) = ctx.x + y
-%\end{minted}
-
-Плавный переход от интерпретаторов с окружением к замыканиям можно посмотреть в гарвардских слайдах~\cite{closures-slides}.
-Простую и понятную реализацию для интерпретаторов --- в книжке~\cite[глава 11]{nystrom2021crafting}.
-
-\subsubsection{Верифицированный контекст}
+\subsubsection{Типизированный контекст} \label{subsubsec:typed-env}
 
 Рассмотрим кодирование, описанное, например, в~\cite{kiselyov2012typed}.
 
@@ -290,7 +277,7 @@
 Крайне не хотелось бы для eDSL самостоятельно реализовывать связывания и функции первого класса.
 Построим meta-circular tagless interpreter, который будет переиспользовать функции первого класса мета-языка для реализации их в определяемом языке.
 
-Термы теперь будут не только аннотированы результирующими типами, но и типами необходимых для интерпретации окружений.
+Термы теперь будут не только аннотированы результирующими типами, но и типами необходимых для интерпретации окружений, рассмотренных ранее~\ref{subsubsec:typed-env}.
 Абстрагированному терму доступно большее окружение.
 
 \begin{minted}{haskell}
@@ -397,4 +384,51 @@
 
 \subsection{Expression problem: неподвижная точка копроизведения функторов} \label{subsec:functor-coprod}
 
-% todo expression problem
+Рассмотрим первое в этом курсе решение expression problem~\ref{subsec:expression-problem}.
+
+Воспользуемся представлением данных как неподвижной точки функтора (см.~\ref{subsubsec:functor-fixpoint}).
+В качестве модельного языка возьмём язык выражений со сложением:
+\begin{minted}{haskell}
+    data Basic rec = Const Int | Plus rec rec
+
+    algBasic :: Basic Int -> Int
+    algBasic = \case Const x -> c; Plus l r -> l + r
+
+    evalBasic :: Fix Basic -> Int
+    evalBasic = cata algBasic
+\end{minted}
+
+Заметим, что сумма (копроизведение) функторов формы даёт функтор формы, алгебра для которого получается из алгебр компонент\footnote{Пользуемся расширением \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_operators.html}{TypeOperators}.}:
+\begin{minted}{haskell}
+    data (l :+: r) rec = L (l rec) | R (r rec)
+
+    (\/) :: (l a -> a) -> (r a -> a) -> ((l :+: r) a -> a)
+    phi \/ psi = \case L l -> phi l; R r -> psi r
+\end{minted}
+
+Расширим наш язык чтением числа из окружения.
+Следуя рассмотренной ранее денотационной семантике~\ref{subsec:semantics}, выберем функцию \mintinline{haskell}{Int -> Int} в качестве домена:
+\begin{minted}{haskell}
+    data Basic rec = Const Int | Plus rec rec
+    data Input rec = Input
+
+    algBasic' :: Basic (Int -> Int) -> Int -> Int
+    algBasic' = \case Const x -> const x; Plus l r -> const (l + r)
+
+    algInput :: Input (Int -> Int) -> Int -> Int
+    algInput = \case Input -> \env -> env
+\end{minted}
+
+Таким образом, мы добились возможности отдельно определять куски синтаксиса и семантики языка, и собирать нужный язык по месту.
+Напишем программу на нашем языке с неявным иммутабельным состоянием:
+\begin{minted}{haskell}
+    f :: Int -> Int
+    f = cata (algBasic \/ algInput) $
+      In (L (Plus (In (L (Const 1))) (In (R Input)))) -- 1 + input
+\end{minted}
+
+Однако заметим, что пока мы не решили проблему полностью, так как интерпретация новой конструкции \mintinline{haskell}{Input} потребовала более сложный домен и нам пришлось переписывать интерпретацию старой для него: из \mintinline{haskell}{algBasic} в \mintinline{haskell}{algBasic'}.
+Теперь мы понимаем, почему stable denotations~--- это ещё одно название для expression problem~\ref{subsec:expression-problem}.
+Далее мы дополним это решение до полноценного. % todo ref
+
+Полученный терм на встроенном языке пока имеет несколько чудовищную запись, но далее мы рассмотрим, как сделать термы на встроенном языке неотличимыми от обычного кода мета-языка.
