@@ -1,8 +1,8 @@
 %! suppress = LineBreak
 %! suppress = MissingLabel
 
-Как мы убедились ранее (см.~\ref{subsec:all-interpreters}), программирование состоит из написания новых и новых интерпретаторов поверх друг друга.
-Интерпретаторы задают семантику новых языков (см~\ref{subsubsec:semantics}).
+Как мы убедились ранее (\ref{subsec:interpreters-everywhere}), программирование состоит из написания новых и новых интерпретаторов поверх друг друга.
+Интерпретаторы задают семантику новых языков (\ref{subsec:semantics}).
 В классическом виде язык задаётся как множество деревьев, а интерпретатор отправляет деревья в объект мета-языка.
 Если язык встроенный, то такой подход называют deep embedding (см.~\ref{subsubsec:edsl}).
 \[
@@ -17,225 +17,76 @@
 
 \subsection{Формальный путь в зазеркалье}
 
-\subsubsection{Рекурсивные структуры через функторы}
-
-Любой рекурсивный тип данных можно представить с помощью двух типов: один отвечает за форму структуры, второй --- за рекурсивность.
-Рассмотрим для примера дерево.
-\begin{minted}{haskell}
-    data Tree a = Leaf a | Node a (Tree a) (Tree a)
-\end{minted}
-
-Строим тип, отвечающий за форму, параметризуясь по дополнительному типовому параметру и заменяя все рекурсивные ссылки на него.
-Идея аналогична написанию рекурсивных функций через комбинатор неподвижной точки.
-\begin{minted}{haskell}
-    data Shape a rec = Leaf a | Node a rec rec
-\end{minted}
-
-За рекурсивность будет отвечать комбинатор неподвижной точки уровня типов.
-Он передаёт последним типовым параметром в форму рекурсивный тип.
-\begin{minted}{haskell}
-    data Fix shape = In { out :: shape (Fix shape) }
-\end{minted}
-
-Можно показать, что старое и новое представление деревьев изоморфны, следовательно, взаимозаменимы: \mintinline{haskell}|Tree a ?$\simeq$? Fix (Shape a)|.
-
-\begin{task}
-    Какие типы будут у \mintinline{haskell}|In| и \mintinline{haskell}|out|?
-\end{task}
-
-\begin{task}
-    Покажите, что \mintinline{haskell}|Tree a ?$\simeq$? Fix (Shape a)|.
-\end{task}
-
-Типы форм объявляют функторами, чтобы иметь возможность подменять рекурсивные ссылки чем-то другим и наоборот (примеры увидим далее):
-\begin{minted}{haskell}
-    instance Functor (Shape a) where
-      fmap :: (b -> c) -> Shape a b -> Shape b c
-      fmap f = \case Leaf x -> Leaf x; Node x l r -> Node x (f l) (f r)
-\end{minted}
-
-\subsubsection{Категории и алгебры}
-
-Посмотрим совсем немного теории категорий.
-
-\vocab{Категория} --- это коллекция объектов и коллекция стрелок.
-Для каждого объекта $X$ существует тождественная стрелка, а для каждой пары стрелок существует способ получить их композицию: $f : Y \to Z, g : X \to Y \Rightarrow f \circ g : X \to Z$.
-
-Определяют категорию, соответствующую Haskell --- $Hask$.
-На самом деле это плохая категория с точки зрения теории, но для наших нестрогих рассуждений подойдёт\footnote{\url{https://math.andrej.com/2016/08/06/hask-is-not-a-category/}}.
-Объектами в Hask являются типы языка Haskell, а морфизмами --- термы, задающие функции между соответствующими типами.
-Тождественный морфизм --- \mintinline{haskell}|id|, композиция задаётся как \mintinline{haskell}|f . g = \x -> f (g x)|.
-
-\begin{task}
-    Как в такой категории представить константы?
-\end{task}
-
-% todo Category type class
-
-\vocab{Функтором} называется отображение между категориями, которое объектам одной категории сопоставляет объекты другой, а стрелкам одной --- стрелки другой.
-В Haskell типовые конструкторы задают отображение между объектами, а \mintinline{haskell}|fmap| --- между стрелками.
-Функтор должен сохранять тождественный морфизм и композицию.
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.25\textwidth]{figs/functor}
-\end{figure}
-
-\vocab{Алгеброй} в категории $C$ называется пара из объекта категории $X \in Obj(C)$ и морфизма $\phi : F\ap X \to X$, где $F$ --- функтор.
-Сам морфизм $F\ap X \to X$ называют \vocab{f-алгеброй}.
-Алгебрами в смысле категорий можно описывать алгебры.
-Так, в качестве объекта $X$ берём носитель алгебры.
-В качестве функтора $F$ --- сигнатуру алгебры в виде типа-формы.
-Тогда морфизмом будет интерпретация сигнатуры.
-\begin{minted}{haskell}
-    data MonoidSig carrier = Mempty | Mappend carrier carrier
-
-    interpretSig :: MonoidSig Int -> Int
-    interpretSig = \case Mempty -> 0; Mappend l r -> l + r
-\end{minted}
-
-\begin{task}
-    Реализуйте алгебру печати, какой тип должен выступить носителем?
-\end{task}
-
-\vocab{Морфизмом алгебр} называется такой морфизм между носителями $h : X \to Y$, что следующая диаграмма коммутирует.
-Говорят, что \vocab{диаграмма коммутирует}, если все возможные пути по стрелкам в ней равны.
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.3\textwidth]{figs/alg-homomorphism}
-\end{figure}
-
-В морфизме алгебр можно обнаружить знакомые черты гомоморфизмов, то есть операций между носителями, которые ``уважают'' операции сигнатуры алгебраической теории.
-
-Алгебры над категорией $C$ образуют \vocab{категорию алгебр}, в которой объектами являются алгебры, а морфизмами --- морфизмы алгебр.
-
-\subsubsection{Рекурсивные типы в категориях}
-
-\vocab{Начальным (инициальным) объектом} категории называется объект, из которого в каждый другой объект существует уникальная стрелка.
-\vocab{Терминальным (финальным) объектом} категории называется объект, в который из каждого другого объекта категории существует уникальная стрелка.
-
-Инициальный и терминальный объекты категории не обязательно присутствуют в единственном экземпляре.
-Но все инициальные объекты изоморфны друг другу, как и все терминальные.
-
-\begin{task}
-    Приведите начальный и терминальный объекты категории $Hask$.
-\end{task}
-
-Рекурсивный тип --- это тип, значит ему соответствует объект в категории Hask.
-$X$ является рекурсивным типом с формой $F$, если имеет место следующий изоморфизм:
-\[X \simeq F\ap X\]
-
-Можно заметить, что свидетель изоморфизма справа налево напоминает f-алгебру, а слева направо --- f-коалгебру (всё то же самое, только все стрелки в обратную сторону).
-И действительно, подходящий объект $X$ должен быть либо начальным объектом категории алгебр, либо терминальным объектом категории коалгебр (с соответствующими морфизмами).
-Первый вариант соответствует конечным структурам данных, второй --- потенциально бесконечным.
-
-Начальным объектом категории алгебр над $Hask$ для функтора $f$ является следующая алгебра: \mintinline{haskell}|(Fix f, In)| (покажем это далее).
-Более того, терминальным объектом категории коалгебр будет \mintinline{haskell}|(Fix f, out)|, благодаря ленивости Haskell.
-
-% todo
-
-\subsubsection{Катаморфизмы: туда и обратно}
-
-Покажем, что \mintinline{haskell}|(Fix f, In)| является инициальным\footnote{\url{https://bartoszmilewski.com/2017/02/28/f-algebras/}}\footnote{\url{https://ncatlab.org/nlab/show/catamorphism}}.
-Действительно, для каждого типа \texttt{a} и для каждой f-алгебры \texttt{phi} мы можем построить такой морфизм \mintinline{haskell}|cata phi :: Fix f -> a|, что следующая диаграмма будет коммутировать.
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.4\textwidth]{figs/cata}
-\end{figure}
-
-Из диаграммы сразу видно, как такой морфизм построить.
-Его называют \vocab{катаморфизмом} f-алгебры \texttt{phi}.
-Он является универсальной свёрткой рекурсивных структур данных\footnote{\url{https://reasonablypolymorphic.com/blog/recursion-schemes/index.html}}~\cite{meijer1991functional, meijer1995bananas}, с которой начинается наука рекурсивных схем, ``структурного'' функционального программирования без неструктурной рекурсии.
+Вспомним, что любую рекурсивную структуру данных можно представить как неподвижную точку функтора, задающего форму (\ref{subsubsec:functor-fixpoint}).
+При этом существует универсальная свёртка, катаморфизм, которая работает для произвольного функтора формы (\ref{subsubsec:recursion-schemas}):
 \begin{minted}{haskell}
     cata :: Functor f => (f a -> a) -> Fix f -> a
-    cata phi = phi . fmap (cata phi) . out
 \end{minted}
 
-Катаморфизм сначала обрабатывает рекурсивные ссылки, добираясь к ним с помощью \mintinline{haskell}|fmap|, и сворачивает поддеревья, оставляя результаты вместо бывших вхождений поддеревьев.
-Таким образом, получается тип формы, у которого вместо рекурсивных ссылок уже значения нужного типа \texttt{a}, а его уже можно непосредственно свернуть с помощью f-алгебры.
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.8\textwidth]{figs/cataStep.excalidraw}
-\end{figure}
-
-\begin{task}
-    Убедитесь, что печатающая алгебра действительно сворачивает терм в строчку.
-\end{task}
-
-Покажем, что \mintinline{haskell}|(Fix f, In)| является ещё и терминальным объектом.
-Аналогично, для каждого объекта \texttt{a} и f-коалгебры \texttt{psi} найдётся морфизм \mintinline{haskell}|ana psi :: a -> Fix f|.
-\begin{figure}[h!]
-    \centering
-    \includegraphics[width=0.35\textwidth]{figs/ana}
-\end{figure}
-
-\begin{minted}{haskell}
-    ana :: Functor f => (a -> f a) -> a -> Fix f
-    ana psi = In . fmap (ana psi) . psi
-\end{minted}
-
-Анаморфизм является универсальной развёрткой.
-f-коалгебра показывает, как из некоторого значения получить один слой структуры данных (тип-формы).
-Он вместо рекурсивных ссылок хранит зёрнышки, из которых потом прорастут поддеревья.
-Анаморфизм как раз сначала разворачивает один слой, а потом рекурсивно разворачивает все поддеревья.
-
-Анаморфизм проясняет интуицию, почему терминальными коалгебрами кодируют потенциально бесконечные структуры данных.
-f-коалгебра по некоторому зерну вычисляет следующий слой структуры.
-Так, можно слой за слоем лениво вычислять поддеревья, потенциально сколь угодно долго.
-
-С помощью катаморфизма можно получить изоморфизм между структурами данных и их свёртками:
+Оказывается, что с помощью катаморфизма можно получить изоморфизм между структурами данных и их свёртками:
 \mintinline{haskell}|Fix f ?$\simeq$? forall a . (f a -> a) -> a|.
 \begin{minted}{haskell}
     to :: Functor f => Fix f -> (forall a . (f a -> a) -> a)
     to = flip cata
 
     from :: (forall a . (f a -> a) -> a) -> Fix f
-    from g = g Fix
+    from g = g In
 \end{minted}
 
-% todo пример со списком
-
-\subsubsection{Прибытие в зазеркалье}
-
-С помощью катаморфизма можно получить изоморфизм между структурами данных и их свёртками:
-\mintinline{haskell}|Fix f ?$\simeq$? forall a . (f a -> a) -> a|.
+Например, следующие два списка эквивалентны (все конструкторы \mintinline{haskell}{In} заменяем на данную алгебру):
 \begin{minted}{haskell}
-    to :: Functor f => Fix f -> (forall a . (f a -> a) -> a)
-    to = flip cata
+    data List elem rec = Nil | Cons elem rec
 
-    from :: (forall a . (f a -> a) -> a) -> Fix f
-    from g = g Fix
+    xs1 :: Fix (List Int)
+    xs1 = In (Cons 1 (In (Cons 2 (In (Cons 3 (In Nil))))))
+
+    xs2 :: (List Int a -> a) -> a
+    xs2 = \alg -> alg (Cons 1 (alg (Cons 2 (alg (Cons 3 (alg Nil))))))
 \end{minted}
 
-% todo пример со списком
+Таким образом, вместо того, чтобы конструировать дерево языка, а затем его интерпретировать (сворачивать), мы можем сразу сконструировать терм типа \mintinline{haskell}{?$\forall$?a . (f a -> a) -> a}.
+Предоставив ему тип домена \texttt{a} и алгебру \texttt{f a -> a} мы немедленно получим элемент домена.
 
-Вспомним, что нашей целью было конструирование программ напрямую как объектов мета-языка (домена).
+\begin{minted}{haskell}
+    ghci> xs2 @Int \case Nil -> 0; Cons x acc -> x + acc
+    6
+\end{minted}
+
+Однако, мы избавились ещё не от всех деревьев в программе --- остался функтор, задающий форму.
+Это нерекурсивный тип, который можно представить в канонической форме (см.~\ref{subsubsec:type-algebra}):
 \[
-    \sembr{\bullet} : L \to D
+    f\ap a \iso \sum_{i}\prod_{j} (t_{ij}\ap a)
 \]
+Тогда алгебра может быть записана следующим образом:
+\[
+    f\ap a\to a\iso a^{\sum_{i}\prod_{j} (t_{ij}\ap a)} \iso \prod_{i}a^{\prod_{j} (t_{ij}\ap a)}
+\]
+Остались произведения, от которых можно избавиться с помощью каррирования, и получить \vocab{финальное кодирование} структуры данных\footnote{Финальным такое кодирование называется по историческим причинам. Казалось, что оно двойственно инициальному и является терминальным (финальным) объектом категории интерпретаций. Однако это не так, с категорной точки зрения, это тоже инициальный объект.}.
+Например, для списка имеем:
+\begin{align*}
+    \text{\mintinline{haskell}{(List elem a -> a) -> a}}
+    \iso a^{\displaystyle a^{\displaystyle 1 + elem\times a}}
+    \iso a^{\displaystyle a\times a^{\displaystyle elem\times a}}
+    \iso a^{\displaystyle a^{\displaystyle \left(a^{\displaystyle a^{\displaystyle elem}}\right)}} \\
+    \iso \text{\mintinline{haskell}{a -> (elem -> a -> a) -> a}}
+\end{align*}
 
-Для этого воспользуемся изоморфизмом
-\mintinline{haskell}|Fix f ?$\simeq$? forall d . (f d -> d) -> d|, который говорит о том, что правую часть можно использовать вместо левой.
-Иначе говоря, вместо того, чтобы конструировать дерево языка \mintinline{haskell}|Fix f|, достаточно сконструировать функцию мета-языка с типом справа, которая и будет выполнять роль терма нового языка.
+Мы получили не что иное, как список Чёрча\footnote{\url{https://en.wikipedia.org/wiki/Church_encoding}}\footnote{\url{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}}.
+Структуру данных, без единого конструктора!\footnote{На самом деле в этом нет ничего удивительного, если вспомнить, что функции первого класса представляются как замыкания, содержащие данные. Мы получили тот же односвязный список, только на замыканиях.}
+Перепишем знакомый нам список ещё раз:
+\begin{minted}{haskell}
+    xs3 :: a -> (Int -> a -> a) -> a
+    xs3 = \ini f -> f 1 (f 2 (f 3 ini))
+\end{minted}
 
-Действительно, выбирая тип-домен \texttt{d} и передавая соответствующую алгебру, мы можем получать различные интерпретации термов зазеркалья.
-
-TODO % todo пример
-
-Мы ещё избавились не от всех деревьев в программе --- остался функтор, задающий форму.
-Представим его в канонической форме и с помощью алгебраических преобразований получим функцию без единой структуры данных.
-
-TODO % todo преобразования
-
-В качестве примера покажем, что список Чёрча (да и в целом кодирование по Чёрчу) является зазеркальной альтернативой обычного списка\footnote{\url{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}}.
-
-TODO % todo пример
-
-% todo Можно вообще избавиться от data в программе.
-% todo Вместо того, чтобы доставлять объект к месту деконструирования, доставляем меcто деконструирования к месту конструирования
+Попробуем интуитивно понять, что это всё значит.
+Заметим, что список Чёрча принимает функции, соответствующие веткам паттерн-матчинга или аргументам сворачивающей функции.
+Вместо конструкторов же сразу вызываются соответствующие функции.
+То есть, вместо того, чтобы создать структуру данных и доставить её к месту деконструирования, мы \point{доставляем место деконструирования к месту конструирования} и оказывается, что ничего конструировать по итогу и не надо.
 
 Если зафиксировать интерпретацию, то функции-аргументы можно реализовать статически и просто ссылаться на них в терме.
 Таким образом, про объявление функций можно думать как про расширение некоторого встроенного предметного языка.
+Общие рассуждения про shallow embeddings, свёртки и библиотеки можно почитать в~\cite{gibbons2013functional, gibbons2014folding}.
 Сравните:
 \begin{figure}[h]
     \centering
@@ -250,104 +101,191 @@ TODO % todo пример
     \end{tabular}
 \end{figure}
 
-Общие рассуждения про shallow embeddings, свёртки и библиотеки можно почитать в~\cite{gibbons2013functional, gibbons2014folding}.
+\subsection{Tagless final}
 
-Можно заметить, что термы в зазеркалье можно представлять как объекты с единственным методом \texttt{visit}, а инстанс соответствующего класса типов --- visitor.
-
-% todo visitor pattern
-
-TODO % todo деревянный язык это бейзлайн
-
-% todo connections to polarity https://ncatlab.org/nlab/show/polarity+in+type+theory
-
-% todo простые примеры типа uncurry с первого курса
-
-\subsection{Tagless final интерпретаторы}
-
-Если вернуться к каррированной версии типа термов, то теперь это тип, принимающий кортеж функций.
-А кортеж функций --- можно заменить на класс типов.
-Тогда декларация класса будет задавать синтаксис встроенного языка, а инстансы для доменов --- реализацию.
+Вернёмся к некаррированной версии типа финальных термов, теперь это тип, принимающий кортеж функций.
+А кортеж функций можно заменить на класс типов.
+Тогда декларация класса будет задавать синтаксис встроенного языка, а инстансы для доменов~--- реализацию.
 Этот подход называется \vocab{tagless final encoding}\footnote{\url{https://okmij.org/ftp/tagless-final/}} и фактически это кодирование данных по Чёрчу с классами типов и набором трюков~\cite{carette2007finally, kiselyov2012typed}.
 
-\subsubsection{Tagless final meta-circular evaluator}
-
-Повторим рассмотренный ранее язык в tagless final стиле.
-
+Снова рассмотрим язык со сложением:
 \begin{minted}{haskell}
-     data Term3 ty where
-       Val3 :: ty -> Term3 ty
-       Plus :: Term3 Int -> Term3 Int -> Term3 Int
-       App3 :: Term3 (arg -> res) -> Term3 arg -> Term3 res
-       Lam3 :: (Term3 arg -> Term3 res) -> Term3 (arg -> res)
+    data Expr = Const Int | Plus Expr Expr
 
-     example3 :: Term3 Int
-     example3 = (Lam3 \x -> x `Plus` Val3 41) `App3` Val3 1
+    eval :: Expr -> Int
+    eval = \case Const x -> x; Plus l r -> eval l + eval r
+\end{minted}
+Или через катаморфизм:
+\begin{minted}{haskell}
+    data FExpr rec = Const Int | Plus rec rec
 
-     eval3 :: Term3 ty -> ty
+    eval :: Fix FExpr -> Int
+    eval = cata \case Const x -> x; Plus l r -> l + r
+\end{minted}
+Соответствующее tagless final кодирование будет выглядеть следующим образом:
+\begin{minted}{haskell}
+    class Expr domain where
+      cnst :: Int -> domain
+      plus :: domain -> domain -> domain
+
+    instance Expr Int where
+      cnst x = x
+      plus l r = l + r
 \end{minted}
 
+Теперь мы можем сконструировать обычный терм Haskell, задать домен, и машинерия классов типов подставит нужную алгебру самостоятельно:
 \begin{minted}{haskell}
-    class Term d where
-      type C d ty :: Constraint
-      val :: C d ty => ty -> d ty
-      plus :: d Int -> d Int -> d Int
-      app :: d (arg -> res) -> d arg -> d res
-      lam :: (d arg -> d res) -> d (arg -> res)
+    example :: forall domain . Expr domain => domain
+    example = cnst 1 `plus` cnst 41
 
-    example :: (Term d, C d Int) => d Int
-    example = (lam \x -> x `plus` val 41) `app` val 1
+    ghci> example :: Int
+    42
+\end{minted}
 
-    instance Term Identity where
+Чтобы добавить ещё интерпретацию, реализуем инстанс для другого домена:
+\begin{minted}{haskell}
+    instance Expr String where
+      cnst x = show x
+      plus l r = l <> " + " <> r
+
+    ghci> example :: String
+    "1 + 41"
+\end{minted}
+
+\subsubsection{Expression problem: произведение алгебр}
+
+Ранее, мы пытались решить expression problem путём композирования функторов формы с помощью открытого копроизведения, а также композирования алгебр (см.~\ref{subsec:functor-coprod}).
+Перейдя к финальной версии того же самого, композирование становится намного эффективнее и удобнее.
+Вместо копроизведения функторов теперь имеем произведение алгебр, представляемое контекстом классов типов.
+
+Чтобы определить ещё одну конструкцию, просто задаём новый класс с желаемыми интерпретациями:
+\begin{minted}{haskell}
+    class Input domain where
+      input :: domain
+
+    instance Input (Int -> Int) where
+      input = \env -> env
+\end{minted}
+
+Теперь нужно снова не забыть реализовать предыдущие операции \mintinline{haskell}{Expr} для нового домена \mintinline{haskell}{Int -> Int} и можно не лету композировать языки:
+\begin{minted}{haskell}
+    example :: forall domain . (Expr domain, Input domain) => target
+    example = cnst 1 `plus` input
+
+    ghci> (example :: Int -> Int) 41
+    42
+\end{minted}
+
+\subsubsection{Typed tagless final interpreter}
+
+Рассмотрим наш пример tagless initial encoding~\ref{subsubsec:tagless-initial}:
+\begin{minted}{haskell}
+    data Expr ty where
+      Const :: Int -> Expr Int
+      IsZero :: Expr Int -> Expr Bool
+      If :: forall ty . Expr Bool -> Expr ty -> Expr ty -> Expr ty
+
+    eval :: Expr ty -> ty
+    eval = \case
+      Const x  -> x
+      IsZero t -> eval == 0
+      If c t e -> if eval c then eval t else eval e
+\end{minted}
+Чтобы получить final encoding, параметризуем домен результирующим типом выражения:
+\begin{minted}{haskell}
+    class Expr (domain :: Type -> Type) where
+      cnst :: Int -> domain Int
+      isZero :: domain Int -> domain Bool
+      if' :: forall ty . domain Bool -> domain ty -> domain ty -> domain ty
+
+    class Expr Identity where
+      cnst x = Identity x
+      isZero (Identity x) = Identity (x == 0)
+      if' (Identity c) t e = if c then t else e
+\end{minted}
+
+\begin{task}
+    Какой домен подойдёт для печати выражения?
+\end{task}
+
+Можно сделать константы полиморфными, но тогда разумно дать возможность реализациям наложить ограничения на их полиморфизм.
+Добьёмся этого с помощью ассоциированного семейства констреинтов:
+\begin{minted}{haskell}
+    class Expr domain where
+      type C domain ty :: Constraint
+      val :: C domain ty => ty -> domain ty
+      -- ...
+
+    instance Expr Identity where
       type C Identity ty = ()
-      val = Identity
-      plus = liftA2 (+)
-      app = liftA2 ($)
-      lam = coerce
+      val x = Identity x
+      -- ...
 
-    instance Term (Const String) where
+    instance Expr (Const String) Where
       type C (Const String) ty = Show ty
-      val = Const . show
-      plus (Const l) (Const r) = Const $ "(" ++ l ++ " + " ++ r ++ ")"
-      app (Const f) (Const arg) = Const $ "(" ++ f ++ " " ++ arg ++ ")"
-      lam f = Const $ "(" ++ "\\x -> " ++ getConst (f (Const "x")) ++ ")"
-\end{minted}
+      val x = Const $ show x
+      -- ...
 
-TODO % todo
+    example :: forall domain . (C domain ty, Expr domain) => domain ty
+    example = val 42
+
+    ghci> example :: Const String Int
+\end{minted}
 
 \subsubsection{Встречаем старых друзей}
 
-Аппликатив --- операция применения, монада --- let-in.
-
+Рассмотрим следующий язык в initial encoding с higher order abstract syntax (см.~\ref{subsubsec:h-syntax}:
 \begin{minted}{haskell}
-    class StateLang s d | d -> s where
-      co :: a -> d a
-      put :: s -> d ()
-      get :: d s
-      appl :: d (arg -> res) -> d arg -> d res
-      letIn :: d a -> (a -> d b) -> d b
+    data Expr s ty where
+      Val :: ty -> Expr s ty
+      App :: Expr s (arg -> res) -> Expr s arg -> Expr s res
+      LetIn :: Expr s ty -> (ty -> Expr s ty') -> Expr s ty'
+      Get :: Expr s s
+      Put :: s -> Expr s ()
 
-    data StateD s a = StateD { runStateD :: s -> (s, a) }
-
-    instance StateLang s (StateD s) where
-      co x = StateD \s -> (s, x)
-      put s = StateD \_ -> (s, ())
-      get = StateD \s -> (s, s)
-      appl (StateD f) (StateD arg) = StateD \s ->
-        let (s', f') = f s in let (s'', arg') = arg s' in (s'', f' arg')
-      letIn (StateD comp) k = StateD \s ->
-        let (s', x) = comp s in runStateD (k x) s'
-
-    exampleState :: StateLang Int d => d ()
-    exampleState =
-      get `letIn` \x ->
-      put (x + 1)
+    modify :: (s -> s) -> Expr s s
+    modify f =
+      Get `LetIn` \x ->
+      Val (const x) `App` Put (f x)
 \end{minted}
 
-TODO % todo
+Перепишем в tagless final, выбирая подходящие имена для кусков синтаксиса:
+\begin{minted}{haskell}
+    class Applicative domain where
+      pure :: ty -> domain ty
+      (<*>) :: domain (arg -> res) -> domain arg -> domain res
 
-\subsubsection{Некомпозиционные семантики}
+    class Monad domain where
+      (>>=) :: domain ty -> (ty -> domain ty') -> domain ty'
 
-\vocab{Семантика} называется \vocab{композиционной}, если значение сложного выражения определяется его структурой и семантикой его подструктур.
+    class MonadState s domain | domain -> s where
+      get :: domain s
+      put :: s -> domain ()
+\end{minted}
+
+Таким образом, аппликативные функторы --- meta-circular язык с аппликацией, а монадический bind --- это фактически let-in в higher-order синтаксисе.
+
+Реализуем знакомую интерпретацию для подходящего домена:
+\begin{minted}{haskell}
+    newtype State s a = State { runState :: s -> (s, a) }
+
+    instance Applicative (State s) where
+      pure x = State \s -> (s, x)
+      State fs <*> State xs = State \s1 ->
+        let (s2, f) = fs s1 in let (s3, x) = xs s2 in (s3, f x)
+
+    instance Monad (State s) where
+      State comp >>= k = State \s ->
+        let (s', x) = comp s in runState (k x) s'
+
+    instance MonadState s (State s) where
+      get = State \s -> (s, s)
+      put s' = State \s -> (s', ())
+\end{minted}
+
+\subsubsection{Восстановление композиционности семантики} \label{subsubsec:recover-compositionality}
+
+\vocab{Семантика} называется \vocab{композиционной}, если значение сложного выражения определяется его структурой и семантикой его подструктур. % todo ref back
 
 Всякие преобразования кода не композиционные.
 Для примера рассмотрим протаскивание унарных отрицаний:
@@ -363,7 +301,7 @@ TODO % todo
       Neg (Add l r) -> Add (transform1 (Neg l)) (transform1 (Neg r))
 \end{minted}
 
-Чтобы восстановить композиционность семантики, нужно экплицировать контекстные зависимости
+Чтобы восстановить композиционность семантики, нужно экплицировать контекстные зависимости с помощью функционального домена:
 \begin{minted}{haskell}
     class Expr2 d where
       lit :: Int -> d
@@ -380,95 +318,154 @@ TODO % todo
       add l r ctx = add (l ctx) (r ctx)
 \end{minted}
 
-TODO % todo
 
-% todo bananas in space и что там было про функции и зачем
 
-\subsection{Использование зазеркалья в реальности}
 
-\subsubsection{Expression problem}
 
-\url{https://homepages.inf.ed.ac.uk/wadler/papers/expression/expression.txt}
+%\subsubsection{Tagless final meta-circular evaluator}
+%
+%Повторим рассмотренный ранее язык в tagless final стиле.
+%
+%\begin{minted}{haskell}
+%     data Term3 ty where
+%       Val3 :: ty -> Term3 ty
+%       Plus :: Term3 Int -> Term3 Int -> Term3 Int
+%       App3 :: Term3 (arg -> res) -> Term3 arg -> Term3 res
+%       Lam3 :: (Term3 arg -> Term3 res) -> Term3 (arg -> res)
+%
+%     example3 :: Term3 Int
+%     example3 = (Lam3 \x -> x `Plus` Val3 41) `App3` Val3 1
+%
+%     eval3 :: Term3 ty -> ty
+%\end{minted}
+%
+%\begin{minted}{haskell}
+%    class Term d where
+%      type C d ty :: Constraint
+%      val :: C d ty => ty -> d ty
+%      plus :: d Int -> d Int -> d Int
+%      app :: d (arg -> res) -> d arg -> d res
+%      lam :: (d arg -> d res) -> d (arg -> res)
+%
+%    example :: (Term d, C d Int) => d Int
+%    example = (lam \x -> x `plus` val 41) `app` val 1
+%
+%    instance Term Identity where
+%      type C Identity ty = ()
+%      val = Identity
+%      plus = liftA2 (+)
+%      app = liftA2 ($)
+%      lam = coerce
+%
+%    instance Term (Const String) where
+%      type C (Const String) ty = Show ty
+%      val = Const . show
+%      plus (Const l) (Const r) = Const $ "(" ++ l ++ " + " ++ r ++ ")"
+%      app (Const f) (Const arg) = Const $ "(" ++ f ++ " " ++ arg ++ ")"
+%      lam f = Const $ "(" ++ "\\x -> " ++ getConst (f (Const "x")) ++ ")"
+%\end{minted}
+%
+%TODO % todo
+%
 
-% todo wadler the expression problem
 
-% todo Extensibility for the Masses: Practical Extensibility with Object Algebras
 
-TODO % todo
+%
+%TODO % todo
+%
+%% todo bananas in space и что там было про функции и зачем
+%
+%\subsection{Зазеркалье в реальности}
+%
+%\subsubsection{Expression problem}
+%
+%\url{https://homepages.inf.ed.ac.uk/wadler/papers/expression/expression.txt}
+%
+%% todo wadler the expression problem
+%
+%% todo Extensibility for the Masses: Practical Extensibility with Object Algebras
+%
+%TODO % todo
+%
+%\subsubsection{Deforestation \& fusion}
+%
+%\vocab{Дефорестация} --- процесс избавления программы от (промежуточных) деревьев~\cite{wadler1988deforestation} (рис.~\ref{fig:deforestation-examples}).
+%Дефорестация является частным случаем суперкомпиляции~\cite{supercomp}.
+%
+%\begin{figure}
+%    \centering
+%    \includegraphics[width=0.55\textwidth]{figs/deforestation-examples}
+%    \caption{Примеры работы дефорестирующего алгоритма~\cite{wadler1988deforestation}.}
+%    \label{fig:deforestation-examples}
+%\end{figure}
+%
+%Однако, алгоритм дефорестации имеет проблемы: он либо имеет шанс не завершиться на рекурсивных определениях, либо ограничен программами очень специального вида.
+%Поэтому для Haskell был предложен другой способ, работающий только на списках, дефорестирующий с помощью алгебраических свойств списочных трансформаций\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}~\cite{gill1993short}.
+%
+%Вместо использования множества алгебраических правил, определяем универсальный способ конструирования и деконструирования списка.
+%Деконструируем с помощью \mintinline{haskell}|foldr|:
+%\begin{minted}{haskell}
+%    foldr f ini . map g ?$\equiv$? foldr (f . g) ini
+%\end{minted}
+%
+%Конструируем с помощью \mintinline{haskell}|build|.
+%Можно заметить, что на вход передаётся список Чёрча, отсюда не удивителен закон:
+%\begin{minted}{haskell}
+%    build :: (forall b . (a -> b -> b) -> b -> b) -> [a]
+%    build g = g (:) []
+%
+%    foldr f ini (build g) ?$\equiv$? g f ini
+%\end{minted}
+%
+%% todo \cite{meijer1991functional}
+%
+%TODO % todo пример
+%
+%\subsubsection{Streams \& reactive programming}
+%
+%Если пойти в обратную сторону относительно анаморфизма, то получим структуру данных, заданную через развёртку.
+%Такая структура даже в энергичном языке может быть потенциально бесконечной.
+%\begin{minted}{haskell}
+%    anaInv :: Fix f -> ?$\exists$?s . (s -> f s, s)
+%\end{minted}
+%
+%TODO\cite{coutts2007stream, kiselyov2022highest} % todo stream fusion from lists to streams to nothing at all
+%
+%% todo Reading circle about fusion
+%
+%% todo haskell inlining
+%% todo Oleg about fusion and streams
+%
+%% todo call-pattern specialization for Haskell programs
+%
+%% todo FRP
+%% todo reactive programming https://youtu.be/sTSQlYX5DU0?si=Ybxux16h5Vt1LnC4
+%
+%% todo internal iteration
+%
+%TODO % todo
+%
+%\subsubsection{Data vs codata}
+%
+%\url{https://reasonablypolymorphic.com/blog/review-codata/index.html}
+%
+%% todo codata, copattern-matching
+%% todo are custom patterns in haskell connected to this?
+%
+%% todo когда использовать дату, а когда - кодату (интерпретируем входые данные)
+%
+%TODO~\cite{downen2019codata} % todo
+%
+%\subsubsection{Threaded code}
+%
+%TODO % todo https://en.wikipedia.org/wiki/Threaded_code
+%
+%% todo pull and push
+%
+%% todo \vocab{полярности}\footnote{\url{https://existentialtype.wordpress.com/2012/08/25/polarity-in-type-theory/}}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}}
 
-\subsubsection{Deforestation \& fusion}
+%Можно заметить, что термы в зазеркалье можно представлять как объекты с единственным методом \texttt{visit}, а инстанс соответствующего класса типов --- visitor.
+%
+%% todo visitor pattern
 
-\vocab{Дефорестация} --- процесс избавления программы от (промежуточных) деревьев~\cite{wadler1988deforestation} (рис.~\ref{fig:deforestation-examples}).
-Дефорестация является частным случаем суперкомпиляции~\cite{supercomp}.
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.55\textwidth]{figs/deforestation-examples}
-    \caption{Примеры работы дефорестирующего алгоритма~\cite{wadler1988deforestation}.}
-    \label{fig:deforestation-examples}
-\end{figure}
-
-Однако, алгоритм дефорестации имеет проблемы: он либо имеет шанс не завершиться на рекурсивных определениях, либо ограничен программами очень специального вида.
-Поэтому для Haskell был предложен другой способ, работающий только на списках, дефорестирующий с помощью алгебраических свойств списочных трансформаций\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}~\cite{gill1993short}.
-
-Вместо использования множества алгебраических правил, определяем универсальный способ конструирования и деконструирования списка.
-Деконструируем с помощью \mintinline{haskell}|foldr|:
-\begin{minted}{haskell}
-    foldr f ini . map g ?$\equiv$? foldr (f . g) ini
-\end{minted}
-
-Конструируем с помощью \mintinline{haskell}|build|.
-Можно заметить, что на вход передаётся список Чёрча, отсюда не удивителен закон:
-\begin{minted}{haskell}
-    build :: (forall b . (a -> b -> b) -> b -> b) -> [a]
-    build g = g (:) []
-
-    foldr f ini (build g) ?$\equiv$? g f ini
-\end{minted}
-
-% todo \cite{meijer1991functional}
-
-TODO % todo пример
-
-\subsubsection{Streams \& reactive programming}
-
-Если пойти в обратную сторону относительно анаморфизма, то получим структуру данных, заданную через развёртку.
-Такая структура даже в энергичном языке может быть потенциально бесконечной.
-\begin{minted}{haskell}
-    anaInv :: Fix f -> ?$\exists$?s . (s -> f s, s)
-\end{minted}
-
-TODO\cite{coutts2007stream, kiselyov2022highest} % todo stream fusion from lists to streams to nothing at all
-
-% todo Reading circle about fusion
-
-% todo haskell inlining
-% todo Oleg about fusion and streams
-
-% todo call-pattern specialization for Haskell programs
-
-% todo FRP
-% todo reactive programming https://youtu.be/sTSQlYX5DU0?si=Ybxux16h5Vt1LnC4
-
-% todo internal iteration
-
-TODO % todo
-
-\subsubsection{Data vs codata}
-
-\url{https://reasonablypolymorphic.com/blog/review-codata/index.html}
-
-% todo codata, copattern-matching
-% todo are custom patterns in haskell connected to this?
-
-% todo когда использовать дату, а когда - кодату (интерпретируем входые данные)
-
-TODO~\cite{downen2019codata} % todo
-
-\subsubsection{Threaded code}
-
-TODO % todo https://en.wikipedia.org/wiki/Threaded_code
-
-% todo pull and push
-
-% todo \vocab{полярности}\footnote{\url{https://existentialtype.wordpress.com/2012/08/25/polarity-in-type-theory/}}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}}
+% todo зафиксировать где-то достижение, что код пишется на нормальном хаскеле

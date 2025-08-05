@@ -181,25 +181,34 @@
 
 \vocab{Deep eDSL} --- термы на таком языке строят дерево абстрактного синтаксиса для дальнейшей интерпретации:
 \begin{minted}{haskell}
-    value :: Env -> Int
-    value = eval $ Const 1 `Plus` Var "x"
+    f :: Int -> Int
+    f = eval $ Const 1 `Plus` Input
 \end{minted}
 
-Можно заметить, что промежуточное дерево, которое получается, нас, как правило, не интересует.
+% todo
+%Например, можно построить встроенный язык для работы с изменяемым состоянием.
+%Теперь можем писать императивно в Haskell без единой монады!
+%\begin{minted}{haskell}
+%    fac :: Int -> Int
+%    fac = eval $
+%
+%\end{minted}
+
+Однако можно заметить, что промежуточное дерево, которое получается, нас, как правило, не интересует.
 Нам важно только получить элемент домена, которым мы уже умеем пользоваться непосредственно.
-\vocab{Shallow eDSL} минуют стадию построения дерева и сразу строят значение в семантическом домене: % todo переделать пример под контекст
+\vocab{Shallow eDSL} минуют стадию построения дерева и сразу строят значение в семантическом домене:
 \begin{minted}{haskell}
-    cnst :: Int -> (Env -> Int)
+    cnst :: Int -> (Int -> Int)
     cnst x _ = x
 
-    var :: String -> (Env -> Int)
-    var name env = env ! name
+    input :: Int -> Int
+    input env = env
 
-    plus :: (Env -> Int) -> (Env -> Int) -> (Env -> Int)
+    plus :: (Int -> Int) -> (Int -> Int) -> (Int -> Int)
     plus l r env = l env + r env
 
-    value :: Env -> Int
-    value = cnst 1 `plus` var "x"
+    f :: Int -> Int
+    f = cnst 1 `plus` input
 \end{minted}
 
 Интерпретаторы часто называют \vocab{наблюдателями (observers)}, которые анализируют термы и дают им некоторый смысл~\cite{gibbons2013functional}.
@@ -223,8 +232,6 @@
 \begin{task}
     Предположите, какие свойства наследует определяемый язык.
 \end{task}
-
-% todo ссылка вперёд
 
 \subsubsection{Пример: библиотека Accelerate}
 
