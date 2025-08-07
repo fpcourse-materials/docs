@@ -4,7 +4,7 @@
 Как мы убедились ранее (\ref{subsec:interpreters-everywhere}), программирование состоит из написания новых и новых интерпретаторов поверх друг друга.
 Интерпретаторы задают семантику новых языков (\ref{subsec:semantics}).
 В классическом виде язык задаётся как множество деревьев, а интерпретатор отправляет деревья в объект мета-языка.
-Если язык встроенный, то такой подход называют deep embedding (см.~\ref{subsubsec:edsl}).
+Если язык встроенный, то такой подход называют deep embedding (см.~\ref{subsec:edsl}).
 \[
     \sembr{\bullet} : L \to D
 \]
@@ -15,7 +15,7 @@
 Можем ли мы миновать стадию интерпретации собственного синтаксиса и сразу строить объект домена в синтаксисе мета-языка?
 Да, такое встраивание называется shallow embedding, о нём эта глава.
 
-\subsection{Формальный путь в зазеркалье}
+\subsection{Формальный путь в зазеркалье} \label{subsec:to-wonderland}
 
 Вспомним, что любую рекурсивную структуру данных можно представить как неподвижную точку функтора, задающего форму (\ref{subsubsec:functor-fixpoint}).
 При этом существует универсальная свёртка, катаморфизм, которая работает для произвольного функтора формы (\ref{subsubsec:recursion-schemas}):
@@ -67,7 +67,7 @@
     \text{\mintinline{haskell}{(List elem a -> a) -> a}}
     \iso a^{\displaystyle a^{\displaystyle 1 + elem\times a}}
     \iso a^{\displaystyle a\times a^{\displaystyle elem\times a}}
-    \iso a^{\displaystyle a^{\displaystyle \left(a^{\displaystyle a^{\displaystyle elem}}\right)}} \\
+    \iso \left( a^{\displaystyle a} \right)^{\displaystyle \left(\left( a^{\displaystyle a}\right)^{\displaystyle elem}\right)} \\
     \iso \text{\mintinline{haskell}{a -> (elem -> a -> a) -> a}}
 \end{align*}
 
@@ -178,7 +178,7 @@
 
 \subsubsection{Typed tagless final interpreter}
 
-Рассмотрим наш пример tagless initial encoding~\ref{subsubsec:tagless-initial}:
+Рассмотрим наш пример tagless initial encoding~\ref{subsubsec:typed-initial}:
 \begin{minted}{haskell}
     data Expr ty where
       Const :: Int -> Expr Int

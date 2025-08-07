@@ -322,7 +322,7 @@
     data Fix f = In { out :: f (Fix f) }
 
     data ListShape a r = FNil | FCons a r
-    data List' a = Fix (L a)
+    data List' a = Fix (ListShape a)
 \end{minted}
 
 \begin{task}
