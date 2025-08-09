@@ -597,6 +597,12 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
     (->) :: forall {q :: RuntimeRep} {r :: RuntimeRep}. TYPE q -> TYPE r -> Type
 \end{minted}
 
+\begin{task}
+    Подумайте, почему функция имеет boxed тип.
+    Может ли быть иначе?
+    Может ли это быть полезным?
+\end{task}
+
 К сожалению, Haskell выставляет довольно строгое ограничение: связыватели не могут иметь тип, полиморфный по runtime представлению.
 Можно легко предположить, почему,~--- нельзя сгенерировать код функции для работы с параметром произвольного рантайм-представления.
 Это можно решить только мономорфизацией~\ref{subsubsec:monomorphization}, но Haskell избегает этого подхода\footnote{\url{https://gitlab.haskell.org/ghc/ghc/-/issues/14917}}.

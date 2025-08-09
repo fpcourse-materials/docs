@@ -169,7 +169,7 @@
 
 Теперь нужно снова не забыть реализовать предыдущие операции \mintinline{haskell}{Expr} для нового домена \mintinline{haskell}{Int -> Int} и можно не лету композировать языки:
 \begin{minted}{haskell}
-    example :: forall domain . (Expr domain, Input domain) => target
+    example :: forall domain . (Expr domain, Input domain) => domain
     example = cnst 1 `plus` input
 
     ghci> (example :: Int -> Int) 41
@@ -301,7 +301,7 @@
       Neg (Add l r) -> Add (transform1 (Neg l)) (transform1 (Neg r))
 \end{minted}
 
-Чтобы восстановить композиционность семантики, нужно экплицировать контекстные зависимости с помощью функционального домена:
+Чтобы восстановить композиционность семантики, нужно экплицировать контекстные зависимости с помощью функционального домена~\cite{kiselyov2012typed}:
 \begin{minted}{haskell}
     class Expr2 d where
       lit :: Int -> d
@@ -469,3 +469,5 @@
 %% todo visitor pattern
 
 % todo зафиксировать где-то достижение, что код пишется на нормальном хаскеле
+
+% todo торжественно отметить где-нибудь, что мы плавно расширяем мета-язык теперь новой фигнёй
