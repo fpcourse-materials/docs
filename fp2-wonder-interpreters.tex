@@ -13,7 +13,7 @@
 Сама программа же представляет собой лишь удобную синтаксическую запись элемента домена и является промежуточным шагом, а не самоцелью.
 В то же время доменом в случае встроенных языков, заданных интерпретаторами, являются объекты мета-языка.
 Можем ли мы миновать стадию интерпретации собственного синтаксиса и сразу строить объект домена в синтаксисе мета-языка?
-Да, такое встраивание называется shallow embedding, о нём эта глава.
+Да, такое встраивание называется shallow embedding (\ref{subsec:edsl}), о нём эта глава.
 
 \subsection{Формальный путь в зазеркалье} \label{subsec:to-wonderland}
 
@@ -82,7 +82,9 @@
 Попробуем интуитивно понять, что это всё значит.
 Заметим, что список Чёрча принимает функции, соответствующие веткам паттерн-матчинга или аргументам сворачивающей функции.
 Вместо конструкторов же сразу вызываются соответствующие функции.
-То есть, вместо того, чтобы создать структуру данных и доставить её к месту деконструирования, мы \point{доставляем место деконструирования к месту конструирования} и оказывается, что ничего конструировать по итогу и не надо.
+То есть, вместо того, чтобы создать структуру данных и доставить её к месту деконструирования (паттерн-матчингу), мы \point{доставляем место деконструирования к месту конструирования} и оказывается, что ничего конструировать по итогу и не надо.
+
+Стоит отметить, что изоморфизм \mintinline{haskell}|Fix f ?$\simeq$? forall d . (f d -> d) -> d|, на котором основывается этот раздел, является обобщением изоморфизма \mintinline{haskell}{a ?$\sim$? forall r . (a -> r) -> r} (при \mintinline{haskell}{f = Const a}), который является основой CPS трансформации, рассматриваемой нами далее в~\ref{sec:continuations}.
 
 Если зафиксировать интерпретацию, то функции-аргументы можно реализовать статически и просто ссылаться на них в терме.
 Таким образом, про объявление функций можно думать как про расширение некоторого встроенного предметного языка.
@@ -234,7 +236,7 @@
 
 \subsubsection{Встречаем старых друзей}
 
-Рассмотрим следующий язык в initial encoding с higher order abstract syntax (см.~\ref{subsubsec:h-syntax}:
+Рассмотрим следующий язык в initial encoding с higher order abstract syntax (см.~\ref{subsubsec:meta-circular-initial}, ~\ref{subsubsec:h-syntax}):
 \begin{minted}{haskell}
     data Expr s ty where
       Val :: ty -> Expr s ty
@@ -285,9 +287,9 @@
 
 \subsubsection{Восстановление композиционности семантики} \label{subsubsec:recover-compositionality}
 
-\vocab{Семантика} называется \vocab{композиционной}, если значение сложного выражения определяется его структурой и семантикой его подструктур. % todo ref back
+\vocab{Семантика} называется \vocab{композиционной}, если семантика конструкций зависит только от семантик подконструкций (см.~\ref{subsec:semantics}).
 
-Всякие преобразования кода не композиционные.
+Всякие преобразования кода, как правило, не композиционные.
 Для примера рассмотрим протаскивание унарных отрицаний:
 \begin{minted}{haskell}
     data Expr1 = Lit Int | Add Expr1 Expr1 | Neg Expr1 deriving Show
@@ -318,106 +320,55 @@
       add l r ctx = add (l ctx) (r ctx)
 \end{minted}
 
+\subsection{Зазеркалье в реальности}
+
+Рассмотрим некоторые частные случаи применения такого рода структур данных, заданных своими свёртками, на практике.
+
+\subsubsection{Deforestation \& fusion} \label{subsubsec:deforestation-fusion}
+
+\vocab{Дефорестация} --- процесс избавления программы от (промежуточных) деревьев~\cite{wadler1988deforestation} (рис.~\ref{fig:deforestation-examples}).
+Дефорестация является частным случаем суперкомпиляции~\cite{supercomp}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.55\textwidth]{figs/deforestation-examples}
+    \caption{Примеры работы дефорестирующего алгоритма~\cite{wadler1988deforestation}.}
+    \label{fig:deforestation-examples}
+\end{figure}
+
+Однако, алгоритм дефорестации имеет проблемы: он либо имеет шанс не завершиться на рекурсивных определениях, либо ограничен программами очень специального вида.
+Поэтому для Haskell был предложен другой способ, работающий только на списках, дефорестирующий с помощью алгебраических свойств списочных трансформаций\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}~\cite{gill1993short}. % todo
+
+Вместо использования множества алгебраических правил, определяем универсальный способ конструирования и деконструирования списка.
+Деконструируем с помощью \mintinline{haskell}|foldr|:
+\begin{minted}{haskell}
+    foldr f ini . map g ?$\equiv$? foldr (f . g) ini
+\end{minted}
+Конструируем с помощью \mintinline{haskell}|build|:
+\begin{minted}{haskell}
+    build :: (forall b . (a -> b -> b) -> b -> b) -> [a]
+    build g = g (:) []
+\end{minted}
+Можно заметить, что на вход \texttt{build} передаётся список Чёрча, отсюда не удивителен закон:
+\begin{minted}{haskell}
+    foldr f ini (build g) ?$\equiv$? g f ini
+\end{minted}
+
+
+% todo \cite{meijer1991functional}
 
 
 
 
-%\subsubsection{Tagless final meta-circular evaluator}
-%
-%Повторим рассмотренный ранее язык в tagless final стиле.
-%
-%\begin{minted}{haskell}
-%     data Term3 ty where
-%       Val3 :: ty -> Term3 ty
-%       Plus :: Term3 Int -> Term3 Int -> Term3 Int
-%       App3 :: Term3 (arg -> res) -> Term3 arg -> Term3 res
-%       Lam3 :: (Term3 arg -> Term3 res) -> Term3 (arg -> res)
-%
-%     example3 :: Term3 Int
-%     example3 = (Lam3 \x -> x `Plus` Val3 41) `App3` Val3 1
-%
-%     eval3 :: Term3 ty -> ty
-%\end{minted}
-%
-%\begin{minted}{haskell}
-%    class Term d where
-%      type C d ty :: Constraint
-%      val :: C d ty => ty -> d ty
-%      plus :: d Int -> d Int -> d Int
-%      app :: d (arg -> res) -> d arg -> d res
-%      lam :: (d arg -> d res) -> d (arg -> res)
-%
-%    example :: (Term d, C d Int) => d Int
-%    example = (lam \x -> x `plus` val 41) `app` val 1
-%
-%    instance Term Identity where
-%      type C Identity ty = ()
-%      val = Identity
-%      plus = liftA2 (+)
-%      app = liftA2 ($)
-%      lam = coerce
-%
-%    instance Term (Const String) where
-%      type C (Const String) ty = Show ty
-%      val = Const . show
-%      plus (Const l) (Const r) = Const $ "(" ++ l ++ " + " ++ r ++ ")"
-%      app (Const f) (Const arg) = Const $ "(" ++ f ++ " " ++ arg ++ ")"
-%      lam f = Const $ "(" ++ "\\x -> " ++ getConst (f (Const "x")) ++ ")"
-%\end{minted}
-%
-%TODO % todo
-%
 
 
 
-%
-%TODO % todo
-%
-%% todo bananas in space и что там было про функции и зачем
-%
-%\subsection{Зазеркалье в реальности}
-%
-%\subsubsection{Expression problem}
-%
-%\url{https://homepages.inf.ed.ac.uk/wadler/papers/expression/expression.txt}
-%
-%% todo wadler the expression problem
-%
+
+
+
 %% todo Extensibility for the Masses: Practical Extensibility with Object Algebras
-%
-%TODO % todo
-%
-%\subsubsection{Deforestation \& fusion}
-%
-%\vocab{Дефорестация} --- процесс избавления программы от (промежуточных) деревьев~\cite{wadler1988deforestation} (рис.~\ref{fig:deforestation-examples}).
-%Дефорестация является частным случаем суперкомпиляции~\cite{supercomp}.
-%
-%\begin{figure}
-%    \centering
-%    \includegraphics[width=0.55\textwidth]{figs/deforestation-examples}
-%    \caption{Примеры работы дефорестирующего алгоритма~\cite{wadler1988deforestation}.}
-%    \label{fig:deforestation-examples}
-%\end{figure}
-%
-%Однако, алгоритм дефорестации имеет проблемы: он либо имеет шанс не завершиться на рекурсивных определениях, либо ограничен программами очень специального вида.
-%Поэтому для Haskell был предложен другой способ, работающий только на списках, дефорестирующий с помощью алгебраических свойств списочных трансформаций\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}~\cite{gill1993short}.
-%
-%Вместо использования множества алгебраических правил, определяем универсальный способ конструирования и деконструирования списка.
-%Деконструируем с помощью \mintinline{haskell}|foldr|:
-%\begin{minted}{haskell}
-%    foldr f ini . map g ?$\equiv$? foldr (f . g) ini
-%\end{minted}
-%
-%Конструируем с помощью \mintinline{haskell}|build|.
-%Можно заметить, что на вход передаётся список Чёрча, отсюда не удивителен закон:
-%\begin{minted}{haskell}
-%    build :: (forall b . (a -> b -> b) -> b -> b) -> [a]
-%    build g = g (:) []
-%
-%    foldr f ini (build g) ?$\equiv$? g f ini
-%\end{minted}
-%
-%% todo \cite{meijer1991functional}
+
+
 %
 %TODO % todo пример
 %
@@ -471,3 +422,50 @@
 % todo зафиксировать где-то достижение, что код пишется на нормальном хаскеле
 
 % todo торжественно отметить где-нибудь, что мы плавно расширяем мета-язык теперь новой фигнёй
+
+
+%\subsubsection{Tagless final meta-circular evaluator}
+%
+%Повторим рассмотренный ранее язык в tagless final стиле.
+%
+%\begin{minted}{haskell}
+%     data Term3 ty where
+%       Val3 :: ty -> Term3 ty
+%       Plus :: Term3 Int -> Term3 Int -> Term3 Int
+%       App3 :: Term3 (arg -> res) -> Term3 arg -> Term3 res
+%       Lam3 :: (Term3 arg -> Term3 res) -> Term3 (arg -> res)
+%
+%     example3 :: Term3 Int
+%     example3 = (Lam3 \x -> x `Plus` Val3 41) `App3` Val3 1
+%
+%     eval3 :: Term3 ty -> ty
+%\end{minted}
+%
+%\begin{minted}{haskell}
+%    class Term d where
+%      type C d ty :: Constraint
+%      val :: C d ty => ty -> d ty
+%      plus :: d Int -> d Int -> d Int
+%      app :: d (arg -> res) -> d arg -> d res
+%      lam :: (d arg -> d res) -> d (arg -> res)
+%
+%    example :: (Term d, C d Int) => d Int
+%    example = (lam \x -> x `plus` val 41) `app` val 1
+%
+%    instance Term Identity where
+%      type C Identity ty = ()
+%      val = Identity
+%      plus = liftA2 (+)
+%      app = liftA2 ($)
+%      lam = coerce
+%
+%    instance Term (Const String) where
+%      type C (Const String) ty = Show ty
+%      val = Const . show
+%      plus (Const l) (Const r) = Const $ "(" ++ l ++ " + " ++ r ++ ")"
+%      app (Const f) (Const arg) = Const $ "(" ++ f ++ " " ++ arg ++ ")"
+%      lam f = Const $ "(" ++ "\\x -> " ++ getConst (f (Const "x")) ++ ")"
+%\end{minted}
+%
+%TODO % todo
+%
