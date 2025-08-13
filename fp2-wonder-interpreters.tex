@@ -79,6 +79,10 @@
     xs3 = \ini f -> f 1 (f 2 (f 3 ini))
 \end{minted}
 
+\begin{task}
+    Какая знакомая вам стандартная функция работы со списками по \mintinline{haskell}{data} списку возвращает список Чёрча?
+\end{task}
+
 Попробуем интуитивно понять, что это всё значит.
 Заметим, что список Чёрча принимает функции, соответствующие веткам паттерн-матчинга или аргументам сворачивающей функции.
 Вместо конструкторов же сразу вызываются соответствующие функции.
@@ -180,7 +184,7 @@
 
 \subsubsection{Typed tagless final interpreter}
 
-Рассмотрим наш пример tagless initial encoding~\ref{subsubsec:typed-initial}:
+Рассмотрим наш пример tagless initial encoding~\ref{subsubsec:typed-tagless-initial}:
 \begin{minted}{haskell}
     data Expr ty where
       Const :: Int -> Expr Int
@@ -265,7 +269,7 @@
       put :: s -> domain ()
 \end{minted}
 
-Таким образом, аппликативные функторы --- meta-circular язык с аппликацией, а монадический bind --- это фактически let-in в higher-order синтаксисе.
+Таким образом, \point{аппликативные функторы --- meta-circular язык с аппликацией}, а \point{монадический bind --- это фактически let-in в higher-order синтаксисе}.
 
 Реализуем знакомую интерпретацию для подходящего домена:
 \begin{minted}{haskell}
@@ -326,8 +330,26 @@
 
 \subsubsection{Deforestation \& fusion} \label{subsubsec:deforestation-fusion}
 
-\vocab{Дефорестация} --- процесс избавления программы от (промежуточных) деревьев~\cite{wadler1988deforestation} (рис.~\ref{fig:deforestation-examples}).
-Дефорестация является частным случаем суперкомпиляции~\cite{supercomp}.
+В функциональном программировании мы строим новые функции путём композирования имеющихся, более простых, функций.
+Этот подход позволяет переиспользовать реализованную функциональность, снижая сложность кода и вероятность ошибок.
+Однако, он может приводить к излишним накладным расходам на аллокацию и деконструирование промежуточных структур данных.
+
+Например, сравните следующие две реализации.
+Первая предпочтительна с точки зрения качества кода, однако вторая порождает промежуточный список во время работы:
+\begin{minted}{haskell}
+    all p xs = and (map p xs)
+    -- или fused версия
+    all p [] = []
+    all p (x:xs) = p x && all p xs
+\end{minted}
+
+Очевидно, это задача оптимизирующего компилятора превращать хороший код с абстракциями в быстрый код.
+Оптимизация, избавляющая программы от (промежуточных) структур данных (деревьев) называется \vocab{дефорестацией (deforestation)}.
+В результате две функции, как говорят, ``сплавляются'' --- fuse.
+
+Термин и первый дефорестирующий алгоритм был предложен Philip Wadler~\cite{wadler1988deforestation}, он основан на нескольких простых правилах переписывания и агрессивном инлайнинге (см. примеры работы на рис.~\ref{fig:deforestation-examples}).
+Однако, этот алгоритм может приводить к экспоненциальному разбуханию кода и имеет шанс не завершится при наличии рекурсивных вызовов\footnote{Дефорестация является частным случаем суперкомпиляции~\cite{supercomp}, которая в свою очередь является обобщеним большого количества компиляторных оптимизаций.}.
+Чтобы алгоритм завершался программы должны быть написаны в некоторой строгой форме под названием treeless.
 
 \begin{figure}[h]
     \centering
@@ -336,35 +358,67 @@
     \label{fig:deforestation-examples}
 \end{figure}
 
-Однако, алгоритм дефорестации имеет проблемы: он либо имеет шанс не завершиться на рекурсивных определениях, либо ограничен программами очень специального вида.
-Поэтому для Haskell был предложен другой способ, работающий только на списках, дефорестирующий с помощью алгебраических свойств списочных трансформаций\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}~\cite{gill1993short}. % todo
+Сфокусируемся на списках и рассмотрим более практичные решения\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}.
+Первым очевидным решением было бы для каждой пары функций, работающих со списками, добавить специальное правило переписывания (см.~\ref{subsubsec:rules}), дефорестирующее с помощью алгебраических свойств списочных трансформаций.
+Однако, таких правил будет экспоненциально много.
+\begin{minted}{haskell}
+    {-# RULES
+    "map/map" forall f g xs. map f (map g xs) = map (f . g) xs
+      #-}
+\end{minted}
 
-Вместо использования множества алгебраических правил, определяем универсальный способ конструирования и деконструирования списка.
-Деконструируем с помощью \mintinline{haskell}|foldr|:
+Современная техника дефорестирования в Haskell --- fold/build list fusion~\cite{gill1993short} --- вместо использования множества алгебраических правил, определяет универсальный способ конструирования и деконструирования списка.
+Деконструировать список будем с помощью \mintinline{haskell}|foldr|, и для него введём специальное правило:
 \begin{minted}{haskell}
     foldr f ini . map g ?$\equiv$? foldr (f . g) ini
 \end{minted}
-Конструируем с помощью \mintinline{haskell}|build|:
+Конструировать будем с помощью функции \mintinline{haskell}|build|:
 \begin{minted}{haskell}
     build :: (forall b . (a -> b -> b) -> b -> b) -> [a]
     build g = g (:) []
+\end{minted}
+Например, список \mintinline{haskell}{[1, 2, 3]} и функция \mintinline{haskell}{map} теперь запишутся следующим образом\footnote{В стандартной библиотеке Haskell функции работы со списками написаны нормально, но рядом написаны правила \texttt{RULES}, которые подменяют их реализацию на fold/build.}:
+\begin{minted}{haskell}
+    list123 :: [Int]
+    list123 = build \s z -> s 1 (s 2 (s 3 z))
+
+    map :: (a -> b) -> [a] -> [b]
+    map f xs = build \s z -> foldr (\x acc -> s (f x) acc) z xs
 \end{minted}
 Можно заметить, что на вход \texttt{build} передаётся список Чёрча, отсюда не удивителен закон:
 \begin{minted}{haskell}
     foldr f ini (build g) ?$\equiv$? g f ini
 \end{minted}
 
+Таким образом, мы избавились от конструирования списков путём замены вызовов конструкторов на вызовы сворачивающих функций.
+
+\subsubsection{Push vs pull} \label{subsubsec:push-pull}
+
+TODO % todo
+
+\subsubsection{External iteration vs internal iteration}
+
+TODO % todo
+
+\subsubsection{Data vs codata} \label{subsubsec:codata}
+
+TODO % todo
+
+\subsubsection{Bytecode vs threaded code} \label{subsubsec:threaded-code}
+
+TODO % todo
+
+
+
+
+
+
+
+
+
+
 
 % todo \cite{meijer1991functional}
-
-
-
-
-
-
-
-
-
 
 %% todo Extensibility for the Masses: Practical Extensibility with Object Algebras
 
@@ -391,8 +445,9 @@
 %
 %% todo FRP
 %% todo reactive programming https://youtu.be/sTSQlYX5DU0?si=Ybxux16h5Vt1LnC4
+%% todo  React 2014 : Erik Meijer - What does it mean to be Reactive? https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx
 %
-%% todo internal iteration
+%% todo internal iteration vs external iteration
 %
 %TODO % todo
 %
@@ -466,6 +521,3 @@
 %      app (Const f) (Const arg) = Const $ "(" ++ f ++ " " ++ arg ++ ")"
 %      lam f = Const $ "(" ++ "\\x -> " ++ getConst (f (Const "x")) ++ ")"
 %\end{minted}
-%
-%TODO % todo
-%
