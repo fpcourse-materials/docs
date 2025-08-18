@@ -252,7 +252,21 @@
     modify :: (s -> s) -> Expr s s
     modify f =
       Get `LetIn` \x ->
-      Val (const x) `App` Put (f x)
+      Put (f x) `LetIn` \() ->
+      Val x
+
+    eval :: Expr s ty -> s -> (s, ty)
+    eval = \case
+      Val x -> \s -> (s, x)
+      App fs xs -> \s1 ->
+        let (s2, f) = eval fs s1 in
+        let (s3, x) = eval xs s2 in
+        (s3, f x)
+      LetIn comp k -> \s ->
+        let (s', x) = eval comp s in
+        eval (k x) s'
+      Get -> \s -> (s, s)
+      Put s -> \_ -> (s, ())
 \end{minted}
 
 Перепишем в tagless final, выбирая подходящие имена для кусков синтаксиса:
@@ -271,22 +285,31 @@
 
 Таким образом, \point{аппликативные функторы --- meta-circular язык с аппликацией}, а \point{монадический bind --- это фактически let-in в higher-order синтаксисе}.
 
-Реализуем знакомую интерпретацию для подходящего домена:
+Реализуем знакомую интерпретацию для подходящего домена (сравните с реализацией интерпретатора выше):
 \begin{minted}{haskell}
     newtype State s a = State { runState :: s -> (s, a) }
 
     instance Applicative (State s) where
       pure x = State \s -> (s, x)
-      State fs <*> State xs = State \s1 ->
-        let (s2, f) = fs s1 in let (s3, x) = xs s2 in (s3, f x)
+      fs <*> xs = State \s1 ->
+        let (s2, f) = runState fs s1 in
+        let (s3, x) = runState xs s2 in
+        (s3, f x)
 
     instance Monad (State s) where
-      State comp >>= k = State \s ->
-        let (s', x) = comp s in runState (k x) s'
+      comp >>= k = State \s ->
+        let (s', x) = runState comp s in
+        runState (k x) s'
 
     instance MonadState s (State s) where
       get = State \s -> (s, s)
       put s' = State \s -> (s', ())
+
+    modify :: (s -> s) -> State s s -- s -> (s, a)
+    modify f =
+      get >>= \x ->
+      put (f x) >>= \() ->
+      pure x
 \end{minted}
 
 \subsubsection{Восстановление композиционности семантики} \label{subsubsec:recover-compositionality}
@@ -394,11 +417,15 @@
 
 \subsubsection{Push vs pull} \label{subsubsec:push-pull}
 
+
+
+
+
 TODO % todo
 
-\subsubsection{External iteration vs internal iteration}
-
-TODO % todo
+%\subsubsection{External iteration vs internal iteration}
+%
+%TODO % todo
 
 \subsubsection{Data vs codata} \label{subsubsec:codata}
 
@@ -422,6 +449,7 @@ TODO % todo
 
 %% todo Extensibility for the Masses: Practical Extensibility with Object Algebras
 
+% todo visitors
 
 %
 %TODO % todo пример
@@ -447,9 +475,6 @@ TODO % todo
 %% todo reactive programming https://youtu.be/sTSQlYX5DU0?si=Ybxux16h5Vt1LnC4
 %% todo  React 2014 : Erik Meijer - What does it mean to be Reactive? https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx
 %
-%% todo internal iteration vs external iteration
-%
-%TODO % todo
 %
 %\subsubsection{Data vs codata}
 %
