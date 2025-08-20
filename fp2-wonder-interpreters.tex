@@ -17,78 +17,23 @@
 
 \subsection{Формальный путь в зазеркалье} \label{subsec:to-wonderland}
 
-Вспомним, что любую рекурсивную структуру данных можно представить как неподвижную точку функтора, задающего форму (\ref{subsubsec:functor-fixpoint}).
-При этом существует универсальная свёртка, катаморфизм, которая работает для произвольного функтора формы (\ref{subsubsec:recursion-schemas}):
-\begin{minted}{haskell}
-    cata :: Functor f => (f a -> a) -> Fix f -> a
-\end{minted}
 
-Оказывается, что с помощью катаморфизма можно получить изоморфизм между структурами данных и их свёртками:
-\mintinline{haskell}|Fix f ?$\simeq$? forall a . (f a -> a) -> a|.
-\begin{minted}{haskell}
-    to :: Functor f => Fix f -> (forall a . (f a -> a) -> a)
-    to = flip cata
 
-    from :: (forall a . (f a -> a) -> a) -> Fix f
-    from g = g In
-\end{minted}
 
-Например, следующие два списка эквивалентны (все конструкторы \mintinline{haskell}{In} заменяем на данную алгебру):
-\begin{minted}{haskell}
-    data List elem rec = Nil | Cons elem rec
 
-    xs1 :: Fix (List Int)
-    xs1 = In (Cons 1 (In (Cons 2 (In (Cons 3 (In Nil))))))
 
-    xs2 :: (List Int a -> a) -> a
-    xs2 = \alg -> alg (Cons 1 (alg (Cons 2 (alg (Cons 3 (alg Nil))))))
-\end{minted}
 
 Таким образом, вместо того, чтобы конструировать дерево языка, а затем его интерпретировать (сворачивать), мы можем сразу сконструировать терм типа \mintinline{haskell}{?$\forall$?a . (f a -> a) -> a}.
 Предоставив ему тип домена \texttt{a} и алгебру \texttt{f a -> a} мы немедленно получим элемент домена.
 
-\begin{minted}{haskell}
-    ghci> xs2 @Int \case Nil -> 0; Cons x acc -> x + acc
-    6
-\end{minted}
 
-Однако, мы избавились ещё не от всех деревьев в программе --- остался функтор, задающий форму.
-Это нерекурсивный тип, который можно представить в канонической форме (см.~\ref{subsubsec:type-algebra}):
-\[
-    f\ap a \iso \sum_{i}\prod_{j} (t_{ij}\ap a)
-\]
-Тогда алгебра может быть записана следующим образом:
-\[
-    f\ap a\to a\iso a^{\sum_{i}\prod_{j} (t_{ij}\ap a)} \iso \prod_{i}a^{\prod_{j} (t_{ij}\ap a)}
-\]
-Остались произведения, от которых можно избавиться с помощью каррирования, и получить \vocab{финальное кодирование} структуры данных\footnote{Финальным такое кодирование называется по историческим причинам. Казалось, что оно двойственно инициальному и является терминальным (финальным) объектом категории интерпретаций. Однако это не так, с категорной точки зрения, это тоже инициальный объект.}.
-Например, для списка имеем:
-\begin{align*}
-    \text{\mintinline{haskell}{(List elem a -> a) -> a}}
-    \iso a^{\displaystyle a^{\displaystyle 1 + elem\times a}}
-    \iso a^{\displaystyle a\times a^{\displaystyle elem\times a}}
-    \iso \left( a^{\displaystyle a} \right)^{\displaystyle \left(\left( a^{\displaystyle a}\right)^{\displaystyle elem}\right)} \\
-    \iso \text{\mintinline{haskell}{a -> (elem -> a -> a) -> a}}
-\end{align*}
 
-Мы получили не что иное, как список Чёрча\footnote{\url{https://en.wikipedia.org/wiki/Church_encoding}}\footnote{\url{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}}.
-Структуру данных, без единого конструктора!\footnote{На самом деле в этом нет ничего удивительного, если вспомнить, что функции первого класса представляются как замыкания, содержащие данные. Мы получили тот же односвязный список, только на замыканиях.}
-Перепишем знакомый нам список ещё раз:
-\begin{minted}{haskell}
-    xs3 :: a -> (Int -> a -> a) -> a
-    xs3 = \ini f -> f 1 (f 2 (f 3 ini))
-\end{minted}
 
-\begin{task}
-    Какая знакомая вам стандартная функция работы со списками по \mintinline{haskell}{data} списку возвращает список Чёрча?
-\end{task}
 
-Попробуем интуитивно понять, что это всё значит.
-Заметим, что список Чёрча принимает функции, соответствующие веткам паттерн-матчинга или аргументам сворачивающей функции.
-Вместо конструкторов же сразу вызываются соответствующие функции.
-То есть, вместо того, чтобы создать структуру данных и доставить её к месту деконструирования (паттерн-матчингу), мы \point{доставляем место деконструирования к месту конструирования} и оказывается, что ничего конструировать по итогу и не надо.
 
-Стоит отметить, что изоморфизм \mintinline{haskell}|Fix f ?$\simeq$? forall d . (f d -> d) -> d|, на котором основывается этот раздел, является обобщением изоморфизма \mintinline{haskell}{a ?$\sim$? forall r . (a -> r) -> r} (при \mintinline{haskell}{f = Const a}), который является основой CPS трансформации, рассматриваемой нами далее в~\ref{sec:continuations}.
+
+
+
 
 Если зафиксировать интерпретацию, то функции-аргументы можно реализовать статически и просто ссылаться на них в терме.
 Таким образом, про объявление функций можно думать как про расширение некоторого встроенного предметного языка.
@@ -182,6 +127,41 @@
     42
 \end{minted}
 
+\subsubsection{Восстановление композиционности семантики} \label{subsubsec:recover-compositionality}
+
+\vocab{Семантика} называется \vocab{композиционной}, если семантика конструкций зависит только от семантик подконструкций (см.~\ref{subsec:semantics}).
+
+Всякие преобразования кода, как правило, не композиционные.
+Для примера рассмотрим протаскивание унарных отрицаний:
+\begin{minted}{haskell}
+    data Expr1 = Lit Int | Add Expr1 Expr1 | Neg Expr1 deriving Show
+
+    transform1 :: Expr1 -> Expr1
+    transform1 = \case
+      Lit x -> Lit x
+      Neg (Lit x) -> Lit (-x)
+      Add l r -> Add (transform1 l) (transform1 r)
+      Neg (Neg e) -> transform1 e
+      Neg (Add l r) -> Add (transform1 (Neg l)) (transform1 (Neg r))
+\end{minted}
+
+Чтобы восстановить композиционность семантики, нужно экплицировать контекстные зависимости с помощью функционального домена~\cite{kiselyov2012typed}:
+\begin{minted}{haskell}
+    class Expr2 d where
+      lit :: Int -> d
+      add :: d -> d -> d
+      neg :: d -> d
+
+    data Ctx = CtxPos | CtxNeg
+
+    instance Expr2 d => Expr2 (Ctx -> d) where
+      lit x CtxNeg = lit (-x)
+      lit x CtxPos = lit x
+      neg e CtxNeg = e CtxPos
+      neg e CtxPos = e CtxNeg
+      add l r ctx = add (l ctx) (r ctx)
+\end{minted}
+
 \subsubsection{Typed tagless final interpreter}
 
 Рассмотрим наш пример tagless initial encoding~\ref{subsubsec:typed-tagless-initial}:
@@ -214,6 +194,7 @@
     Какой домен подойдёт для печати выражения?
 \end{task}
 
+% todo перенести в домашку?
 Можно сделать константы полиморфными, но тогда разумно дать возможность реализациям наложить ограничения на их полиморфизм.
 Добьёмся этого с помощью ассоциированного семейства констреинтов:
 \begin{minted}{haskell}
@@ -249,12 +230,6 @@
       Get :: Expr s s
       Put :: s -> Expr s ()
 
-    modify :: (s -> s) -> Expr s s
-    modify f =
-      Get `LetIn` \x ->
-      Put (f x) `LetIn` \() ->
-      Val x
-
     eval :: Expr s ty -> s -> (s, ty)
     eval = \case
       Val x -> \s -> (s, x)
@@ -267,6 +242,12 @@
         eval (k x) s'
       Get -> \s -> (s, s)
       Put s -> \_ -> (s, ())
+
+    modify :: (s -> s) -> Expr s s
+    modify f =
+      Get `LetIn` \x ->
+      Put (f x) `LetIn` \() ->
+      Val x
 \end{minted}
 
 Перепишем в tagless final, выбирая подходящие имена для кусков синтаксиса:
@@ -312,137 +293,34 @@
       pure x
 \end{minted}
 
-\subsubsection{Восстановление композиционности семантики} \label{subsubsec:recover-compositionality}
-
-\vocab{Семантика} называется \vocab{композиционной}, если семантика конструкций зависит только от семантик подконструкций (см.~\ref{subsec:semantics}).
-
-Всякие преобразования кода, как правило, не композиционные.
-Для примера рассмотрим протаскивание унарных отрицаний:
-\begin{minted}{haskell}
-    data Expr1 = Lit Int | Add Expr1 Expr1 | Neg Expr1 deriving Show
-
-    transform1 :: Expr1 -> Expr1
-    transform1 = \case
-      Lit x -> Lit x
-      Neg (Lit x) -> Lit (-x)
-      Add l r -> Add (transform1 l) (transform1 r)
-      Neg (Neg e) -> transform1 e
-      Neg (Add l r) -> Add (transform1 (Neg l)) (transform1 (Neg r))
-\end{minted}
-
-Чтобы восстановить композиционность семантики, нужно экплицировать контекстные зависимости с помощью функционального домена~\cite{kiselyov2012typed}:
-\begin{minted}{haskell}
-    class Expr2 d where
-      lit :: Int -> d
-      add :: d -> d -> d
-      neg :: d -> d
-
-    data Ctx = CtxPos | CtxNeg
-
-    instance Expr2 d => Expr2 (Ctx -> d) where
-      lit x CtxNeg = lit (-x)
-      lit x CtxPos = lit x
-      neg e CtxNeg = e CtxPos
-      neg e CtxPos = e CtxNeg
-      add l r ctx = add (l ctx) (r ctx)
-\end{minted}
+% todo про монады и аппликативы, статьи
 
 \subsection{Зазеркалье в реальности}
 
 Рассмотрим некоторые частные случаи применения такого рода структур данных, заданных своими свёртками, на практике.
 
-\subsubsection{Deforestation \& fusion} \label{subsubsec:deforestation-fusion}
-
-В функциональном программировании мы строим новые функции путём композирования имеющихся, более простых, функций.
-Этот подход позволяет переиспользовать реализованную функциональность, снижая сложность кода и вероятность ошибок.
-Однако, он может приводить к излишним накладным расходам на аллокацию и деконструирование промежуточных структур данных.
-
-Например, сравните следующие две реализации.
-Первая предпочтительна с точки зрения качества кода, однако вторая порождает промежуточный список во время работы:
-\begin{minted}{haskell}
-    all p xs = and (map p xs)
-    -- или fused версия
-    all p [] = []
-    all p (x:xs) = p x && all p xs
-\end{minted}
-
-Очевидно, это задача оптимизирующего компилятора превращать хороший код с абстракциями в быстрый код.
-Оптимизация, избавляющая программы от (промежуточных) структур данных (деревьев) называется \vocab{дефорестацией (deforestation)}.
-В результате две функции, как говорят, ``сплавляются'' --- fuse.
-
-Термин и первый дефорестирующий алгоритм был предложен Philip Wadler~\cite{wadler1988deforestation}, он основан на нескольких простых правилах переписывания и агрессивном инлайнинге (см. примеры работы на рис.~\ref{fig:deforestation-examples}).
-Однако, этот алгоритм может приводить к экспоненциальному разбуханию кода и имеет шанс не завершится при наличии рекурсивных вызовов\footnote{Дефорестация является частным случаем суперкомпиляции~\cite{supercomp}, которая в свою очередь является обобщеним большого количества компиляторных оптимизаций.}.
-Чтобы алгоритм завершался программы должны быть написаны в некоторой строгой форме под названием treeless.
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.55\textwidth]{figs/deforestation-examples}
-    \caption{Примеры работы дефорестирующего алгоритма~\cite{wadler1988deforestation}.}
-    \label{fig:deforestation-examples}
-\end{figure}
-
-Сфокусируемся на списках и рассмотрим более практичные решения\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}.
-Первым очевидным решением было бы для каждой пары функций, работающих со списками, добавить специальное правило переписывания (см.~\ref{subsubsec:rules}), дефорестирующее с помощью алгебраических свойств списочных трансформаций.
-Однако, таких правил будет экспоненциально много.
-\begin{minted}{haskell}
-    {-# RULES
-    "map/map" forall f g xs. map f (map g xs) = map (f . g) xs
-      #-}
-\end{minted}
-
-Современная техника дефорестирования в Haskell --- fold/build list fusion~\cite{gill1993short} --- вместо использования множества алгебраических правил, определяет универсальный способ конструирования и деконструирования списка.
-Деконструировать список будем с помощью \mintinline{haskell}|foldr|, и для него введём специальное правило:
-\begin{minted}{haskell}
-    foldr f ini . map g ?$\equiv$? foldr (f . g) ini
-\end{minted}
-Конструировать будем с помощью функции \mintinline{haskell}|build|:
-\begin{minted}{haskell}
-    build :: (forall b . (a -> b -> b) -> b -> b) -> [a]
-    build g = g (:) []
-\end{minted}
-Например, список \mintinline{haskell}{[1, 2, 3]} и функция \mintinline{haskell}{map} теперь запишутся следующим образом\footnote{В стандартной библиотеке Haskell функции работы со списками написаны нормально, но рядом написаны правила \texttt{RULES}, которые подменяют их реализацию на fold/build.}:
-\begin{minted}{haskell}
-    list123 :: [Int]
-    list123 = build \s z -> s 1 (s 2 (s 3 z))
-
-    map :: (a -> b) -> [a] -> [b]
-    map f xs = build \s z -> foldr (\x acc -> s (f x) acc) z xs
-\end{minted}
-Можно заметить, что на вход \texttt{build} передаётся список Чёрча, отсюда не удивителен закон:
-\begin{minted}{haskell}
-    foldr f ini (build g) ?$\equiv$? g f ini
-\end{minted}
-
-Таким образом, мы избавились от конструирования списков путём замены вызовов конструкторов на вызовы сворачивающих функций.
-
-\subsubsection{Push vs pull} \label{subsubsec:push-pull}
 
 
 
 
 
-TODO % todo
 
-%\subsubsection{External iteration vs internal iteration}
-%
-%TODO % todo
+
+
+
+
+
+% todo ссылка на стриминг
 
 \subsubsection{Data vs codata} \label{subsubsec:codata}
+
+% todo On Understanding Data Abstraction, Revisited
 
 TODO % todo
 
 \subsubsection{Bytecode vs threaded code} \label{subsubsec:threaded-code}
 
 TODO % todo
-
-
-
-
-
-
-
-
-
 
 
 % todo \cite{meijer1991functional}
@@ -546,3 +424,11 @@ TODO % todo
 %      app (Const f) (Const arg) = Const $ "(" ++ f ++ " " ++ arg ++ ")"
 %      lam f = Const $ "(" ++ "\\x -> " ++ getConst (f (Const "x")) ++ ")"
 %\end{minted}
+
+%\subsubsection{Push vs pull} \label{subsubsec:push-pull}
+
+TODO % todo
+
+%\subsubsection{External iteration vs internal iteration}
+%
+%TODO % todo
