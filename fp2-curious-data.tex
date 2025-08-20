@@ -182,7 +182,7 @@
     visitTree :: Tree a -> Visitor a r -> r
 \end{minted}
 
-Чтобы это ещё более выглядело в ООП стиле, само дерево должно задаваться свёрткой (функцией \texttt{visit}), а разные вершины --- конкретными её реализациями:
+Чтобы это ещё более выглядело в ООП стиле, само дерево должно задаваться свёрткой (как бы интерфейсом с функцией \texttt{visit}), а разные вершины --- конкретными её реализациями (объектами-наследниками):
 \begin{minted}{haskell}
     type Tree a = forall r . Visitor a r -> r
 
@@ -195,6 +195,58 @@
 
 \subsection{Всё --- развёртка} \label{subsec:all-unfolds}
 
+Вспомним, что существует универсальная развёртка --- анаморфизм, которая по генерирующей процедуре позволяет получить целую структуру данных (см.~\ref{subsubsec:recursion-schemas}).
+\begin{minted}{haskell}
+    ana :: Functor f => forall s . (s -> f s) -> s -> Fix f
+    ana psi = In . fmap (ana psi) . psi
+\end{minted}
+
+Приведём функцию \texttt{ana} к типу вида \mintinline{haskell}{A -> B}, чтобы затем проще было исследовать стрелку \texttt{B -> A}.
+Для этого сделаем \texttt{uncurry} и перенесём квантор налево от стрелки (он изменится на противоположный):
+\begin{minted}{haskell}
+    ana :: Functor f => (exists s . (s, s -> f s)) -> Fix f
+\end{minted}
+Закодируем квантор существования с помощью нового типа (см.~\ref{subsubsec:existentials}) и перепишем анаморфизм на работу с ним:
+\begin{minted}{haskell}
+    data Box f where
+      Box :: forall s . s -> (s -> f s) -> Box
+
+    ana' :: Functor f => Box f -> Fix f
+    ana' (Box currSeed psi) =
+      In $ (\nextSeed -> ana' (Box nextSeed psi)) <$> psi currSeed
+\end{minted}
+Теперь построим изоморфизм между структурами данных и их тривиальными развёртками \mintinline{haskell}|Fix f ?$\simeq$? Box f|:
+\begin{minted}{haskell}
+    to :: Fix f -> Box f
+    to x = Box x out
+
+    from :: Functor f => Box f -> Fix f
+    from = ana'
+\end{minted}
+
+Рассмотрим случай, когда функтор формы представляет собой произведение:
+\[
+    \text{\mintinline{haskell}{s -> f s}} \iso \left( \prod_{i}(t_i\ap a) \right)^{\displaystyle s} \iso \prod_i(s\to t_i\ap a)
+\]
+То есть коалгебра эквивалентна кортежу функций.
+
+Таким образом, \mintinline{haskell}{Box} это не что иное, как абстрактный тип данных: он включает в себя скрытое состояние неизвестной природы и набор операций для работы с ним.
+
+
+
+Рассмотрим конкретный пример:
+\begin{minted}{haskell}
+    data Rose a = Rose a [Rose a]
+    ?$\iso$?
+    data RoseShape a r = Rose a [r]
+    type Rose' a = Fix (RoseShape a)
+    ?$\iso$?
+    data RoseObj a = RoseObj { elem :: a, children :: [RoseObj a] }
+\end{minted}
+
+
+
+
 
 
 % todo
@@ -202,3 +254,6 @@
 \subsection{Вездесущий дуализм}
 
 % todo
+
+
+% todo coinduction
