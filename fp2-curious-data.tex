@@ -95,7 +95,7 @@
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.55\textwidth]{figs/deforestation-examples}
+    \includegraphics[width=0.6\textwidth]{figs/deforestation-examples}
     \caption{Примеры работы дефорестирующего алгоритма~\cite{wadler1988deforestation}.}
     \label{fig:deforestation-examples}
 \end{figure}
@@ -184,13 +184,13 @@
 
 Чтобы это ещё более выглядело в ООП стиле, само дерево должно задаваться свёрткой (как бы интерфейсом с функцией \texttt{visit}), а разные вершины --- конкретными её реализациями (объектами-наследниками):
 \begin{minted}{haskell}
-    type Tree a = forall r . Visitor a r -> r
+    data Tree a = Tree { visit :: forall r . Visitor a r -> r }
 
     leaf :: Tree a
-    leaf Visitor{onLeaf} = onLeaf
+    leaf = Tree \Visitor{onLeaf} -> onLeaf
 
     node :: a -> [Tree a] -> Tree a
-    node x ts v@Visitor{onNode} = onNode x (fmap ($ v) ts)
+    node x ts = Tree \v@Visitor{onNode} -> onNode x (fmap ($ v) ts)
 \end{minted}
 
 \subsection{Всё --- развёртка} \label{subsec:all-unfolds}
@@ -201,7 +201,7 @@
     ana psi = In . fmap (ana psi) . psi
 \end{minted}
 
-Приведём функцию \texttt{ana} к типу вида \mintinline{haskell}{A -> B}, чтобы затем проще было исследовать стрелку \texttt{B -> A}.
+Приведём функцию \texttt{ana} к типу вида \mintinline{haskell}{A -> B}, чтобы затем проще было исследовать стрелку \mintinline{haskell}{B -> A}.
 Для этого сделаем \texttt{uncurry} и перенесём квантор налево от стрелки (он изменится на противоположный):
 \begin{minted}{haskell}
     ana :: Functor f => (exists s . (s, s -> f s)) -> Fix f
@@ -226,25 +226,10 @@
 
 Рассмотрим случай, когда функтор формы представляет собой произведение:
 \[
-    \text{\mintinline{haskell}{s -> f s}} \iso \left( \prod_{i}(t_i\ap a) \right)^{\displaystyle s} \iso \prod_i(s\to t_i\ap a)
+    \text{\texttt{s -> f s}} \iso \left( \prod_{i}(t_i\ap a) \right)^{\displaystyle s} \iso \prod_i(s\to t_i\ap a)
 \]
 То есть коалгебра эквивалентна кортежу функций.
-
-Таким образом, \mintinline{haskell}{Box} это не что иное, как абстрактный тип данных: он включает в себя скрытое состояние неизвестной природы и набор операций для работы с ним.
-
-
-
-Рассмотрим конкретный пример:
-\begin{minted}{haskell}
-    data Rose a = Rose a [Rose a]
-    ?$\iso$?
-    data RoseShape a r = Rose a [r]
-    type Rose' a = Fix (RoseShape a)
-    ?$\iso$?
-    data RoseObj a = RoseObj { elem :: a, children :: [RoseObj a] }
-\end{minted}
-
-
+Таким образом, \mintinline{haskell}{Box} это не что иное, как \point{абстрактный тип данных}: он включает в себя скрытое состояние неизвестной природы и набор операций для работы с ним.
 
 
 
