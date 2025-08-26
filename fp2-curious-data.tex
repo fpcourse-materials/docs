@@ -1,4 +1,7 @@
-В этой главе мы воспользуемся знаниями предыдущей и получим различные эквивалентные представления данных, чтобы на практике переключаться между ними в зависимости от обстоятельств.
+%! suppress = LineBreak
+
+В этой главе мы воспользуемся знаниями предыдущей и получим различные эквивалентные представления рекурсивных типов данных (иначе говоря, коллекций).
+Многие концепции являются частными случаями этого многообразия.
 
 \subsection{Всё --- свёртка} \label{subsec:all-folds}
 
@@ -20,12 +23,12 @@
 
 Например, следующие два списка эквивалентны (все конструкторы \mintinline{haskell}{In} заменяем на данную алгебру):
 \begin{minted}{haskell}
-    data List elem rec = Nil | Cons elem rec
+    data FList elem rec = Nil | Cons elem rec
 
-    xs1 :: Fix (List Int)
+    xs1 :: Fix (FList Int)
     xs1 = In (Cons 1 (In (Cons 2 (In (Cons 3 (In Nil))))))
 
-    xs2 :: (List Int a -> a) -> a
+    xs2 :: (FList Int a -> a) -> a
     xs2 = \alg -> alg (Cons 1 (alg (Cons 2 (alg (Cons 3 (alg Nil))))))
 
     ghci> xs2 @Int \case Nil -> 0; Cons x acc -> x + acc
@@ -44,11 +47,11 @@
 Остались произведения, от которых можно избавиться с помощью каррирования, и получить \vocab{финальное кодирование} структуры данных\footnote{Финальным такое кодирование называется по историческим причинам. Казалось, что оно двойственно инициальному и является терминальным (финальным) объектом категории интерпретаций. Однако, с категорной точки зрения, это тоже инициальный объект.}.
 Например, для списка имеем:
 \begin{align*}
-    \text{\mintinline{haskell}{(List elem a -> a) -> a}}
+    \text{\texttt{(FList elem a -> a) -> a}}
     \iso a^{\displaystyle a^{\displaystyle 1 + elem\times a}}
     \iso a^{\displaystyle a\times a^{\displaystyle elem\times a}}
     \iso \left( a^{\displaystyle a} \right)^{\displaystyle \left(\left( a^{\displaystyle a}\right)^{\displaystyle elem}\right)} \\
-    \iso \text{\mintinline{haskell}{a -> (elem -> a -> a) -> a}}
+    \iso \text{\texttt{a -> (elem -> a -> a) -> a}}
 \end{align*}
 
 Мы получили не что иное, как список Чёрча\footnote{\url{https://en.wikipedia.org/wiki/Church_encoding}}\footnote{\url{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}}.
@@ -68,7 +71,7 @@
 Вместо конструкторов же сразу вызываются соответствующие функции.
 То есть, вместо того, чтобы создать структуру данных и доставить её к месту деконструирования (паттерн-матчингу), мы \point{доставляем место деконструирования к месту конструирования} и оказывается, что ничего конструировать по итогу и не надо.
 
-Стоит отметить, что изоморфизм \mintinline{haskell}|Fix f ?$\simeq$? forall d . (f d -> d) -> d|, на котором основывается этот раздел, является обобщением изоморфизма \mintinline{haskell}{a ?$\sim$? forall r . (a -> r) -> r} (при \mintinline{haskell}{f = Const a}), который является основой CPS трансформации, рассматриваемой нами далее в~\ref{sec:continuations}.
+Стоит отметить, что изоморфизм \mintinline{haskell}|Fix f ?$\simeq$? forall d . (f d -> d) -> d| является обобщением изоморфизма \mintinline{haskell}{a ?$\sim$? forall r . (a -> r) -> r} (при \mintinline{haskell}{f = Const a}), который является основой CPS трансформации, рассматриваемой нами далее в~\ref{sec:continuations}.
 
 \subsubsection{Deforestation \& fusion} \label{subsubsec:deforestation-fusion}
 
@@ -187,10 +190,10 @@
     data Tree a = Tree { visit :: forall r . Visitor a r -> r }
 
     leaf :: Tree a
-    leaf = Tree \Visitor{onLeaf} -> onLeaf
+    leaf = Tree { visit = \Visitor{onLeaf} -> onLeaf }
 
     node :: a -> [Tree a] -> Tree a
-    node x ts = Tree \v@Visitor{onNode} -> onNode x (fmap ($ v) ts)
+    node x ts = Tree { visit = \v@Visitor{onNode} -> onNode x (map (`visit` v) ts) }
 \end{minted}
 
 \subsection{Всё --- развёртка} \label{subsec:all-unfolds}
@@ -209,13 +212,14 @@
 Закодируем квантор существования с помощью нового типа (см.~\ref{subsubsec:existentials}) и перепишем анаморфизм на работу с ним:
 \begin{minted}{haskell}
     data Box f where
+      --     exists s. (s,    s -> f s)
       Box :: forall s . s -> (s -> f s) -> Box
 
     ana' :: Functor f => Box f -> Fix f
     ana' (Box currSeed psi) =
       In $ (\nextSeed -> ana' (Box nextSeed psi)) <$> psi currSeed
 \end{minted}
-Теперь построим изоморфизм между структурами данных и их тривиальными развёртками \mintinline{haskell}|Fix f ?$\simeq$? Box f|:
+Теперь построим изоморфизм между структурами данных и их тривиальными развёртками, возвращающими каждый раз следующий слой данной структуры, \mintinline{haskell}|Fix f ?$\simeq$? Box f|:
 \begin{minted}{haskell}
     to :: Fix f -> Box f
     to x = Box x out
@@ -223,22 +227,55 @@
     from :: Functor f => Box f -> Fix f
     from = ana'
 \end{minted}
+Таким образом, мы получили свидетельство того, что любую рекурсивную структуру данных можно хотя бы тривиальным образом представить как \mintinline{haskell}{Box f}. % todo и что дальше?
+
+Например, бесконечный ленивый список натуральных чисел может быть задан следующим образом.
+Заметьте, что тут мы не полагаемся на ленивость Haskell.
+\begin{minted}{haskell}
+    nats :: Box (FList Int)
+    nats = Box 0 \curr -> Cons curr (curr + 1)
+\end{minted}
+
+\begin{task}
+    Реализуйте ленивую функцию \\ \mintinline{haskell}{take :: Int -> Box (FList Int) -> Box (FList Int)}.
+\end{task}
+
+\subsubsection{Абстрактные типы данных} \label{subsubsec:abstract-data-types}
 
 Рассмотрим случай, когда функтор формы представляет собой произведение:
 \[
-    \text{\texttt{s -> f s}} \iso \left( \prod_{i}(t_i\ap a) \right)^{\displaystyle s} \iso \prod_i(s\to t_i\ap a)
+    \text{\texttt{s -> f s}} \iso \left( \prod_{i}(t_i\ap s) \right)^{\displaystyle s} \iso \prod_i(s\to t_i\ap s)
 \]
 То есть коалгебра эквивалентна кортежу функций.
 Таким образом, \mintinline{haskell}{Box} это не что иное, как \point{абстрактный тип данных}: он включает в себя скрытое состояние неизвестной природы и набор операций для работы с ним.
+На самом деле мы уже встречали такую конструкцию ранее, когда говорили про экзистенциальные типы~\ref{subsubsec:existentials} (там мы использовали инстансы классы типов в качестве кортежей функций).
 
-
-
+% todo co-Church encoding
 
 % todo
 
 \subsection{Вездесущий дуализм}
 
 % todo
+
+%\subsubsection{Push vs pull} \label{subsubsec:push-pull}
+
+TODO % todo
+
+%\subsubsection{External iteration vs internal iteration}
+%
+%TODO % todo
+
+%\subsubsection{Data vs codata}
+%
+%\url{https://reasonablypolymorphic.com/blog/review-codata/index.html}
+%
+%% todo codata, copattern-matching
+%% todo are custom patterns in haskell connected to this?
+%
+%% todo когда использовать дату, а когда - кодату (интерпретируем входые данные)
+%
+%TODO~\cite{downen2019codata} % todo
 
 
 % todo coinduction

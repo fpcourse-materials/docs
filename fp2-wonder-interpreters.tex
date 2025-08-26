@@ -304,7 +304,7 @@
 
 
 
-
+% todo убрать слово финальный отсюда, это не правда
 
 
 
@@ -333,16 +333,7 @@ TODO % todo
 %TODO % todo пример
 %
 %\subsubsection{Streams \& reactive programming}
-%
-%Если пойти в обратную сторону относительно анаморфизма, то получим структуру данных, заданную через развёртку.
-%Такая структура даже в энергичном языке может быть потенциально бесконечной.
-%\begin{minted}{haskell}
-%    anaInv :: Fix f -> ?$\exists$?s . (s -> f s, s)
-%\end{minted}
-%
 %TODO\cite{coutts2007stream, kiselyov2022highest} % todo stream fusion from lists to streams to nothing at all
-%
-%% todo Reading circle about fusion
 %
 %% todo haskell inlining
 %% todo Oleg about fusion and streams
@@ -354,16 +345,7 @@ TODO % todo
 %% todo  React 2014 : Erik Meijer - What does it mean to be Reactive? https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx
 %
 %
-%\subsubsection{Data vs codata}
-%
-%\url{https://reasonablypolymorphic.com/blog/review-codata/index.html}
-%
-%% todo codata, copattern-matching
-%% todo are custom patterns in haskell connected to this?
-%
-%% todo когда использовать дату, а когда - кодату (интерпретируем входые данные)
-%
-%TODO~\cite{downen2019codata} % todo
+
 %
 %\subsubsection{Threaded code}
 %
@@ -372,12 +354,6 @@ TODO % todo
 %% todo pull and push
 %
 %% todo \vocab{полярности}\footnote{\url{https://existentialtype.wordpress.com/2012/08/25/polarity-in-type-theory/}}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}}
-
-%Можно заметить, что термы в зазеркалье можно представлять как объекты с единственным методом \texttt{visit}, а инстанс соответствующего класса типов --- visitor.
-%
-%% todo visitor pattern
-
-% todo зафиксировать где-то достижение, что код пишется на нормальном хаскеле
 
 % todo торжественно отметить где-нибудь, что мы плавно расширяем мета-язык теперь новой фигнёй
 
@@ -425,10 +401,4 @@ TODO % todo
 %      lam f = Const $ "(" ++ "\\x -> " ++ getConst (f (Const "x")) ++ ")"
 %\end{minted}
 
-%\subsubsection{Push vs pull} \label{subsubsec:push-pull}
 
-TODO % todo
-
-%\subsubsection{External iteration vs internal iteration}
-%
-%TODO % todo
