@@ -314,8 +314,6 @@
 
 В стандартной библиотеке Haskell всё-таки используется foldr/build fusion, однако существует множество промышленных библиотек стримов~\cite[глава 14]{bragilevsky-haskell}.
 
-На стримы можно смотреть как на \point{Iterator pattern} из ООП.
-
 Больше про стримы можно почитать у Олега Киселёва\footnote{\url{https://okmij.org/ftp/Streams.html}}.
 
 \subsection{Вездесущий дуализм} \label{subsec:data-duality}
@@ -331,24 +329,37 @@
 
 \subsubsection{Pull vs push streaming} \label{subsubsec:push-pull}
 
+Рассмотрим различные представления списков или, как их иногда называют, потоков событий.
+Подробнее сравнение можно посмотреть тут~\cite[параграф 3]{kiselyov2017stream}.
 
+Church encoding для списков даёт \vocab{pull stream}, или \vocab{internal iteration}, или \vocab{Observer pattern}\footnote{\url{https://learn.microsoft.com/en-us/dotnet/api/system.iobserver-1?view=net-9.0}} (частный случай Visitor pattern~\ref{subsubsec:visitor}), когда мы регистрируем обработчика событий, а коллекция вызывает на нём методы.
+Другими примерами pull потоков являются Java Stream API\footnote{\url{https://docs.oracle.com/javase/8/docs/api/java/util/stream/Stream.html}}, Closure Transducers\footnote{\url{https://clojure.org/reference/transducers}}.
+\begin{minted}{kotlin}
+    events.observe(object : Observer<T> {
+        override fun onComplete() { .. }
+        override fun onNext(elem: T) { .. }
+    })
+\end{minted}
 
-TODO % todo
+co-Church encoding для списков даёт \vocab{push stream}, или \vocab{external iteration}, или \vocab{Iterator pattern}.
+Чтобы получить следующий элемент, его нужно явно запросить потребляющему коду.
+Это представление часто гораздо удобнее с точки зрения использования (см.~\ref{subsubsec:stream-fusion}), однако сложнее на стороне имплементации, потому что нужно выделить и поддерживать экзистенциальное состояние в коалгебре.
+Генераторы призваны автоматизировать выделение этого состояния, так можно заметить, что это continuation вычисления (см. далее~\ref{sec:continuations}).
 
-%\subsubsection{External iteration vs internal iteration}
-%
-%TODO % todo
+Особенно сильно различия проявляются в асинхронном окружении (в этом случае работу с такими коллекциями называют \vocab{реактивным программированием}\footnote{\href{https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx}{React 2014 : Erik Meijer - What does it mean to be Reactive?}}).
+Тут Church encoding соответствует \vocab{горячим потокам}, а co-Church encoding --- \vocab{холодным}. % todo
 
-%\subsubsection{Data vs codata}
-%
+\subsubsection{Data vs codata} \label{subsubsec:data-codata}
+
 %\url{https://reasonablypolymorphic.com/blog/review-codata/index.html}
 %
 %% todo codata, copattern-matching
 %% todo are custom patterns in haskell connected to this?
 %
 %% todo когда использовать дату, а когда - кодату (интерпретируем входые данные)
-%
-%TODO~\cite{downen2019codata} % todo
+
+TODO~\cite{downen2019codata} % todo
+
 
 %% todo \vocab{полярности}\footnote{\url{https://existentialtype.wordpress.com/2012/08/25/polarity-in-type-theory/}}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}}
 
