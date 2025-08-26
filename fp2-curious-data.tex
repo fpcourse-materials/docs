@@ -344,9 +344,9 @@ Church encoding для списков даёт \vocab{pull stream}, или \voca
 co-Church encoding для списков даёт \vocab{push stream}, или \vocab{external iteration}, или \vocab{Iterator pattern}.
 Чтобы получить следующий элемент, его нужно явно запросить потребляющему коду.
 Это представление часто гораздо удобнее с точки зрения использования (см.~\ref{subsubsec:stream-fusion}), однако сложнее на стороне имплементации, потому что нужно выделить и поддерживать экзистенциальное состояние в коалгебре.
-Генераторы призваны автоматизировать выделение этого состояния, так можно заметить, что это continuation вычисления (см. далее~\ref{sec:continuations}).
+Генераторы призваны автоматизировать выделение этого состояния, так как можно заметить, что это continuation вычисления (см. далее~\ref{sec:continuations}).
 
-Особенно сильно различия проявляются в асинхронном окружении (в этом случае работу с такими коллекциями называют \vocab{реактивным программированием}\footnote{\href{https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx}{React 2014 : Erik Meijer - What does it mean to be Reactive?}}).
+Особенно сильно различия проявляются в асинхронном окружении (в этом случае работу с такими коллекциями называют \vocab{реактивным программированием}\footnote{\href{https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx}{(youtube) React 2014 : Erik Meijer - What does it mean to be Reactive?}}).
 Тут Church encoding соответствует \vocab{горячим потокам}, а co-Church encoding --- \vocab{холодным}. % todo
 
 \subsubsection{Data vs codata} \label{subsubsec:data-codata}
