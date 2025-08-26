@@ -73,7 +73,7 @@
 
 Стоит отметить, что изоморфизм \mintinline{haskell}|Fix f ?$\simeq$? forall d . (f d -> d) -> d| является обобщением изоморфизма \mintinline{haskell}{a ?$\sim$? forall r . (a -> r) -> r} (при \mintinline{haskell}{f = Const a}), который является основой CPS трансформации, рассматриваемой нами далее в~\ref{sec:continuations}.
 
-\subsubsection{Deforestation \& fusion} \label{subsubsec:deforestation-fusion}
+\subsubsection{Deforestation \& list fusion} \label{subsubsec:deforestation-fusion}
 
 В функциональном программировании мы строим новые функции путём композирования имеющихся, более простых, функций.
 Этот подход позволяет переиспользовать реализованную функциональность, снижая сложность кода и вероятность ошибок.
@@ -92,7 +92,7 @@
 Оптимизация, избавляющая программы от (промежуточных) структур данных (деревьев) называется \vocab{дефорестацией (deforestation)}.
 В результате две функции, как говорят, ``сплавляются'' --- fuse.
 
-Термин и первый дефорестирующий алгоритм был предложен Philip Wadler~\cite{wadler1988deforestation}, он основан на нескольких простых правилах переписывания и агрессивном инлайнинге (см. примеры работы на рис.~\ref{fig:deforestation-examples}).
+Термин и первый дефорестирующий алгоритм был предложен Philip Wadler~\cite{wadler1988deforestation}, он основан на нескольких простых правилах переписывания, нацеленных получить ситуацию \mintinline{haskell}{case K args of ...}, и агрессивном инлайнинге (см. примеры работы на рис.~\ref{fig:deforestation-examples}).
 Однако, этот алгоритм может приводить к экспоненциальному разбуханию кода и имеет шанс не завершится при наличии рекурсивных вызовов\footnote{Дефорестация является частным случаем суперкомпиляции~\cite{supercomp}, которая в свою очередь является обобщеним большого количества компиляторных оптимизаций.}.
 Чтобы алгоритм завершался программы должны быть написаны в некоторой строгой форме под названием treeless.
 
@@ -227,7 +227,8 @@
     from :: Functor f => Box f -> Fix f
     from = ana'
 \end{minted}
-Таким образом, мы получили свидетельство того, что любую рекурсивную структуру данных можно хотя бы тривиальным образом представить как \mintinline{haskell}{Box f}. % todo и что дальше?
+Таким образом, мы получили свидетельство того, что любую рекурсивную структуру данных можно хотя бы тривиальным образом представить как \mintinline{haskell}{Box f}.
+Иногда такое представление называют \vocab{co-Church encoding}.
 
 Например, бесконечный ленивый список натуральных чисел может быть задан следующим образом.
 Заметьте, что тут мы не полагаемся на ленивость Haskell.
@@ -247,18 +248,81 @@
     \text{\texttt{s -> f s}} \iso \left( \prod_{i}(t_i\ap s) \right)^{\displaystyle s} \iso \prod_i(s\to t_i\ap s)
 \]
 То есть коалгебра эквивалентна кортежу функций.
-Таким образом, \mintinline{haskell}{Box} это не что иное, как \point{абстрактный тип данных}: он включает в себя скрытое состояние неизвестной природы и набор операций для работы с ним.
+Таким образом, \mintinline{haskell}{Box} это не что иное, как \point{абстрактный тип данных (ADT)}: он включает в себя скрытое состояние неизвестной природы и набор операций для работы с ним~\cite{gibbons2008unfolding}.
 На самом деле мы уже встречали такую конструкцию ранее, когда говорили про экзистенциальные типы~\ref{subsubsec:existentials} (там мы использовали инстансы классы типов в качестве кортежей функций).
 
-% todo co-Church encoding
+Известно, что ООП объекты тоже имеют коалгебраическую природу.
+Подробнее про соотношение объектов и абстрактных типов данных можно почитать в~\cite{cook2009understanding}.
 
-% todo
+\subsubsection{Stream fusion} \label{subsubsec:stream-fusion}
+
+Ранее мы рассматривали foldr/build list fusion оптимизацию, элиминирующую промежуточные списки (см.~\ref{subsubsec:deforestation-fusion}).
+Однако, эта техника не подходит для многих популярных функций, например, \texttt{zip}.
+
+Позднее была предложена техника использования ко-структуры списка --- развёртки или \mintinline{haskell}{Stream}~\cite{coutts2007stream}:
+\begin{minted}{haskell}
+    data FList a r = Nil | Cons a r
+    type MyStream a = Box (FList a) -- ?$\exists$?s . (s -> FList a s, s)
+    -- ?$\iso$?
+    data Step a s = Done | Yield a s
+    data Stream a where
+      Stream :: forall s . (s -> Step a s) -> s -> Stream a
+
+    stream :: [a] -> Stream a
+    stream xs = Stream (\case [] -> Done; x:xs -> Yield x xs) xs
+
+    unstream :: Stream a -> [a]
+    unstream (Stream next s) = case next s of
+      Done -> []
+      Cons a s' -> a : unstream next s'
+\end{minted}
+
+Идея в том, что теперь \point{функции работы со стримами нерекурсивны} и легко подвергаются базовым компиляторным дефорестирующим трансформациям в стиле~\cite{wadler1988deforestation}.
+Действительно, вместо рекурсивного вызова мы запоминаем состояние для следующей итерации.
+\begin{minted}{haskell}
+    mapS :: (a -> b) -> Stream a -> Stream b
+    mapS f (Stream next s) = Stream next' s
+      where
+        next' s = case next s of
+          Done -> Done
+          Yield x s' -> Yield (f x) s'
+\end{minted}
+
+Общий пайплайн выглядит следующим образом:
+\begin{enumerate}
+    \item Мы пишем все функции работы со списками через стримы:
+    \begin{minted}{haskell}
+        map :: (a -> b) -> [a] -> [b]
+        map f = unstream . map f . stream
+    \end{minted}
+    \item С помощью RULES (см.~\ref{subsubsec:rules}) задаём правило переписывания stream/unstream, двойственное foldr/build: \texttt{stream . unstream = id}.
+    \item Далее справляются обычные компиляторные оптимизации.
+\end{enumerate}
+
+Чтобы поддержать нерекурсивную функцию фильтрации, обычно добавляют отдельный вид шагов:
+\begin{minted}{haskell}
+    data Step a s = Done | Skip s | Yield a s
+
+    filterS :: (a -> Bool) -> Stream a -> Stream a
+    filterS p (Stream next s) = Stream next' s
+      where
+        next' s = case next s of
+          Done -> Done
+          Skip s' -> Skip s'
+          Yield a s' -> if p a then Yield a s' else Skip s'
+\end{minted}
+
+На стримы можно смотреть как на \point{Iterator pattern} из ООП.
+
+Больше про стримы можно почитать у Олега Киселёва\footnote{\url{https://okmij.org/ftp/Streams.html}}.
 
 \subsection{Вездесущий дуализм}
 
 % todo
 
 %\subsubsection{Push vs pull} \label{subsubsec:push-pull}
+
+%TODO\cite{coutts2007stream, kiselyov2022highest}
 
 TODO % todo
 
@@ -277,5 +341,6 @@ TODO % todo
 %
 %TODO~\cite{downen2019codata} % todo
 
+%% todo \vocab{полярности}\footnote{\url{https://existentialtype.wordpress.com/2012/08/25/polarity-in-type-theory/}}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}}
 
 % todo coinduction
