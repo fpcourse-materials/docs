@@ -324,7 +324,7 @@
 
 В этом разделе мы рассмотрим некоторые практические примеры, в которых пространство решений задано дуальными представлениями коллекций.
 
-\subsubsection{Pull vs push streaming} \label{subsubsec:push-pull}
+\subsubsection{Push vs pull streaming} \label{subsubsec:push-pull}
 
 Рассмотрим различные представления списков или, как их иногда называют, потоков событий.
 Подробнее сравнение можно посмотреть тут~\cite[параграф 3]{kiselyov2017stream}.
@@ -332,9 +332,9 @@
 Church encoding для списков даёт \vocab{push stream}, или \vocab{internal iteration}, или \vocab{Observer pattern}\footnote{\url{https://learn.microsoft.com/en-us/dotnet/api/system.iobserver-1?view=net-9.0}} (в некотором смысле частный случай Visitor pattern~\ref{subsubsec:visitor}), когда мы регистрируем обработчика событий, а коллекция вызывает (push) на нём методы.
 Другими примерами push потоков являются Java Stream API\footnote{\url{https://docs.oracle.com/javase/8/docs/api/java/util/stream/Stream.html}}, Closure Transducers\footnote{\url{https://clojure.org/reference/transducers}}.
 \begin{minted}{kotlin}
-    events.observe(object : Observer<T> {
+    events.observe(object : Observer<Event> {
         override fun onComplete() { .. }
-        override fun onNext(elem: T) { .. }
+        override fun onNext(elem: Event) { .. }
     })
 \end{minted}
 
@@ -343,17 +343,17 @@ co-Church encoding для списков даёт \vocab{pull stream}, или \v
 Это представление часто гораздо удобнее с точки зрения использования (см.~\ref{subsubsec:stream-fusion})\footnote{\url{https://github.com/pulldown-cmark/pulldown-cmark/?tab=readme-ov-file\#why-a-pull-parser}}, однако сложнее на стороне имплементации, потому что нужно выделить и поддерживать экзистенциальное состояние в коалгебре.
 Генераторы призваны автоматизировать выделение этого состояния, так как можно заметить, что это continuation вычисления (см. далее~\ref{sec:continuations}).
 
-Особенно сильно различия проявляются в асинхронном окружении (в этом случае работу с такими коллекциями иногда называют \vocab{реактивным программированием}\footnote{\href{https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx}{(youtube) React 2014 : Erik Meijer - What does it mean to be Reactive?}}).
-Тут Church encoding соответствует \vocab{горячим потокам}, а co-Church encoding --- \vocab{холодным}.
+Нередко работу с потоками называют \vocab{реактивным программированием}\footnote{\href{https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx}{(youtube) React 2014 : Erik Meijer - What does it mean to be Reactive?}}.
+Чистой версией является \vocab{functional reactive programming (FRP)}, представляющее потоки как функции от времени\footnote{\href{https://youtu.be/rfmkzp76M4M?si=TRBq8wWbcDOhSbIO}{Conal Elliott - The Essence \& Origins of Functional Reactive Programming}}~\cite{elliott1997functional}.
 
 \subsubsection{Data vs codata} \label{subsubsec:data-codata}
 
 
 
-%\url{https://reasonablypolymorphic.com/blog/review-codata/index.html}
-%
+
+
+
 %% todo codata, copattern-matching
-%% todo are custom patterns in haskell connected to this?
 %
 %% todo когда использовать дату, а когда - кодату (интерпретируем входые данные)
 
