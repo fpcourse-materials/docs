@@ -113,16 +113,13 @@
 \end{minted}
 
 Современная техника дефорестирования в Haskell --- fold/build list fusion~\cite{gill1993short} --- вместо использования множества алгебраических правил, определяет универсальный способ конструирования и деконструирования списка.
-Деконструировать список будем с помощью \mintinline{haskell}|foldr|, и для него введём специальное правило:
-\begin{minted}{haskell}
-    foldr f ini . map g ?$\equiv$? foldr (f . g) ini
-\end{minted}
+Деконструировать список будем с помощью \mintinline{haskell}|foldr|.
 Конструировать будем с помощью функции \mintinline{haskell}|build|:
 \begin{minted}{haskell}
     build :: (forall b . (a -> b -> b) -> b -> b) -> [a]
     build g = g (:) []
 \end{minted}
-Например, список \mintinline{haskell}{[1, 2, 3]} и функция \mintinline{haskell}{map} теперь запишутся следующим образом\footnote{В стандартной библиотеке Haskell функции работы со списками написаны нормально, но рядом написаны правила \texttt{RULES}, которые подменяют их реализацию на fold/build.}:
+Например, список \mintinline{haskell}{[1, 2, 3]} и функция \mintinline{haskell}{map} теперь запишутся следующим образом\footnote{В стандартной библиотеке Haskell функции работы со списками написаны нормально, но рядом написаны правила \texttt{RULES} (см.~\ref{subsubsec:rules}), которые подменяют их реализацию на fold/build.}:
 \begin{minted}{haskell}
     list123 :: [Int]
     list123 = build \s z -> s 1 (s 2 (s 3 z))
@@ -259,7 +256,7 @@
 Ранее мы рассматривали foldr/build list fusion оптимизацию, элиминирующую промежуточные списки (см.~\ref{subsubsec:deforestation-fusion}).
 Однако, эта техника не подходит для многих популярных функций, например, \texttt{zip} (нужно корутинить между двумя алгебрами) или \texttt{take} (нужно оборвать свёртку в определённый момент).
 
-Позднее была предложена техника использования ко-структуры списка --- развёртки или \mintinline{haskell}{Stream}~\cite{coutts2007stream}:
+Позднее была предложена техника использования ко-структуры списка --- развёртки или \mintinline{haskell}{Stream}\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}~\cite{coutts2007stream}:
 \begin{minted}{haskell}
     data FList a r = Nil | Cons a r
     type MyStream a = Box (FList a) -- ?$\exists$?s . (s -> FList a s, s)
@@ -332,8 +329,8 @@
 Рассмотрим различные представления списков или, как их иногда называют, потоков событий.
 Подробнее сравнение можно посмотреть тут~\cite[параграф 3]{kiselyov2017stream}.
 
-Church encoding для списков даёт \vocab{pull stream}, или \vocab{internal iteration}, или \vocab{Observer pattern}\footnote{\url{https://learn.microsoft.com/en-us/dotnet/api/system.iobserver-1?view=net-9.0}} (частный случай Visitor pattern~\ref{subsubsec:visitor}), когда мы регистрируем обработчика событий, а коллекция вызывает на нём методы.
-Другими примерами pull потоков являются Java Stream API\footnote{\url{https://docs.oracle.com/javase/8/docs/api/java/util/stream/Stream.html}}, Closure Transducers\footnote{\url{https://clojure.org/reference/transducers}}.
+Church encoding для списков даёт \vocab{push stream}, или \vocab{internal iteration}, или \vocab{Observer pattern}\footnote{\url{https://learn.microsoft.com/en-us/dotnet/api/system.iobserver-1?view=net-9.0}} (в некотором смысле частный случай Visitor pattern~\ref{subsubsec:visitor}), когда мы регистрируем обработчика событий, а коллекция вызывает (push) на нём методы.
+Другими примерами push потоков являются Java Stream API\footnote{\url{https://docs.oracle.com/javase/8/docs/api/java/util/stream/Stream.html}}, Closure Transducers\footnote{\url{https://clojure.org/reference/transducers}}.
 \begin{minted}{kotlin}
     events.observe(object : Observer<T> {
         override fun onComplete() { .. }
@@ -341,15 +338,17 @@ Church encoding для списков даёт \vocab{pull stream}, или \voca
     })
 \end{minted}
 
-co-Church encoding для списков даёт \vocab{push stream}, или \vocab{external iteration}, или \vocab{Iterator pattern}.
-Чтобы получить следующий элемент, его нужно явно запросить потребляющему коду.
-Это представление часто гораздо удобнее с точки зрения использования (см.~\ref{subsubsec:stream-fusion}), однако сложнее на стороне имплементации, потому что нужно выделить и поддерживать экзистенциальное состояние в коалгебре.
+co-Church encoding для списков даёт \vocab{pull stream}, или \vocab{external iteration}, или \vocab{Iterator pattern}.
+Чтобы получить следующий элемент, его нужно явно запросить (pull) потребляющему коду.
+Это представление часто гораздо удобнее с точки зрения использования (см.~\ref{subsubsec:stream-fusion})\footnote{\url{https://github.com/pulldown-cmark/pulldown-cmark/?tab=readme-ov-file\#why-a-pull-parser}}, однако сложнее на стороне имплементации, потому что нужно выделить и поддерживать экзистенциальное состояние в коалгебре.
 Генераторы призваны автоматизировать выделение этого состояния, так как можно заметить, что это continuation вычисления (см. далее~\ref{sec:continuations}).
 
-Особенно сильно различия проявляются в асинхронном окружении (в этом случае работу с такими коллекциями называют \vocab{реактивным программированием}\footnote{\href{https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx}{(youtube) React 2014 : Erik Meijer - What does it mean to be Reactive?}}).
-Тут Church encoding соответствует \vocab{горячим потокам}, а co-Church encoding --- \vocab{холодным}. % todo
+Особенно сильно различия проявляются в асинхронном окружении (в этом случае работу с такими коллекциями иногда называют \vocab{реактивным программированием}\footnote{\href{https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx}{(youtube) React 2014 : Erik Meijer - What does it mean to be Reactive?}}).
+Тут Church encoding соответствует \vocab{горячим потокам}, а co-Church encoding --- \vocab{холодным}.
 
 \subsubsection{Data vs codata} \label{subsubsec:data-codata}
+
+
 
 %\url{https://reasonablypolymorphic.com/blog/review-codata/index.html}
 %
