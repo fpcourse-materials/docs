@@ -520,14 +520,14 @@ $X$ является рекурсивным типом с формой $F$, ес
 И действительно, подходящий объект $X$ должен быть либо начальным объектом категории алгебр, либо терминальным объектом категории коалгебр (с соответствующими морфизмами).
 Первый вариант соответствует конечным структурам данных, второй --- потенциально бесконечным.
 
-Начальным объектом категории алгебр над $Hask$ для функтора $f$ является следующая алгебра: \mintinline{haskell}|(Fix f, In)|\footnote{\url{https://bartoszmilewski.com/2017/02/28/f-algebras/}}\footnote{\url{https://ncatlab.org/nlab/show/catamorphism}}.
+Начальным объектом категории алгебр над $Hask$ для функтора $f$ является следующая алгебра: \mintinline{haskell}|(Fix f, In)|\footnote{\url{https://bartoszmilewski.com/2017/02/28/f-algebras/}}\footnote{\url{https://ncatlab.org/nlab/show/catamorphism}}. % todo проверить инициальность свёрток
 Действительно, для каждого типа \texttt{a} и для каждой f-алгебры \texttt{phi} мы можем построить такой морфизм \mintinline{haskell}|cata phi :: Fix f -> a|, что следующая диаграмма будет коммутировать.
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.4\textwidth]{figs/cata}
 \end{figure}
 
-Покажем, что \mintinline{haskell}|(Fix f, In)| является ещё и терминальным объектом (благодаря ленивости Haskell). % todo как тут учитывается ленивость
+Покажем, что \mintinline{haskell}|(Fix f, out)| является терминальным объектом категории коалгебр (благодаря ленивости Haskell). % todo как тут учитывается ленивость % todo проверить калгебраические стреллки
 Аналогично, для каждого объекта \texttt{a} и f-коалгебры \texttt{psi} найдётся морфизм \mintinline{haskell}|ana psi :: a -> Fix f|.
 \begin{figure}[h!]
     \centering
