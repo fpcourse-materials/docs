@@ -332,9 +332,9 @@
 
 \subsection{Вездесущий дуализм} \label{subsec:data-duality}
 
-Мы рассмотрели три формы рекурсивных данных (два инициальных и одно финальное):
+Мы рассмотрели три формы рекурсивных данных:
 \begin{itemize}
-    \item \mintinline{haskell}{Fix f} --- обычные алгебраические типы данных, конечные в энергичных языках;
+    \item \mintinline{haskell}{Fix f} --- обычные рекурсивные типы данных, конечные в энергичных языках;
     \item \mintinline{haskell}{?$\forall$?a . (f a -> a) -> a} --- Church encoding, конечные структуры заданные свёртками;
     \item \mintinline{haskell}{?$\exists$?s . (s -> f s, s)} --- co-Church encoding, потенциально бесконечные структуры данных, абстракции по данным (работаем через интерфейс над сокрытым представлением).
 \end{itemize}
@@ -365,23 +365,60 @@ co-Church encoding для списков даёт \vocab{pull stream}, или \v
 
 \subsubsection{Data vs codata} \label{subsubsec:data-codata}
 
+Вспомним функтор-формы для списка:
+\begin{minted}{haskell}
+    data ListF a r = Nil | Cons a r
+\end{minted}
+
 С помощью ключевого слова \mintinline{haskell}{data} мы определяем новый алгебраический тип данных через способы его сконструировать.
 Далее, с помощью pattern-matching мы можем деконструировать значения алгебраического типа данных и воспользоваться хранящейся в нём информацией.
+\begin{minted}{haskell}
+    data List a where
+      List :: ListF a (List a) -> List a
 
-Однако, можно определять тип данных и через способы его деконструировать с помощью ключевого слова \mintinline{haskell}{codata}.
-Сконструировать такой тип данных можно с помощью co-pattern-matching'а.
+    fold :: (ListF a r -> r) -> List a -> r
+    fold alg xs = case xs of
+      Fix Nil -> alg Nil
+      Fix (Cons y ys) -> alg (Cons y (fold alg ys))
+\end{minted}
 
+Однако, также можно определять тип данных через способы его деконструировать с помощью ключевого слова \mintinline{haskell}{codata} (в воображаемом языке).
+Так, у ко-списка можно потребовать показать следующий слой структуры.
+Сконструировать такой тип данных можно с помощью co-pattern-matching'а, описав как деконструирующая функция должна вести себя на конструирующем терме (\texttt{unfold coalg s})\footnote{\href{https://youtu.be/ZCdYIEwcna0?si=XEQSBFhnehQFZPxy}{(youtube) CS410 2017 Lecture 15 Coinduction and Coalgebras}}.
+\begin{minted}{haskell}
+    codata CoList a where
+      force :: CoList a -> ListF a (CoList a)
 
-%алгебраический тип данных
+    unfold :: (s -> ListF a s) -> s -> CoList a
+    force (unfold coalg s) = case coalg s of
+      Nil -> Nil
+      Cons x s' -> Cons x (unfold coalg s')
+\end{minted}
 
+По сути, \mintinline{haskell}{codata} представляет собой словарь функций, которые захватывают некоторое состояние, необходимое для генерации следующих слоёв структуры.
+Так, \mintinline{haskell}{codata} можно сравнить с ООП интерфейсами, а co-pattern-matching с анонимной реализацией интерфейса.
+Предыдущие два примера можно записать, например, в Kotlin следующим образом (форма списка кодируется как \mintinline[escapeinside=**]{kotlin}|Pair<a, r>?|, убедитесь самостоятельно, что этот тип изоморфен \mintinline{haskell}{ListF}).
+\begin{minted}[escapeinside=**]{kotlin}
+    class List<a>(val layer: Pair<a, List<a>>?)
 
+    fun <a, r> fold(alg: (Pair<a, r>?) -> r, xs: List<a>): r =
+        if (xs.layer == null) alg(null)
+        else alg(Pair(xs.layer.first, fold(alg, xs.list.second)))
 
-% todo codata, copattern-matching
+    interface CoList<a> { fun force(): Pair<a, CoList<a>>? }
 
-% todo когда использовать дату, а когда - кодату (интерпретируем входые данные)
+    fun <a, s> unfold(coalg: (s) -> Pair<a, s>?, ini: s): CoList<a> =
+        object : CoList<a> {
+            override fun force(): Pair<a, CoList<a>>? {
+                val layer = coalg(ini)
+                return if (layer == null) null else
+                    Pair(layer.first, unfold(coalg, layer.second))
+            }
+        }
+\end{minted}
 
-TODO~\cite{downen2019codata} % todo
-
+Функциональный стиль программирование в основном оперирует напрямую наблюдаемыми данными \mintinline{haskell}{data}, а ООП --- скрывает данные за интерфейсами \mintinline{haskell}{codata}.
+Однако, обе конструкции имеют свои понятные области применения и ими не стоит пренебрегать вне зависимости от предпочитаемого стиля~\cite{downen2019codata}\footnote{\url{https://reasonablypolymorphic.com/blog/review-codata/}}.
 
 % todo \vocab{полярности}\footnote{\url{https://existentialtype.wordpress.com/2012/08/25/polarity-in-type-theory/}}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}}
 
