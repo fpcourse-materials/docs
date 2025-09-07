@@ -52,7 +52,7 @@
             \item За частичные решения тоже даются баллы
             \item После пары старайтесь как можно скорее начать делать задания
             \item В начале каждой пары будет разбор
-            \item[\NB] Не столь важно не конечное решение, а процесс поиска
+            \item[\NB] Не столь важно не конечное решение как процесс поиска
         \end{itemize}
     \end{frame}
 
@@ -116,7 +116,7 @@
         \end{description}
     \end{frame}
 
-    \begin{frame}[fragile]{Пример программы в $\lambda$-исчислении}
+    \begin{frame}[fragile]{Опускаем скобочки}
         \begin{columns}[onlytextwidth]
             \begin{column}{0.55\textwidth}
                 \[\lambda f \ap g\ldotp \lambda x\ldotp f~(g~x)\]
@@ -124,6 +124,10 @@
                     \item[\todo] Какие скобочки пропущены в этой записи?
                     \item[\todo] Можно ли опустить имеющиеся?
                     \item[\todo] Как выглядит дерево синтаксиса, соответствующее этому терму?
+                    \item[\todo] Опустите скобочки $((((a)~b)~(c~d))~(e))$
+                    \item[\todo] Опустите скобочки $(y)~(\lambda x\ldotp (x))$
+                    \item[\todo] Опустите скобочки $(\lambda x\ldotp (\lambda y\ldotp (x~y)))~(a)~(b)$
+                    \item[\todo] Опустите скобочки $\lambda x\ldotp (x ~(\lambda y\ldotp y)\ap z)$
                 \end{itemize}
             \end{column}\hfill%
             \pause%
@@ -164,6 +168,10 @@
                 \begin{itemize}
                     \item[\todo] Какие переменные свободные в этом терме?
                     \item[\todo] Какими связывателями связаны остальные?
+                    \item[\todo] А для $\lambda x\ldotp x~ (\lambda z\ldotp x~ z)~ z$?
+                    \item[\todo] А для $\lambda a\ldotp \lambda b\ldotp \lambda c\ldotp a ~b~ (b~ c)~ c$?
+                    \item[\todo] А для $a ~(a~ b) ~\lambda a. a~ a$?
+                    \item[\todo] А для $\lambda a\ldotp (\lambda b\ldotp a)\ap b$?
                 \end{itemize}
             \end{column}\hfill%
             \pause%
@@ -300,8 +308,22 @@
             \end{column}
         \end{columns}
         \pause
-        \vspace{1em}
-        Этого правила переписывания термов достаточно, чтобы описать любое вычисление!
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.3\textwidth}
+                \begin{itemize}
+                    \item[\todo] $\comb{I}\ap(\comb{K}\ap\comb{I})\ap\comb{I}$
+                    \item[\todo] $\comb{B}\ap(\lambda x\ldotp x)\ap(\lambda x\ldotp x\ap x)\ap a$
+                    \item[\todo] $\comb{B}\ap\comb{S}\ap\comb{K}$
+                \end{itemize}
+            \end{column}\hfill%
+            \begin{column}[t]{0.7\textwidth}
+                \begin{itemize}
+                    \item[\answer] \pause $\step(\lambda x\ldotp x)\ap(\comb{K}\ap\comb{I})\ap\comb{I}\step (\comb{K}\ap\comb{I})\ap\comb{I} \step ((\lambda x~y\ldotp x)\ap\comb{I})\ap\comb{I} \step (\lambda y\ldotp \comb{I})\ap \comb{I} \step \comb{I}$
+                    \item[\answer] \pause $\step (\lambda x\ldotp x)\ap((\lambda x\ldotp x\ap x)\ap a) \step (\lambda x\ldotp x)\ap(a\ap a) \step a\ap a$
+                    \item[\answer] \pause $\step \lambda x\ldotp \comb{S}\ap(\comb{K} \ap x) \step \lambda x\ldotp\comb{S}\ap (\lambda y\ldotp x) \step \lambda x~g~z\ldotp (\lambda y\ldotp x)\ap z\ap (g\ap z) \step \comb{B}$
+                \end{itemize}
+            \end{column}
+        \end{columns}
     \end{frame}
 
     \begin{frame}[fragile]{Эквивалентности}
@@ -444,6 +466,7 @@
     \begin{frame}[fragile]{Проверка законов пар}
         \begin{itemize}
             \item[\todo] Проверьте, что реализация пар удовлетворяет законам
+            \item[\todo] Определите конструктор и элиминаторы для тройки двумя способами, каким законам они должны удовлетворять?
             \item[\answer] \pause
             \begin{align*}
                 \term{fst} \ap &(\term{pair} \ap \framebox{N} \ap M)
@@ -462,6 +485,11 @@
             \begin{equation*}
                 \term{fst} \ap (\term{pair} \ap N \ap M) \sstep N
             \end{equation*}
+            \item[\answer]
+            \begin{itemize}
+                \item Пара пар: $\term{triple} = \lambda x~y~z\ldotp \term{pair}\ap x\ap (\term{pair} \ap y \ap z)$; $\term{snd3} = \lambda p\ldotp \term{fst}\ap(\term{snd}\ap p)$
+                \item Тройка тройка: $\term{triple} = \lambda x~y~z\ldotp\lambda f\ldotp f\ap x\ap y\ap z$; $\term{snd3} = \lambda p\ldotp p\ap(\lambda x~y~z\ldotp y)$
+            \end{itemize}
         \end{itemize}
     \end{frame}
 

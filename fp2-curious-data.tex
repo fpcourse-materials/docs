@@ -193,6 +193,23 @@
     node x ts = Tree { visit = \v@Visitor{onNode} -> onNode x (map (`visit` v) ts) }
 \end{minted}
 
+Для наглядности, покажем этот код ещё и на Kotlin:
+\begin{minted}{kotlin}
+    interface Visitor<a, r> {
+        fun onLeaf(): r
+        fun onNode(x: a, subtrees: List<r>): r
+    }
+
+    interface Tree<a> { fun <r> visit(visitor: Visitor<a, r>): r }
+    class Leaf : Tree<Nothing> {
+        override fun <r> visit(visitor: Visitor<Nothing, r>): r = visitor.onLeaf()
+    }
+    class Node<a>(val value: a, val subtrees: List<Tree<a>>) : Tree<a> {
+        override fun <r> visit(visitor: Visitor<a, r>): r =
+            visitor.onNode(value, subtrees.map { it -> it.visit(visitor) })
+    }
+\end{minted}
+
 \subsection{Всё --- развёртка} \label{subsec:all-unfolds}
 
 Вспомним, что существует универсальная развёртка --- анаморфизм, которая по генерирующей процедуре позволяет получить целую структуру данных (см.~\ref{subsubsec:recursion-schemas}).
@@ -330,7 +347,7 @@
 Подробнее сравнение можно посмотреть тут~\cite[параграф 3]{kiselyov2017stream}.
 
 Church encoding для списков даёт \vocab{push stream}, или \vocab{internal iteration}, или \vocab{Observer pattern}\footnote{\url{https://learn.microsoft.com/en-us/dotnet/api/system.iobserver-1?view=net-9.0}} (в некотором смысле частный случай Visitor pattern~\ref{subsubsec:visitor}), когда мы регистрируем обработчика событий, а коллекция вызывает (push) на нём методы.
-Другими примерами push потоков являются Java Stream API\footnote{\url{https://docs.oracle.com/javase/8/docs/api/java/util/stream/Stream.html}}, Closure Transducers\footnote{\url{https://clojure.org/reference/transducers}}.
+Примерами push потоков являются Java Stream API\footnote{\url{https://docs.oracle.com/javase/8/docs/api/java/util/stream/Stream.html}}, Closure Transducers\footnote{\url{https://clojure.org/reference/transducers}}.
 \begin{minted}{kotlin}
     events.observe(object : Observer<Event> {
         override fun onComplete() { .. }
@@ -344,9 +361,20 @@ co-Church encoding для списков даёт \vocab{pull stream}, или \v
 Генераторы призваны автоматизировать выделение этого состояния, так как можно заметить, что это continuation вычисления (см. далее~\ref{sec:continuations}).
 
 Нередко работу с потоками называют \vocab{реактивным программированием}\footnote{\href{https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx}{(youtube) React 2014 : Erik Meijer - What does it mean to be Reactive?}}.
-Чистой версией является \vocab{functional reactive programming (FRP)}, представляющее потоки как функции от времени\footnote{\href{https://youtu.be/rfmkzp76M4M?si=TRBq8wWbcDOhSbIO}{Conal Elliott - The Essence \& Origins of Functional Reactive Programming}}~\cite{elliott1997functional}.
+Чистой версией является \vocab{functional reactive programming (FRP)}, представляющее потоки как функции от времени\footnote{\href{https://youtu.be/rfmkzp76M4M?si=TRBq8wWbcDOhSbIO}{(youtube) Conal Elliott - The Essence \& Origins of Functional Reactive Programming}}~\cite{elliott1997functional}.
 
 \subsubsection{Data vs codata} \label{subsubsec:data-codata}
+
+С помощью ключевого слова \mintinline{haskell}{data} мы определяем новый алгебраический тип данных через способы его сконструировать.
+Далее, с помощью pattern-matching мы можем деконструировать значения алгебраического типа данных и воспользоваться хранящейся в нём информацией.
+
+Однако, можно определять тип данных и через способы его деконструировать с помощью ключевого слова \mintinline{haskell}{codata}.
+Сконструировать такой тип данных можно с помощью co-pattern-matching'а.
+
+
+%алгебраический тип данных
+
+
 
 % todo codata, copattern-matching
 

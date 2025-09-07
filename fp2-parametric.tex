@@ -146,6 +146,13 @@ Scala3, однако, включила эту возможность непос�
     newtype Church = Church (forall a . (a -> a) -> a -> a)
     (+) :: Church -> Church -> Church -- rank 1
 \end{minted}
+Аналогичный код можно написать и в Java (Kotlin):
+\begin{minted}{kotlin}
+    interface Church { fun <a> fold(s: (a) -> a, z: a): a }
+    fun plus(n: Church, m: Church): Church = object : Church {
+        override fun <a> fold(s: (a) -> a, z: a): a = n.fold(s, m.fold(s, z))
+    }
+\end{minted}
 
 По умолчанию типовые параметры можно специализировать только на конкретные типы.
 Расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/impredicative_types.html}{ImpredicativeTypes} позволяет специализировать типовые параметры на полиморфные типы (включающие \mintinline{haskell}|forall|'ы внутри себя) --- \vocab{импредикативное применение}.
