@@ -110,7 +110,7 @@
             \item[\todo] На что похоже?
             \item[\todo] А что если мы хотим обновлять несколько переменных в цикле?
             \item[\answer] \pause На числа Чёрча!
-            \item[\answer] \pause Ну будем поддерживать в \mintinline{pythona}{state} кортеж
+            \item[\answer] \pause Ну будем поддерживать в \mintinline{python}{state} кортеж
         \end{itemize}
     \end{frame}
 
@@ -213,15 +213,10 @@
 
     \begin{frame}{Рекурсия}
         \begin{itemize}
-            \item Одной примитивной рекурсии в языке не достаточно, чтобы быть полным по Тьюрингу
+            \item Одной примитивной рекурсии в языке недостаточно, чтобы уметь всё
             \item Чтобы добиться полноты, нужна полноценная рекурсия
             \item В прикладные языки рекурсия встроена --- достаточно в теле именованной функции вызвать её саму
             \item Но у нас в языке нет именованных функций, же?!
-%            \item Договорённость о синонимах не решает проблемы
-%            \begin{itemize}
-%                \item Это синтаксическая конвенция, а не семантическая (вычислительная)
-%                \item $\term{fac} \termdef \cdots \term{fac} \cdots$ --- бесконечное дерево, которое в месте вхождения синонима в правую часть повторяется снова и снова
-%            \end{itemize}
         \end{itemize}
     \end{frame}
 
@@ -237,7 +232,7 @@
                 \term{fac} \ap N
                 \eqbeta
                 % https://tex.stackexchange.com/questions/245934/how-can-i-make-underbrace-texts-have-the-normal-text-size
-                \underbrace{(\lambda rec \ap n \ldotp \term{if} \ap (\term{iszero} \ap \framebox{n}) \ap \term{1} \ap (\term{mult} \ap \framebox{n} \ap (\framebox{rec} \ap (\term{pred} \ap \framebox{n}))))}_{\textstyle \term{fac'}}
+                \underbrace{(\lambda r \ap n \ldotp \term{if} \ap (\term{iszero} \ap \framebox{n}) \ap \term{1} \ap (\term{mult} \ap \framebox{n} \ap (\framebox{r} \ap (\term{pred} \ap \framebox{n}))))}_{\textstyle \term{fac'}}
                 \ap \term{fac} \ap N
             \]
             \item \pause Поскольку правые аппликанды совпадают ($N \equiv N$), рассмотрим левые части:
@@ -250,10 +245,10 @@
                 \termdef \pause
                 \comb{Y} \ap \term{fac'}
                 \eqt_{\beta} \pause
-                \comb{Y} \ap (\lambda rec \ap n \ldotp \term{if} \ap (\term{iszero} \ap n) \ap \term{1} \ap (\term{mult} \ap n \ap (rec \ap (\term{pred} \ap n))))
+                \comb{Y} \ap (\lambda r \ap n \ldotp \term{if} \ap (\term{iszero} \ap n) \ap \term{1} \ap (\term{mult} \ap n \ap (r \ap (\term{pred} \ap n))))
             \]
             \vspace{-1em}
-            \item \pause Делаем проверку:
+            \item \pause Делаем проверку, зная, что $\comb{Y}\ap fac' \eqbeta fac'\ap(\comb{Y}\ap fac')$:
             \begin{align*}
                 \term{fac} \ap N
                 &\eqbeta \pause
@@ -261,11 +256,21 @@
                 \eqbeta \pause
                 \term{fac'} \ap (\comb{Y} \ap \term{fac'}) \ap N
                 \\&\eqbeta \pause
-                (\lambda rec \ap n \ldotp \term{if} \ap (\term{iszero} \ap \framebox{n}) \ap \term{1} \ap (\term{mult} \ap \framebox{n} \ap (\framebox{rec} \ap (\term{pred} \ap \framebox{n})))) \ap (\comb{Y} \ap \term{fac'}) \ap N
+                (\lambda r \ap n \ldotp \term{if} \ap (\term{iszero} \ap \framebox{n}) \ap \term{1} \ap (\term{mult} \ap \framebox{n} \ap (\framebox{r} \ap (\term{pred} \ap \framebox{n})))) \ap (\comb{Y} \ap \term{fac'}) \ap N
                 \\&\eqbeta \pause
                 \term{if} \ap (\term{iszero} \ap \framebox{N}) \ap \term{1} \ap (\term{mult} \ap \framebox{N} \ap (\framebox{$\comb{Y} \ap \term{fac'}$} \ap (\term{pred} \ap \framebox{N})))
             \end{align*}
         \end{enumerate}
+    \end{frame}
+
+    \begin{frame}[fragile]{Больше рекурсивных функций!}
+        Перепишите через комбинатор неподвижной точки (решите рекурсивные уравнения):
+        \begin{itemize}
+            \item[\todo] $\term{fib}\ap n\eqbeta\term{if}\ap (\term{le}\ap n\ap \term{2}) \ap\term{1}\ap(\term{plus}\ap(\term{fib}\ap(\term{minus}\ap n\ap\term{1}))\ap(\term{fib}\ap(\term{minus}\ap n\ap \term{2})))$
+            \item[\todo] $F\eqbeta M\ap F$
+            \item[\answer] \pause $\term{fib} \termdef \comb{Y}\ap\lambda r\ldotp \term{if}\ap (\term{le}\ap n\ap \term{2}) \ap\term{1}\ap(\term{plus}\ap(r\ap(\term{minus}\ap n\ap\term{1}))\ap(r\ap(\term{minus}\ap n \ap\term{2})))$
+            \item[\answer] \pause $F \eqbeta \comb{Y}\ap M$
+        \end{itemize}
     \end{frame}
 
     \begin{frame}{Комбинатор рекурсии (неподвижной точки)}
@@ -279,7 +284,7 @@
         \[
             \term{fac}
             \termdef
-            \comb{Y} \ap \underbrace{(\lambda \framebox{rec} \ap n \ldotp \term{if} \ap (\term{iszero} \ap n) \ap \term{1} \ap (\term{mult} \ap n \ap (\framebox{rec} \ap (\term{pred} \ap n))))}_{\textstyle \term{fac'}}
+            \comb{Y} \ap \underbrace{(\lambda \framebox{r} \ap n \ldotp \term{if} \ap (\term{iszero} \ap n) \ap \term{1} \ap (\term{mult} \ap n \ap (\framebox{r} \ap (\term{pred} \ap n))))}_{\textstyle \term{fac'}}
         \]
         \begin{itemize}
             \item[\todo] Стоп, стоп. Как анонимная функция стала рекурсивной?
@@ -359,9 +364,9 @@
                 \item $\forall f~g~y \ldotp \term{either} \ap f \ap g \ap (\term{inr} \ap y) \eqbeta g \ap y$
             \end{enumerate}
         \end{block}
-        \begin{itemize}
-            \item[\todo] Что если нужно закодировать больше двух вариантов?
-        \end{itemize}
+%        \begin{itemize}
+%            \item[\tod] Что если нужно закодировать больше двух вариантов?
+%        \end{itemize}
     \end{frame}
 
     \begin{frame}[fragile]{Тегированное представление вариантов}
@@ -388,7 +393,7 @@
         \end{block}
     \end{frame}
 
-    \begin{frame}[fragile]{Кодирование вариантов ``наоборот''}
+    \begin{frame}[fragile]{Кодирование вариантов Чёрча}
         \begin{block}{Законы вариантов}
             \begin{enumerate}
                 \item $\forall f~g~x \ldotp \term{either} \ap f \ap g \ap (\term{inl} \ap x) \eqbeta f \ap x$
@@ -447,21 +452,6 @@
         \end{block}
     \end{frame}
 
-    \begin{frame}[fragile]{Списки в Си \popslide}
-        \begin{minted}{C}
-            struct Node {
-                int value;
-                Node * tail;
-            };
-
-            Node * nil = NULL;
-
-            Node * cons(int value, Node * tail) {
-                return new Node { value, tail };
-            }
-        \end{minted}
-    \end{frame}
-
     \begin{frame}[fragile]{Списки на вариантах}
         \begin{block}{Законы списков}
             \begin{enumerate}
@@ -487,7 +477,7 @@
         \end{block}
     \end{frame}
 
-    \begin{frame}[fragile]{Списки Чёрча (``наоборот'')}
+    \begin{frame}[fragile]{Списки Чёрча}
         \begin{block}{Законы списков}
             \begin{enumerate}
                 \item $\forall f~ini\ldotp \term{fold} \ap \term{nil} \ap f \ap ini \eqbeta ini$
@@ -511,7 +501,7 @@
         \end{block}
     \end{frame}
 
-    \begin{frame}[fragile]{Задачки про списки}
+    \begin{frame}[fragile]{Задачки про списки Чёрча}
         \[\tlist{M_0, M_1, \cdots, M_{k-1}} \termdef \lambda s~z\ldotp \underbrace{s~M_0~(s~M_1~(\cdots (s~M_{k-1}~(}_{\textstyle k} z\underbrace{)\cdots ))}_{\textstyle k}\]
         \begin{itemize}
             \item[\todo] Напишите проверку на пустоту списка
@@ -606,22 +596,17 @@
     \end{frame}
 
     \begin{frame}[fragile]{Энергичная и ленивая семантики вычисления}
-        \pause
-        \vspace{-0.7em}
-        \begin{block}{Подстановочная модель вызова}
-            Вызов функции означает подстановку текста её тела в место вызова.
-        \end{block}
-        \pause
-        \vspace{-0.3em}
+%        \pause
+%        \vspace{-0.7em}
+%        \begin{block}{Подстановочная модель вызова}
+%            Вызов функции означает подстановку текста её тела в место вызова.
+%        \end{block}
         \begin{block}{Энергичная семантика вычислений}
             Аргументы функции вычисляются до её вызова (подстановки).
         \end{block}
-        \pause
-        \vspace{-0.3em}
         \begin{block}{Ленивая семантика вычислений}
             Сначала происходит вызов функции, аргументы без необходимости не вычисляются.
         \end{block}
-        \pause
         От энергичной семантики можно перейти к ленивой, как? \pause Лямбды!
         \pause
         \vspace{-1em}
@@ -648,7 +633,24 @@
     \end{frame}
 
 
-    \sectionplan{Материалы}
+    \sectionplan{Материалы \popslide}
+
+    \appendix
+
+    \begin{frame}[fragile]{Списки в Си}
+        \begin{minted}{C}
+            struct Node {
+                int value;
+                Node * tail;
+            };
+
+            Node * nil = NULL;
+
+            Node * cons(int value, Node * tail) {
+                return new Node { value, tail };
+            }
+        \end{minted}
+    \end{frame}
 
     \begin{frame}{Что посмотреть в транспорте}
         \begin{itemize}
