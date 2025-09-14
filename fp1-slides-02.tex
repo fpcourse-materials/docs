@@ -30,7 +30,7 @@
     \end{frame}
 
 
-    \sectionplan{Метаинформация о курсе}
+    \sectionplan{Ещё метаинформация о курсе}
 
     \begin{frame}{Зачем изучать ФП/теорию языков программирования}
         \vspace{-0.5em}
@@ -53,10 +53,10 @@
             \end{itemize}
         \end{block}
         \pause
-        \begin{block}{Чтобы иметь базу для дальшейшего погружения в науку}
+        \begin{block}{Чтобы иметь базу для дальшейшего погружения в науку о языках программирования}
             \begin{itemize}
                 \item ФП на пересечении многих областей (вычислимость, доказательства, категории\ldots)
-                \item ФП --- основа академической традиции теории языков программирования
+                \item ФП --- неотъемлемая часть академической традиции теории языков программирования
                 \item Proof engineering и машинно-проверяемые доказательства --- всё тут
             \end{itemize}
         \end{block}
@@ -91,95 +91,62 @@
 
     \sectionplan{Примитивная рекурсия}
 
-    % todo кажется, эта рекурсивная реализация больше путает, чем помогает. Можно попробовать реализовать то же самое через возврат пары скорее.
     \begin{frame}[fragile]{Цикл по заданному интервалу}
-        \begin{minted}{Python}
-            def rec(f, ini, n):
-                acc = ini
-                for i in range(0, n):
-                    acc = f(i, acc)
-                return acc
-        \end{minted}
         \begin{itemize}
-            \item[\todo] Перепишите рекурсивно
-            \item[\answer] \pause
-        \end{itemize}
-        \begin{minted}{Python}
-            def rec(f, ini, n): #\pause#
-                if n == 0: #\pause#
-                    return ini
-                else: #\pause#
-                    return f(n - 1, rec(f, ini, n - 1))
-        \end{minted}
-    \end{frame}
-
-    \begin{frame}[fragile]{Идея трансляции в $\lambda$-исчисление}
-        \begin{itemize}
-            \item Пример вычисления:
-            \begin{minted}[escapeinside=??]{python}
-                      rec(f, ini, 3)
-                ?$\step_\beta$??\pause? f(2,   rec(f, ini, 2))
-                ?$\step_\beta$??\pause? f(2, f(1,   rec(f, ini, 1)))
-                ?$\step_\beta$??\pause? f(2, f(1, f(0, rec(f, ini, 0))))
-                ?$\step_\beta$??\pause? ?\framebox{f(2, f(1, f(0, ini)))}?
+            \item Любой цикл по интервалу можно записать в следующем виде:
+            \begin{minted}{Python}
+                def rec(f, ini, n):
+                    state = ini
+                    for i in range(0, n):
+                        state = f(i, state)
+                    return state
             \end{minted}
-            \item[\todo] Какая будет идея трансляции?
-            \item[\answer] \pause Похоже на числа Чёрча
-            \item[\answer] Последовательно преобразуется пара из индекса и предыдущего результата
+            \item Узнаем общий вид конечного результата с помощью вызова:
+            \begin{minted}{python}
+                rec(f = lambda i, state: "f(" + str(n) + ", " + state + ")",
+                    ini = "z", n =  5} #\pause#
+                > "f(4, f(3, f(2, f(1, f(0, z)))))"
+            \end{minted}
+            \item[\todo] На что похоже?
+            \item[\todo] А что если мы хотим обновлять несколько переменных в цикле?
+            \item[\answer] \pause На числа Чёрча!
+            \item[\answer] \pause Ну будем поддерживать в \mintinline{pythona}{state} кортеж
         \end{itemize}
     \end{frame}
 
     \begin{frame}[fragile]{Примитивная рекурсия в $\lambda$-исчислении}
-        \begin{columns}[onlytextwidth]
-            \begin{column}{0.385\textwidth}
-                \vspace{-1em}
-                \begin{minted}{Python}
-                    def rec(f, ini, n):
-                        if n == 0:
-                            return ini
-                        else:
-                            res = rec(f, ini, n - 1)
-                            return f(n - 1, res)
-                \end{minted}
-                \vspace{0.5em}
-                Вычисляется в
-                \begin{minted}{python}
-                    f(2, f(1, f(0, ini)))
-                \end{minted}
-                \vspace{0.5em}
-                Нужно выразить в виде
-                $s \ap (s \ap (s \ap z))$.
-            \end{column}\hfill%
-            \pause
-            \begin{column}{0.585\textwidth}
-                \begin{itemize}
-                    \item Из итерации в итерацию передаём пару из номера итерации и результата предыдущей
-                    \item Начальное состояние --- $\term{start} \ap ini \termdef \pause \term{pair} \ap \term{0} \ap ini$
-                    \item Одна итерация:
-                    \[
-                        \term{step} \pause \ap f \ap (\term{pair} \ap i \ap res)
-                        \termdef
-                        \term{pair} \ap (\term{suc} \ap i) \ap (f \ap i \ap res)
-                    \] \vspace{-1em}
-                    \item Итерирование
-                    \[
-                        \term{iter} \ap f \ap ini \ap n
-                        \termdef
-                        \pause \term{natElim} \ap n \ap (\term{step} \ap f) \ap (\term{start} \ap ini)
-                    \] \vspace{-1em}
-                    \item И наконец
-                    \[
-                        \term{rec} \ap f \ap ini \ap n
-                        \termdef
-                        \pause \term{snd} \ap (\term{iter} \ap f \ap ini \ap n)
-                    \] \vspace{-1em}
-                \end{itemize}
-            \end{column}
-        \end{columns}
+        \begin{block}{Примитивная рекурсия}
+            \vspace{-0.5em}
+
+            \[\term{rec}~f~ini~n \eqbeta f~(n-1)~(f~(n-2)~(\cdots~(f~1~(f~0~ini))\cdots))\]
+        \end{block}
+        \begin{itemize}
+            \item Хотим выразить в виде $s \ap (s \ap (s \ap z))$, какими будут $s$ и $z$?
+            \item \pause Из итерации в итерацию будем передавать пару: номер итерации; результат предыдущих
+            \item Начальное состояние --- $\term{start} \ap ini \termdef \pause \term{pair} \ap \term{0} \ap ini$
+            \item Одна итерация:\footnote{Пусть сокращение $\term{pair} \ap i \ap res$ слева значит: принимаем пару $p$, вместо $i$ подразумеваем $\term{fst}\ap p$; $res$ --- $\term{snd}\ap p$.}
+            \[
+                \term{step} \pause \ap f \ap (\term{pair} \ap i \ap res)
+                \termdef
+                \term{pair} \ap (\term{suc} \ap i) \ap (f \ap i \ap res)
+            \] \vspace{-1em}
+            \item Итерирование
+            \[
+                \term{iter} \ap f \ap ini \ap n
+                \termdef
+                \pause \term{natElim} \ap n \ap (\term{step} \ap f) \ap (\term{start} \ap ini)
+            \] \vspace{-1em}
+            \item И наконец
+            \[
+                \term{rec} \ap f \ap ini \ap n
+                \termdef
+                \pause \term{snd} \ap (\term{iter} \ap f \ap ini \ap n)
+            \] \vspace{-1em}
+        \end{itemize}
     \end{frame}
 
     \begin{frame}[fragile]{Примеры применения примитивной рекурсии}
-        \begin{block}{Свойство примитивной рекурсии}
+        \begin{block}{Примитивная рекурсия}
             \vspace{-0.5em}
 
             \[\term{rec}~f~ini~n \eqbeta f~(n-1)~(f~(n-2)~(\cdots~(f~1~(f~0~ini))\cdots))\]
@@ -242,19 +209,19 @@
         \end{itemize}
     \end{frame}
 
-    \sectionplan{Комбинатор неподвижной точки}
+    \sectionplan{Рекурсия и комбинаторы неподвижной точки}
 
     \begin{frame}{Рекурсия}
         \begin{itemize}
             \item Одной примитивной рекурсии в языке не достаточно, чтобы быть полным по Тьюрингу
             \item Чтобы добиться полноты, нужна полноценная рекурсия
-            \item  В прикладные языки рекурсия встроена --- достаточно в теле именованной функции вызвать её саму
-            \item Но у нас в языке нет именованных функций
-            \item Договорённость о синонимах не решает проблемы
-            \begin{itemize}
-                \item Это синтаксическая конвенция, а не семантическая (вычислительная)
-                \item $\term{fac} \termdef \cdots \term{fac} \cdots$ --- бесконечное дерево, которое в месте вхождения синонима в правую часть повторяется снова и снова
-            \end{itemize}
+            \item В прикладные языки рекурсия встроена --- достаточно в теле именованной функции вызвать её саму
+            \item Но у нас в языке нет именованных функций, же?!
+%            \item Договорённость о синонимах не решает проблемы
+%            \begin{itemize}
+%                \item Это синтаксическая конвенция, а не семантическая (вычислительная)
+%                \item $\term{fac} \termdef \cdots \term{fac} \cdots$ --- бесконечное дерево, которое в месте вхождения синонима в правую часть повторяется снова и снова
+%            \end{itemize}
         \end{itemize}
     \end{frame}
 
