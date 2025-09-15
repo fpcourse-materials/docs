@@ -121,22 +121,22 @@
             \[\term{rec}~f~ini~n \eqbeta f~(n-1)~(f~(n-2)~(\cdots~(f~1~(f~0~ini))\cdots))\]
         \end{block}
         \begin{itemize}
-            \item Хотим выразить в виде $s \ap (s \ap (s \ap z))$, какими будут $s$ и $z$?
+            \item Хотим выразить в виде $q\ap (s \ap (s \ap \cdots (s \ap z)\cdots))$, какими будут $q$, $s$ и $z$?
             \item \pause Из итерации в итерацию будем передавать пару: номер итерации; результат предыдущих
             \item Начальное состояние --- $\term{start} \ap ini \termdef \pause \term{pair} \ap \term{0} \ap ini$
-            \item Одна итерация:\footnote{Пусть сокращение $\term{pair} \ap i \ap res$ слева значит: принимаем пару $p$, вместо $i$ подразумеваем $\term{fst}\ap p$; $res$ --- $\term{snd}\ap p$.}
+            \item \pause Одна итерация:\footnote{Пусть сокращение $\term{pair} \ap i \ap res$ слева значит: принимаем пару $p$, вместо $i$ подразумеваем $\term{fst}\ap p$; $res$ --- $\term{snd}\ap p$.}
             \[
                 \term{step} \pause \ap f \ap (\term{pair} \ap i \ap res)
                 \termdef
                 \term{pair} \ap (\term{suc} \ap i) \ap (f \ap i \ap res)
             \] \vspace{-1em}
-            \item Итерирование
+            \item \pause Итерирование
             \[
                 \term{iter} \ap f \ap ini \ap n
                 \termdef
                 \pause \term{natElim} \ap n \ap (\term{step} \ap f) \ap (\term{start} \ap ini)
             \] \vspace{-1em}
-            \item И наконец
+            \item \pause И наконец
             \[
                 \term{rec} \ap f \ap ini \ap n
                 \termdef
