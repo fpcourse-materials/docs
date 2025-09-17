@@ -1,0 +1,347 @@
+%! suppress = MissingImport
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+\setminted{xleftmargin=\parindent, autogobble, escapeinside=??}
+
+\title[2. Параметрический полиморфизм]{2. Параметрический полиморфизм}
+\author{Андрей Стоян}
+\institute[ИПКН ИТМО]{ИПКН ИТМО}
+
+\date{осень 2025}
+
+\begin{document}
+
+    \mymaketitle
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \sectionplan{Параметрический полиморфизм в языке}
+
+    \begin{frame}[fragile]{Пары Чёрча}
+        \pause
+        \begin{align*}
+            &Pair : * \rightarrow * \rightarrow * \\
+            &Pair = \lambda \tau^*~\sigma^*\ldotp\forall \gamma\ldotp(\tau\rightarrow\sigma\rightarrow\gamma)\to\gamma \\
+            &pair : \forall \alpha~\beta\ldotp\alpha \rightarrow \beta \rightarrow Pair~\alpha~\beta \\
+            &pair = \Lambda \alpha^*~\beta^*\ldotp\lambda x^\alpha~y^\beta\ldotp(\Lambda \gamma^*\ldotp\lambda f^{\alpha\rightarrow\beta\rightarrow\gamma}\ldotp f~x~y) \\
+            &fst : \forall \alpha~\beta\ldotp Pair~\alpha~\beta\rightarrow \alpha \\
+            &fst = \Lambda \alpha^*~\beta^*\ldotp\lambda p^{Pair~\alpha~\beta}\ldotp p~\alpha~(\mathbf{K}\ap\alpha\ap\beta)
+        \end{align*}
+    \end{frame}
+
+    \begin{frame}[fragile]{\mintinline{haskell}{Proxy}}
+        \pause
+        \begin{minted}[escapeinside=??]{haskell}
+            data Proxy a = Proxy
+
+            id :: Proxy a -> a -> a
+            ghci> :t id (Proxy :: Proxy Int)
+            id (Proxy :: Proxy Int) :: Int -> Int
+
+            id (Proxy :: Proxy ?\framebox{a}?) x = (x :: ?\framebox{a}?)
+        \end{minted}
+
+        \pause\hspace{2em}
+        \begin{minted}{haskell}
+            id :: proxy a -> a -> a
+            id (_ :: proxy a) x = (x :: a)
+
+            ghci> :t id (undefined :: Proxy Int)
+            id (undefined :: Proxy Int) :: Int -> Int
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{First-class polymorphism}
+        \pause
+        \begin{minted}{haskell}
+            f :: (forall a . a -> a) -> (Int, Char)
+            f g = (g @Int 42, g @Char 'a') -- универсальная аппликация для наглядности
+            ghci> f (\x -> x)
+        \end{minted}
+
+        \pause\hspace{2em}
+        \begin{minted}{haskell}
+            suc :: (forall a . (a -> a) -> a -> a) -> (a -> a) -> a -> a
+            suc n s z = s (n s z)
+        \end{minted}
+        \pause\hspace{2em}
+        Какой ранг имеет тип \mintinline{haskell}|Int -> (forall a . a -> a)|?
+    \end{frame}
+
+    \begin{frame}[fragile]{Числа Чёрча}
+        \pause
+        \begin{minted}{haskell}
+            newtype Church = Church (forall a . (a -> a) -> a -> a)
+            (+) :: Church -> Church -> Church -- rank 1
+        \end{minted}
+
+        \pause\hspace{2em}
+        \begin{minted}{kotlin}
+            interface Church {
+                fun <a> fold(s: (a) -> a, z: a): a
+            }
+            fun plus(n: Church, m: Church): Church =
+                object : Church {
+                override fun <a> fold(s: (a) -> a, z: a): a =
+                    n.fold(s, m.fold(s, z))
+                }
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Impredicative apprication}
+        \pause
+        \begin{minted}{haskell}
+            runST :: (forall s. ST s a) -> a
+            ($) :: forall a b . (a -> b) -> a -> b
+            foo = runST $ ... -- типизируется только с ImpredicativeTypes
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{ST-trick}
+        \pause
+        \begin{minted}{haskell}
+            newtype ST s a = ST (IO a)
+            runST :: (forall s. ST s a) -> a
+
+            sumTo n = do
+              sum <- newSTRef 0
+              forM [0..n] \i -> modifySTRef sum (+ i)
+              readSTRef
+        \end{minted}
+
+        \pause\hspace{2em}
+        \begin{minted}{haskell}
+            ghci> runST newSTRef :: forall a . ST s a
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Higher-order/kinded polymorphism}
+        \pause
+        \begin{minted}{haskell}
+            newtype Fix f = Fix (f (Fix f))
+            cata :: forall (f :: Type -> Type) a . Functor f => (f a -> a) -> Fix f -> a
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Обобщённые алгебраические типы данных (GADTs)}
+        \pause
+        \begin{minted}{haskell}
+            data Expr = Const Int | IsZero Expr | If Expr Expr Expr
+        \end{minted}
+
+        \pause\hspace{2em}
+        \begin{minted}{haskell}
+            data Expr where
+              Const :: Int -> Expr
+              IsZero :: Expr -> Expr
+              If :: Expr -> Expr -> Expr -> Expr
+        \end{minted}
+
+        \pause\hspace{2em}
+        \begin{minted}{haskell}
+            data List (elem :: Type) where
+              Nil :: List a
+              Cons :: a -> List a -> List a
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Обобщённые алгебраические типы данных (GADTs)}
+        \pause
+        \begin{minted}{haskell}
+            data Expr ty where
+              Const :: Int -> Expr Int
+              IsZero :: Expr Int -> Expr Bool
+              If :: forall ty . Expr Bool -> Expr ty -> Expr ty -> Expr ty
+        \end{minted}
+
+        \pause\hspace{2em}
+        \begin{minted}[escapeinside=??]{haskell}
+            eval :: Expr ty -> ty
+            eval = \case
+              Const x  -> x         -- ty ?$\sim$? Int
+              IsZero t -> eval == 0 -- ty ?$\sim$? Bool
+              If c t e -> if eval c then eval t else eval e
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Структуры на уровне типов, data promotion}
+        \pause
+        \begin{minted}{haskell}
+            data Zero
+            data Suc n
+        \end{minted}
+
+        \pause\hspace{2em}
+        \begin{minted}{haskell}
+            data Vec (size :: Type) (elem :: Type) where
+              VNil :: Vec Zero a
+              VCons :: a -> Vec n a -> Vec (Suc n) a
+
+            example :: Vec (Suc (Suc Zero)) Int
+            example = VCons 1 (VCons 2 VNil)
+        \end{minted}
+
+        \pause\hspace{2em}
+        \begin{minted}{haskell}
+            vzip :: Vec n a -> Vec n b -> Vec n (a, b)
+            vzip VNil VNil = VNil                                      -- n ?$\sim$? Zero
+            vzip (VCons x xs) (VCons y ys) = VCons (x, y) (vzip xs ys) -- n ?$\sim$? Suc n'
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Структуры на уровне типов, data promotion}
+        \pause
+        \begin{minted}{haskell}
+            type data Nat = Zero | Suc Nat
+        \end{minted}
+
+        \pause\hspace{2em}
+        \begin{minted}{haskell}
+            data Vec (size :: Nat) (elem :: Type) where
+              VNil :: Vec Zero a
+              VCons :: a -> Vec n a -> Vec (Suc n) a
+        \end{minted}
+
+        \pause\hspace{2em}
+        \begin{minted}{haskell}
+            data Nat = Zero | Suc Nat
+            ghci> :k Suc :: Nat -> Nat -- тут понятно что Suc используется как тип
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Data promotion}
+        \begin{tabular}{|c|c|c|}
+            \hline
+            Term                                   & Type                                            & Kind                                            \\
+            \hline
+            \mintinline{haskell}|Zero|             & \mintinline{haskell}|Nat|                       & \mintinline{haskell}|Type|                      \\
+            \mintinline{haskell}|[Zero, Suc Zero]| & \mintinline{haskell}|[Nat]|                     & \mintinline{haskell}|Type|                      \\
+            \mintinline{haskell}|[]|               & \mintinline{haskell}|forall a. [a]|             & \mintinline{haskell}|Type|                      \\
+            \mintinline{haskell}|(:)|              & \mintinline{haskell}|forall a. a -> [a] -> [a]| & \mintinline{haskell}|Type|                      \\
+            & \mintinline{haskell}|'Suc 'Zero|                & \mintinline{haskell}|Nat|                       \\
+            & \mintinline{haskell}|'['Zero, 'Suc 'Zero]|      & \mintinline{haskell}|[Nat]|                     \\
+            & \mintinline{haskell}|'[Int, Double]|            & \mintinline{haskell}|[Type]|                    \\
+            & \mintinline{haskell}|'[]|                       & \mintinline{haskell}|forall k. [k]|             \\
+            & \mintinline{haskell}|'(:)|                      & \mintinline{haskell}|forall k. k -> [k] -> [k]| \\
+            \hline
+        \end{tabular}
+    \end{frame}
+
+    \begin{frame}[fragile]{HList}
+        \pause
+        \begin{minted}{haskell}
+            data HList (tys :: [Type]) where
+              HNil :: HList '[]
+              HCons :: ty -> HList tys -> HList (ty ': tys)
+
+            example :: HList '[Int, Bool, Double]
+            example = HCons 42 $ HCons True $ HCons 12.5 HNil
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{PolyKinds}
+        \pause
+        \begin{minted}{haskell}
+            newtype Tagged (tag :: k) (a :: Type) = Tagged a
+            ghci> :t Tagged
+            Tagged :: forall k (tag :: k) a. a -> Tagged tag a
+
+            example :: Tagged ("dbId" :: Symbol) Int
+            example = Tagged 42
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Типы и канды --- одно}
+        \pause
+        \includegraphics[width=0.99\textwidth]{figs/types-eq-kinds}
+    \end{frame}
+
+    \sectionplan{Реализация параметрического полиморфизма}
+
+    \sectionplan{Полиморфизм по конвенции вызова}
+
+    \begin{frame}[fragile]{Виды значений в Haskell с примерами}
+        \pause
+        \begin{center}
+            \includegraphics[width=0.5\textwidth]{figs/haskell-value-kinds}
+        \end{center}
+    \end{frame}
+
+    \begin{frame}[fragile]{Unboxed tuples}
+         \pause
+         \begin{minted}{haskell}
+            divMod# :: Int -> Int -> (# Int, Int #)
+            case divMod# n k of (# quot, rem #) -> ...
+         \end{minted}
+
+        \pause\hspace{2em}
+         \begin{minted}{haskell}
+            (# A, (# B, C #)) ?$\equiv$? (# #( A, B #), C #) ?$\equiv$? (# A, B, C #)
+         \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Классификация значений по runtime представлению}
+        \pause
+        \begin{minted}{haskell}
+            TYPE :: RuntimeRep -> Type
+
+            data Levity = Lifted | Unlifted
+
+            data RuntimeRep = BoxedRep Levity
+                            | IntRep | DoubleRep
+                            | TupleRep [RuntimeRep]
+                            | SumRep [RuntimeRep]
+                            | ...
+
+            type LiftedRep = BoxedRep Lifted
+
+            type Type = TYPE LiftedRep
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Примеры}
+        \pause
+        \begin{itemize}
+            \item \mintinline{haskell}|Int ::?\pause? TYPE (BoxedRep Lifted)| или \mintinline{haskell}|:: Type|
+            \item \mintinline{haskell}|IntRep| и \mintinline{haskell}|DoubleRep| соответствуют представлению численных констант (в зависимости от архитектуры процессора, целые числа и числа с плавающей запятой может быть необходимо располагать в различных специальных регистрах)\\ \mintinline{haskell}|Int# ::?\pause? TYPE IntRep|
+            \item \mintinline{haskell}|Maybe Int ::?\pause? Type|
+            \item \mintinline{haskell}|Maybe ::?\pause? Type -> Type|
+            \item \mintinline{haskell}|TupleRep| и \mintinline{haskell}|SumRep| --- unboxed алгебраические типы, представления параметризованы представлениями хранимых значений\\
+            \mintinline{haskell}|(# Int, Bool #) ::?\pause? TYPE (TupleRep '[LiftedRep, LiftedRep])|
+            \item Для простоты, типы вложенных кортежей не унифицируются
+            \begin{minted}{haskell}
+        (# Int#, (# Int, Double# #) #)
+          ::?\pause? TYPE (TupleRep '[IntRep, TupleRep '[LiftedRep, DoubleRep]])
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Representation polymorphism}
+        \pause
+        \begin{minted}{haskell}
+            ghci> :k (->)
+            (->) :: forall {q :: RuntimeRep} {r :: RuntimeRep}. TYPE q -> TYPE r -> Type
+        \end{minted}
+
+        \pause\hspace{2em}
+        \begin{minted}{haskell}
+            ($) :: forall r a (b :: TYPE r). (a -> b) -> a -> b
+            f $ ?\framebox{x}? = f x
+        \end{minted}
+
+        \pause\hspace{2em}
+        \begin{minted}{haskell}
+            ($) :: forall ra rb (a :: TYPE ra) (b :: TYPE rb). (a -> b) -> a -> b
+            ($) f = f
+        \end{minted}
+    \end{frame}
+
+\end{document}
