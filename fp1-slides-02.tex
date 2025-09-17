@@ -103,7 +103,7 @@
             \end{minted}
             \item Узнаем общий вид конечного результата с помощью вызова:
             \begin{minted}{python}
-                rec(f = lambda i, state: "f(" + str(n) + ", " + state + ")",
+                rec(f = lambda i, state: "f(" + str(i) + ", " + state + ")",
                     ini = "z", n =  5} #\pause#
                 > "f(4, f(3, f(2, f(1, f(0, z)))))"
             \end{minted}
