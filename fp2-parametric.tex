@@ -166,14 +166,16 @@ Higher-rank типы можно использовать как type-based escap
     newtype ST s a = ST (IO a)
     runST :: (forall s. ST s a) -> a
 
-    sumTo n = do
-      sum <- newSTRef 0
-      forM [0..n] \i -> modifySTRef sum (+ i)
-      readSTRef
+    sumTo :: Int -> Int
+    sumTo n = runST do
+      ref <- newSTRef 0
+      forM [0..n] \i -> modifySTRef ref (+ i)
+      readSTRef ref
 \end{minted}
 Заметим, что если попытаться вернуть из \texttt{runST} ссылку на мутабельную ячейку, то результирующий тип не пройдёт well-formedness проверку, так как будет содержать фантомный параметр \texttt{s}, который не будет нигде связан:
 \begin{minted}{haskell}
-    ghci> runST newSTRef :: forall a . ST s a
+    newSTRef :: a -> ST s (Ref s a)
+    ghci> runST (newSTRef 0) :: Ref s Int -- ошибка
 \end{minted}
 На практике, чтобы отличать такие локально связанные типовые переменные, используют концепцию уровней\footnote{\url{https://okmij.org/ftp/ML/generalization.html}}~\cite{peytonjones2019typeinference}.
 
@@ -247,7 +249,7 @@ Haskell позволяет также абстрагироваться по ти
     eval :: Expr ty -> ty
     eval = \case
       Const x  -> x         -- ty ?$\sim$? Int
-      IsZero t -> eval == 0 -- ty ?$\sim$? Bool
+      IsZero t -> eval t == 0 -- ty ?$\sim$? Bool
       If c t e -> if eval c then eval t else eval e
 \end{minted}
 
@@ -504,7 +506,7 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
 \end{figure}
 \begin{figure}
     \centering
-    \includegraphics[width=0.6\textwidth]{figs/swift-generated-code}
+    \includegraphics[width=0.5\textwidth]{figs/swift-generated-code}
     \caption{Код полиморфной функции, порождаемый компилятором Swift.}
     \label{fig:swift-generated-code}
 \end{figure}

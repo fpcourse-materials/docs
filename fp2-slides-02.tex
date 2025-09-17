@@ -111,15 +111,17 @@
             newtype ST s a = ST (IO a)
             runST :: (forall s. ST s a) -> a
 
-            sumTo n = do
-              sum <- newSTRef 0
-              forM [0..n] \i -> modifySTRef sum (+ i)
-              readSTRef
+            sumTo :: Int -> Int
+            sumTo n = runST do
+              ref <- newSTRef 0
+              forM [0..n] \i -> modifySTRef ref (+ i)
+              readSTRef ref
         \end{minted}
 
         \pause\hspace{2em}
         \begin{minted}{haskell}
-            ghci> runST newSTRef :: forall a . ST s a
+            newSTRef :: a -> ST s (Ref s a)
+            ghci> runST (newSTRef 0) :: Ref s Int -- ошибка
         \end{minted}
     \end{frame}
 
@@ -167,7 +169,7 @@
             eval :: Expr ty -> ty
             eval = \case
               Const x  -> x         -- ty ?$\sim$? Int
-              IsZero t -> eval == 0 -- ty ?$\sim$? Bool
+              IsZero t -> eval t == 0 -- ty ?$\sim$? Bool
               If c t e -> if eval c then eval t else eval e
         \end{minted}
     \end{frame}
@@ -265,6 +267,17 @@
     \end{frame}
 
     \sectionplan{Реализация параметрического полиморфизма}
+
+    \begin{frame}[fragile]{Использование виртуальной таблицы свойств типов}
+        \begin{figure}
+            \centering
+            \includegraphics[width=0.7\textwidth]{figs/swift-witness-table}
+        \end{figure}
+        \begin{figure}
+            \centering
+            \includegraphics[width=0.5\textwidth]{figs/swift-generated-code}
+        \end{figure}
+    \end{frame}
 
     \sectionplan{Полиморфизм по конвенции вызова}
 
