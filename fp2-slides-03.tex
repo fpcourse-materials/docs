@@ -9,7 +9,7 @@
 \input{preamble-slides}
 \setminted{xleftmargin=\parindent, autogobble, escapeinside=??}
 
-\title[3. Ad-hoc полиморфизм]{2. Ad-hoc полиморфизм}
+\title[3. Ad-hoc полиморфизм]{3. Ad-hoc полиморфизм}
 \author{Андрей Стоян}
 \institute[ИПКН ИТМО]{ИПКН ИТМО}
 
@@ -207,12 +207,12 @@
             reify :: Int -> (forall n. KnownNat n => a) -> a
             reify n k
               | n <= 0 = k @Zero
-              | otherwise = reify (n - 1) \@n -> k @(Suc n)
+              | otherwise = reify (n - 1) \@n' -> k @(Suc n')
         \end{minted}
         \pause\vspace{1em}
         \begin{minted}{haskell}
             wonderId :: Int -> Int
-            wonderId n = reify n (\@n -> natVal @n)
+            wonderId n = reify n (\@t -> natVal @t)
         \end{minted}
     \end{frame}
 
@@ -420,7 +420,7 @@
 
     \sectionplan{Кайнд \texttt{Constraint}}
 
-    \begin{frame}[fragile]{\sectionname}
+    \begin{frame}[fragile]{Кайнд \texttt{Constraint}}
         \pause
         \begin{itemize}
             \item Класс типов конструирует констреинт: \mintinline{haskell}|Monad :: (Type -> Type) -> Constraint|;
