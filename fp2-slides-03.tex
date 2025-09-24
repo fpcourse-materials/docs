@@ -1,0 +1,712 @@
+%! suppress = MissingImport
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+\setminted{xleftmargin=\parindent, autogobble, escapeinside=??}
+
+\title[3. Ad-hoc полиморфизм]{2. Ad-hoc полиморфизм}
+\author{Андрей Стоян}
+\institute[ИПКН ИТМО]{ИПКН ИТМО}
+
+\date{осень 2025}
+
+\begin{document}
+
+    \mymaketitle
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \begin{frame}[fragile]{Классы типов и перегрузка}
+        \pause
+        \begin{minted}{cpp}
+            string toString(x: int) { ... }
+            string toString(fmt: String, d: double) { ... }
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            class Show a where
+              show :: a -> String
+
+            instance Show Int where
+              show :: Int -> String
+              show = ...
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            showPrefixed :: Show a => a -> String -> String
+        \end{minted}
+    \end{frame}
+
+    \sectionplan{Классы типов в языке}
+
+    \begin{frame}[fragile]{Словари}
+        \pause
+        \begin{minted}{haskell}
+            data OrdDict a = OrdDict { less :: a -> a -> Bool }
+
+            sort :: OrdDict a -> [a] -> [a]
+            sort d@OrdDict { less } = \case [] -> []; x:xs -> insert x (sort d xs)
+              where
+                insert x xs = let (l, r) = List.partition (?\framebox{`less`}? x) xs in l ++ x : r
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{}
+        \pause
+        \begin{minted}{haskell}
+            intOrd :: OrdDict Int
+            intOrd = OrdDict { less = (<) }
+
+            ghci> sort intOrd [3, 2, 1]
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            listDict :: OrdDict a -> OrdDict [a]
+            listDict d = OrdDict { less = ... ?\framebox{less d}? ... }
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            ghci> sort (listDict intDict) [[3, 2], [2, 1], [0]]
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Type-directed translation}
+        \begin{tabular}{p{7cm}p{7cm}}
+            \begin{enumerate}
+                \item Определение словаря функций
+                \begin{minted}{haskell}
+            data MyOrd a = MyOrd
+              { less :: a -> a -> Bool }
+                \end{minted}
+                \item Экземпляр словаря для конкретного типа
+                \begin{itemize}
+                    \item Именованное значение
+                \end{itemize}
+                \begin{minted}{haskell}
+            intMyOrd :: MyOrd Int
+            intMyOrd = MyOrd { less = (<) }
+                \end{minted}
+                \item Явный параметр функции
+                \begin{minted}{haskell}
+            sort :: MyOrd a -> [a] -> [a]
+                \end{minted}
+                \item Передаётся пользователем
+                \begin{minted}{haskell}
+            test = sort ?\framebox{intMyOrd}? [3, 2, 1]
+                \end{minted}
+            \end{enumerate}
+            &
+            \begin{enumerate}
+                \item Определение класса типов
+                \begin{minted}{haskell}
+             class MyOrd a where
+               less :: a -> a -> Bool
+                \end{minted}
+                \item Объявление типа представителем класса типов
+                \begin{itemize}
+                    \item Не имеет имени
+                \end{itemize}
+                \begin{minted}{haskell}
+            instance MyOrd Int where
+              less = (<)
+                \end{minted}
+                \item Неявный параметр функции
+                \begin{minted}{haskell}
+            sort :: MyOrd a => [a] -> [a]
+                \end{minted}
+                \item Передаётся компилятором
+                \begin{minted}{haskell}
+            test = sort [3, 2, 1]
+                \end{minted}
+            \end{enumerate}
+        \end{tabular}
+    \end{frame}
+
+    \begin{frame}[fragile]{Неявные аргументы}
+        \pause
+        \begin{minted}{haskell}
+            f :: (Show b => b) -> b
+            f x = ?\framebox{x}?
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            f :: Show b => (Show b => b) -> b
+            f x = ?\framebox{x}?
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}[escapeinside=##]{haskell}
+            sortBy :: (a -> a -> Bool) -> [a] -> [a]
+
+            sort :: (?cmp :: a -> a -> Bool) => [a] -> [a]
+            sort = sortBy ?cmp
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data ShowDict a where
+              ShowDict :: Show a => ShowDict a
+
+            f :: ShowDict b -> (Show b => b) -> b
+            f d x = case d of ShowDict -> ?\framebox{x}? -- в скоупе доступен инстанс Show b
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Вывод инстансов}
+        \pause
+        \begin{minted}{haskell}
+            type data Nat = Zero | Suc Nat
+
+            class KnownNat (n :: Nat) where
+              natVal :: Int
+
+            instance KnownNat Zero where
+              natVal = 0
+
+            instance KnownNat n => KnownNat (Suc n) where
+              natVal = 1 + natVal @n
+
+            ghci> natVal @(Suc (Suc Zero))
+            -- выведется natVal {knownSuc (knownSuc knownZero)}
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Вычисления на тайпклассах}
+        \pause
+        \begin{minted}{haskell}
+            class Reverse (acc :: [Type]) (tys :: [Type]) where
+              showReverse :: String
+
+            instance ShowT acc => Reverse acc '[] where
+              showReverse = showTypes @acc
+
+            instance Reverse (ty : acc) tys => Reverse acc (ty : tys) where
+              showReverse = showReverse @(ty : acc) @tys
+
+            ghci> showReverse @'[] @'[Char, Int, Double]
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Классы типов и кодогенерация}
+        \begin{figure}[h]
+            \centering
+            \includegraphics[width=0.4\textwidth]{figs/class-sinergy}
+            \caption{Классы типов + вывод инстансов = кодогенерация.}
+            \label{fig:class-sinergy}
+        \end{figure}
+    \end{frame}
+
+    \begin{frame}[fragile]{Построение типа по значению}
+        \pause
+        \begin{minted}{haskell}
+            reify :: Int -> (forall n. KnownNat n => a) -> a
+            reify n k
+              | n <= 0 = k @Zero
+              | otherwise = reify (n - 1) \@n -> k @(Suc n)
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            wonderId :: Int -> Int
+            wonderId n = reify n (\@n -> natVal @n)
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Классы типов через имплиситы}
+        \pause
+        \begin{minted}{scala}
+            // Пачка функций.
+            trait Show[T] {
+                def show(x: T): String
+            }
+
+            // Обёртка для удобства вызова.
+            def show[T](x: T)(implicit ev: Show[T]): String = ev.show(x)
+
+            // Объект-синклтон, значение для пачки функций.
+            implicit object intShow extends Show[Int] {
+                def show(x: Int): String = x.toString
+            }
+
+            def showAll[T](xs: List[T])(implicit ev: Show[T]): String =
+                xs.map(show(_)).join(", ")
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Когерентность инстансов}
+        \begin{figure}
+            \centering
+            \includegraphics[width=0.8\linewidth]{figs/coherence}
+            \caption{Когерентность инстансов --- диаграмма коммутирует.}
+            \label{fig:coherence}
+        \end{figure}
+    \end{frame}
+
+    \begin{frame}[fragile]{Правила (rules) и специализация}
+        \pause
+        \begin{minted}{haskell}
+            {-# RULES
+              "map/map"    forall f g xs.  map f (map g xs) = map (f . g) xs
+              "map/append" forall f xs ys. map f (xs ++ ys) = map f xs ++ map f ys
+             #-}
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            genericLookup :: Ord a => Table a b   -> a   -> b
+            intLookup     ::          Table Int b -> Int -> b
+
+            {-# RULES "genericLookup/Int" genericLookup = intLookup #-}
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Отступление: дефункционализация}
+        \pause
+        \begin{minted}{haskell}
+            map :: (Int -> Int) -> [Int] -> [Int]
+            map f = \case [] -> []; x:xs -> f x : map f xs
+
+            example1 xs = map (\x -> x + 1) xs
+            example2 y xs = map (\x -> x * y) xs
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data Fun = F1 | F2 Int
+            apply :: Fun -> Int -> Int
+            apply df x = case df of F1 -> x + 1; F2 y -> x + y
+
+            map :: Fun -> [Int] -> [Int]
+            map df = \case [] -> []; x:xs -> apply df x : map df xs
+
+            example1 xs = map F1 xs
+            example2 y xs = map (F2 y) xs
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Эмуляция полиморфизма высших порядков}
+        \pause
+        \begin{minted}{kotlin}
+            class ListSym
+        \end{minted}
+        \pause
+        \begin{minted}{kotlin}
+            class Apply<Sym, T>(val value: Any)
+        \end{minted}
+        \pause
+        \begin{minted}{kotlin}
+            fun <T> List<T>.to(): Apply<ListSym, T> = Apply(this)
+            fun <T> Apply<ListSym, T>.from(): List<T> = this.value as List<T>
+        \end{minted}
+        \pause
+        \begin{minted}{kotlin}
+            interface Monad<M> {
+                fun <T> pure(x: T): Apply<M, T>
+                infix fun <T, R> Apply<M, T>.bind(k: (T) -> Apply<M, R>): Apply<M, R>
+            }
+            object ListMonad : Monad<ListSym> {
+                override fun <T> pure(x: T): Apply<ListSym, T> = listOf(x).to()
+                override fun <T, R> Apply<ListSym, T>.
+                        bind(k: (T) -> Apply<ListSym, R>): Apply<ListSym, R> =
+                    this.from().flatMap { k(it).from() }.to()
+            }
+        \end{minted}
+        \pause
+        \begin{minted}{kotlin}
+            fun <M> Monad<M>.go(x: Apply<M, Int>): Apply<M, Int> =
+                x bind { it -> pure(it + 1) } bind { it -> pure(it + 2) }
+            fun test(xs: List<Int>): List<Int> = ListMonad.go(xs.to()).from()
+        \end{minted}
+    \end{frame}
+
+    \sectionplan{Семейства}
+
+    \begin{frame}[fragile]{Data families}
+        \pause
+        \begin{minted}{haskell}
+            data family XList elem
+            data instance XList () = IntList Int
+            data instance XList Bool = BoolList ByteArray
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            class XListOp elem where
+              xelem :: elem -> XList elem -> Bool
+
+            instance XListOp () where
+              xelem () (IntList size) = size > 0
+
+            instance XList Bool where
+              xelem key (ByteArray bs) = ...
+
+            xelemAll :: XListOp elem => XList elem -> [elem] -> Bool
+            xelemAll xs = all (`xelem` xs)
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Synonym families}
+        \pause
+        \begin{minted}{haskell}
+            type family Plus (n :: Nat) (m :: Nat) :: Nat where
+              Plus Zero m = m
+              Plus (Suc n) m = Suc (Plus n m)
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            ghci> :k! Plus (Suc Zero) (Suc (Suc Zero))
+            Plus (Suc Zero) (Suc (Suc Zero)) :: Nat
+            = Suc (Suc (Suc Zero))
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Ассоциированные семейства}
+        \pause
+        \begin{minted}{haskell}
+            class Container a where
+              type Elem a
+              elements :: a -> [Elem a]
+
+            instance Container [a] where
+              type Elem [a] = a
+              elements = id
+
+            instance Container ByteString where
+              type Elem ByteString = Word8
+              elements = ByteString.unpack
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Инъективные семейства}
+        \pause
+        \begin{minted}{haskell}
+            Maybe a ?$\sim$? Maybe b ?$\Rightarrow$? a ?$\sim$? b
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            type family NonInjective a where
+              NonInjective Int = Double
+              NonInjective Char = Double
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            type family InjectiveB a b = r | r -> b
+              ...
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Семейства первого класса}
+        \pause
+        \begin{minted}{haskell}
+            f a ?$\sim$? g a ?$\Rightarrow$? f ?$\sim$? g
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            type family ToCtor (s :: Symbol) :: Type -> Type where
+              ToCtor "maybe" = Maybe
+              ToCtor "identity" = Identity
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data Matchability = Matchable | Unmatchable
+
+            hMap
+              :: forall (m :: Matchability) (c :: Type -> Constraint)
+               . forall (f :: Type ->?$^m$? Type) (as :: [Type])
+               . All as c => (forall a. c a => a -> f a) -> HList as -> HList (Map f as)
+        \end{minted}
+    \end{frame}
+
+    \sectionplan{Кайнд \texttt{Constraint}}
+
+    \begin{frame}[fragile]{\sectionname}
+        \pause
+        \begin{itemize}
+            \item Класс типов конструирует констреинт: \mintinline{haskell}|Monad :: (Type -> Type) -> Constraint|;
+            \item Эквивалентность является констреинтом: \mintinline{haskell}|(a ?$\sim$? b) :: Constraint|;
+            \item Пустой кортеж констреинтов является констреинтом: \mintinline{haskell}|() :: Constraint|;
+            \item Кортеж констреинтов является констреинтом: \mintinline{haskell}|(Eq a, a ?$\sim$? b) :: Constraint|.
+        \end{itemize}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data Dict (c :: Constraint) where
+              Dict :: c => Dict c
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Вариадики своими руками}
+        \pause
+        \begin{minted}{haskell}
+            data HList (tys :: [Type]) where
+              HNil :: HList '[]
+              HCons :: ty -> HList tys -> HList (ty : tys)
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            type family All (c :: k -> Constraint) (tys :: [k]) :: Constraint where
+              All c '[] = ()
+              All c (ty : tys) = (c ty, All c tys)
+
+            -- All Show [Int, Double] ?$\sim$? (Show Int, (Show Double, ())
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            hmap :: forall c res tys . All c tys
+                 => (forall ty . c ty => ty -> res) -> HList tys -> [res]
+            hmap f = \case
+              HNil -> []
+              HCons x xs -> f x : hmap @c f xs
+
+            ghci> hmap @Show show (HCons (1 :: Int) $ HCons 'a' HNil)
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Полиморфные констреинты}
+        \pause
+        \begin{minted}{haskell}
+            data Rose f x = Rose x (f (Rose f x))
+
+            instance (Eq a, forall b. Eq b => Eq (f b)) => Eq (Rose f a) where
+              Rose x1 rs1 == Rose x2 rs2 = x1 == x2 && rs1 == rs2
+        \end{minted}
+    \end{frame}
+
+    \sectionplan{Использование ad-hoc полиморфизма}
+
+    \begin{frame}[fragile]{Сериализация}
+        \pause
+        \begin{minted}{kotlin}
+            interface KSerializer<T> {
+                fun serialize(encoder: Encoder, value: T)
+                fun deserialize(decoder: Decoder): T
+            }
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{kotlin}
+            class PairSerializer(
+                keySerializer: KSerializer<K>,
+                valueSerializer: KSerializer<V>,
+            ): KSerializer<Pair<K, V>> { ... }
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Экзистенциальные типы}
+        \pause
+        \begin{minted}{haskell}
+            data Any where
+              Any :: forall a . a -> Any  -- логически эквивалентно (exists a . a) -> Any
+
+            list :: [Any]
+            list = [Any 42, Any "Hello", Any (Just Nothing)]
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data Has (c :: Type -> Constraint) where
+              Has :: c a => a -> Has c
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            showAll :: [Has Show] -> String
+            showAll = List.intercalate "," . map \(Has x) -> show x
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            foldHas :: Has c -> (forall a . c a => a -> b) -> b
+            foldHas (Has x) k = k x
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Разрешение имён}
+        \pause
+        \begin{minted}{haskell}
+            class IsLabel (s :: Symbol) a where
+              fromLabel :: a
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            #name ?$\equiv$? fromLabel @"name"
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data Pet = Pet { name :: String }
+            instance IsLabel "name" (Pet -> String) where
+              fromLabel Pet{ name } = name
+
+            data Person = Person { name :: String, pets :: [Pet] }
+            instance IsLabel "name" (Person -> String) where
+              fromLabel Person{ name } = name
+
+            ghci> #name pet
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Несинтаксические типовые эквивалентности, System FC}
+        \pause
+        \begin{minted}{haskell}
+            f :: forall a b . a ?$\sim$? b => a -> b
+            f = id
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data Expr ty where
+              Const :: Int -> Expr Int
+              IsZero :: Expr Int -> Expr Bool
+              If :: forall ty . Expr Bool -> Expr ty -> Expr ty -> Expr ty
+            -- транслируется в
+            data Expr ty where
+              Const :: forall ty . ty ?$\sim$? Int => Expr ty
+              IsZero :: forall ty . ty ?$\sim$? Bool => Expr Int -> Expr ty
+              If :: forall ty . Expr Bool -> Expr ty -> Expr ty -> Expr ty
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Трансляция семейств}
+        \pause
+        \begin{minted}{haskell}
+            type family Plus (n :: Nat) (m :: Nat) :: Nat where
+              Plus Zero m = m
+              Plus (Suc n) m = Suc (Plus n m)
+            -- раскроется в
+            axiom Plus Zero m ?$\sim$? m
+            axiom Plus (Suc n) m ?$\sim$? Suc (Plus n m)
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Коерции и роли}
+        \pause
+        \begin{minted}{haskell}
+            newtype ModuleId = ModuleId Int64
+            newtype CourceId = CourceId Int64
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            newtype [Html] = Html { unHtml :: String }
+
+            linesH :: Html -> [Html]
+            linesH = map Html . lines . ?\framebox{map}? unHtml
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            class Coercible from to where
+              coerce :: from -> to
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            linesH :: Html -> [Html]
+            linesH = coerce lines
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            type role Map nominal representational
+            data Map k v = ...
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Type reflection}
+        \pause
+        \begin{minted}{haskell}
+            class Typeable a where
+              typeRep :: TypeRep a
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            typeName :: forall a. Typeable a => String
+            typeName = tyConName $ typeRepTyCon $ typeRep $ Proxy @a
+
+            ghci> typeName @Int
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data Dynamic where
+              Dynamic :: Typeable a => a -> Dynamic
+
+            fromDynamic :: Typeable a => Dynamic -> Maybe a
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data Store = Map Key Dynamic
+            data Ref ty = Ref Key
+            get :: Typeable ty => Store -> Ref ty -> Maybe ty
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Data reflection}
+        \pause
+        \begin{minted}{haskell}
+            class Reifies ty terms | ty -> terms where
+              reflect :: Proxy ty -> terms
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            reify :: a -> (forall fresh . Reifies fresh a => Proxy fresh -> res) -> res
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            newtype Wrapped tag a = Wrapped { unwrap :: a }
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data ReifiedOrd a = ReifiedOrd { compare :: a -> a -> Ordering }
+
+            instance Reifies tag (ReifiedOrd a) => Ord (Wrapped tag a) where
+              compare = coerce $ compare $ reflect $ Proxy @tag
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Использование data reflection}
+        \pause
+        \begin{minted}{haskell}
+            sort :: Ord a => [a] -> [a]
+
+            sortReverse :: forall a . Ord a => [a] -> [a]
+            sortReverse xs =
+              let dict = ReifiedOrd { compare = flip compare } in
+              reify dict \(Proxy :: Proxy fresh) ->
+                coerce $ sort @(Wrapped fresh a) $ coerce xs
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Открытые структуры}
+        \pause
+        \begin{minted}{haskell}
+            (Int, Double) ?заменяем на? (Member Int d, Member Double d) => Prod d
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Легковесные частичные стек-трейсы}
+        \pause
+        \begin{minted}{haskell}
+            myHead :: HasCallStack => [a] -> a
+            myHead []     = error "empty"
+            myHead (x:xs) = x
+
+            bad :: Int
+            bad = myHead []
+
+            ghci> bad
+            *** Exception: empty
+            CallStack (from HasCallStack):
+              error, called at Bad.hs:8:15 in main:Bad
+              myHead, called at Bad.hs:12:7 in main:Bad
+              -- no information about bad call site here
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}[escapeinside=##]{haskell}
+            type HasCallStack = (?callStack :: CallStack)
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Кастомизируемые ошибки типизации}
+        \pause
+        \begin{minted}{haskell}
+            instance (TypeError
+              ( Text "Attempting to show a function of type "
+                :<>: Text "'" :<>: ShowType (a -> b) :<>: Text "'"
+                :$$: Text "Did you forget to apply an argument?"
+              )) => Show (a -> b) where
+              show = undefined -- реализация не важна, до исполнения дело не дойдёт
+        \end{minted}
+    \end{frame}
+
+\end{document}
