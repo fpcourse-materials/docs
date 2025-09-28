@@ -85,7 +85,7 @@ Christopher Strachey ввёл классификацию полиморфизм�
     data OrdDict a = OrdDict { less :: a -> a -> Bool }
 
     sort :: OrdDict a -> [a] -> [a]
-    sort d@OrdDict { less } = \case [] -> []; x:xs -> insert x (sort d xs)
+    sort d@OrdDict{ less } = \case [] -> []; x:xs -> insert x (sort d xs)
       where
         insert x xs = let (l, r) = List.partition (?\framebox{`less`}? x) xs in l ++ x : r
 \end{minted}
@@ -176,7 +176,7 @@ Christopher Strachey ввёл классификацию полиморфизм�
 Так, следующий код не скомпилируется, потому что в месте использования переменной \texttt{y} нет значения типа \mintinline{haskell}|Show b|:
 \begin{minted}{haskell}
     f :: (Show b => b) -> b
-    f x = ?\framebox{x}?
+    f x = ?\framebox{x}? -- ошибка
 \end{minted}
 Можно это значение принять в функции \texttt{f}, тогда оно автоматически пропагируется в \texttt{y}:
 \begin{minted}{haskell}
@@ -406,7 +406,7 @@ GHC позволяет прямо в коде, с помощью специал�
 \begin{minted}{haskell}
     data Fun = F1 | F2 Int
     apply :: Fun -> Int -> Int
-    apply df x = case df of F1 -> x + 1; F2 y -> x + y
+    apply df x = case df of F1 -> x + 1; F2 y -> x * y
 
     map :: Fun -> [Int] -> [Int]
     map df = \case [] -> []; x:xs -> apply df x : map df xs
@@ -531,9 +531,9 @@ Synonym families (семейства типов) фактически являю
 Например, коллекции --- тип её элементов:
 
 \begin{minted}{haskell}
-    class Container a where
-      type Elem a
-      elements :: a -> [Elem a]
+    class Container c where
+      type Elem c
+      elements :: c -> [Elem c]
 
     instance Container [a] where
       type Elem [a] = a
@@ -671,7 +671,7 @@ Haskell предоставляет явный синтаксис для объя
       Rose x1 rs1 == Rose x2 rs2 = x1 == x2 && rs1 == rs2
 \end{minted}
 
-Также, как и типы, констреинты параметризованы представлением\footnote{\url{https://hackage.haskell.org/package/base-4.21.0.0/docs/GHC-Exts.html\#t:CONSTRAINT}}:
+Также, как и типы, констреинты параметризованы представлением\footnote{\url{https://hackage.haskell.org/package/base-4.21.0.0/docs/GHC-Exts.html\#t:CONSTRAINT}}: % todo пояснить зачем это
 \begin{minted}{haskell}
     data CONSTRAINT (a :: RuntimeRep)
     type Constraint = CONSTRAINT LiftedRep

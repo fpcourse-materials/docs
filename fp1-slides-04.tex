@@ -10,19 +10,16 @@
 \input{preamble-slides}
 
 \title[4. Введение в Haskell]{Практика 4. Введение в Haskell}
-\date{осень 2024}
+\date{осень 2025}
 
 \begin{document}
 
-    \setcounter{framenumber}{-1}
     \mymaketitle
 
     \begin{frame}{В предыдущих сериях}
         \begin{itemize}
             \item Синтаксис и семантика лямбда-исчисления
-            \item Структуры данных в чистом лямбда-исчислении
             \item Просто-типизированное лямбда-исчисление
-            \item Стиль программирования с явной передачей обновлённого состояния вместо изменения старого
             \item[\newtopic] Базовый синтаксис Haskell
             \item[\newtopic] Базовые типы
             \item[\newtopic] Группировка объявлений: \mintinline{haskell}|let| и \mintinline{haskell}|where|
@@ -34,32 +31,32 @@
         \tableofcontents
     \end{frame}
 
-    \sectionplan{Введение}
-
-    \begin{frame}{Как изучать Haskell}
-        \begin{block}{Почему Haskell}
-            \begin{itemize}
-                \item Писать не функционально максимально неудобно
-                \item Наружу вывернуты концепции и абстракции в ущерб простоте и эргономике
-            \end{itemize}
-        \end{block}
-        \pause
-        \begin{block}{\color{red} Как неправильно}
-            \begin{itemize}
-                \item Принимать на веру лекции и практики
-                \item Пытаться по примерам и типам нащупать, как этим пользоваться
-                \item Привычка от изучения языков с магическими правилами\footnote{\href{https://docs.python.org/3/reference/datamodel.html\#special-method-names}{\color{blue} Python special method names.}}
-            \end{itemize}
-        \end{block}
-        \pause
-        \begin{block}{\color{green} Как правильно}
-            \begin{itemize}
-                \item Открыть определение и почитать
-                \item Поредуцировать руками простые примеры
-                \item Лучший способ осознать что-то из ФП~--- реализовать то же самое самостоятельно
-            \end{itemize}
-        \end{block}
-    \end{frame}
+%    \sectionplan{Введение}
+%
+%    \begin{frame}{Как изучать Haskell}
+%        \begin{block}{Почему Haskell}
+%            \begin{itemize}
+%                \item Писать не функционально максимально неудобно
+%                \item Наружу вывернуты концепции и абстракции в ущерб простоте и эргономике
+%            \end{itemize}
+%        \end{block}
+%        \pause
+%        \begin{block}{\color{red} Как неправильно}
+%            \begin{itemize}
+%                \item Принимать на веру лекции и практики
+%                \item Пытаться по примерам и типам нащупать, как этим пользоваться
+%                \item Привычка от изучения языков с магическими правилами\footnote{\href{https://docs.python.org/3/reference/datamodel.html\#special-method-names}{\color{blue} Python special method names.}}
+%            \end{itemize}
+%        \end{block}
+%        \pause
+%        \begin{block}{\color{green} Как правильно}
+%            \begin{itemize}
+%                \item Открыть определение и почитать
+%                \item Поредуцировать руками простые примеры
+%                \item Лучший способ осознать что-то из ФП~--- реализовать то же самое самостоятельно
+%            \end{itemize}
+%        \end{block}
+%    \end{frame}
 
     \sectionplan{Рекурсия и аккумуляторы}
 
@@ -99,7 +96,7 @@
         \end{itemize}
     \end{frame}
 
-    \begin{frame}[fragile]{Техника аккумулирующего параметра\footnote{\href{https://youtu.be/8gnhaE2nmQ0?si=A8lDF9pJqa_07x9q}{\color{blue} \advanced (youtube) Continuation-passing style, defunctionalization, and associativity.}}}
+    \begin{frame}[fragile]{Техника аккумулирующего параметра}
         \begin{itemize}
             \item[\todo] Какая сложность по памяти у рекурсивного факториала?
             \item[\answer] \pause Линейная:
@@ -201,94 +198,12 @@
         \end{itemize}
     \end{frame}
 
-    \sectionplan{System F \advancedslide}
-
-    \begin{frame}{Полиморфные функции}
-        \vspace{-0.5em}
-        \begin{itemize}
-            \item[\advanced] То, что типизация остаётся валидной после подстановки в тип~--- теорема метатеории
-            \vspace{-1.3em}
-            \begin{columns}[onlytextwidth]
-                \begin{column}[t]{0.05\textwidth}
-                \end{column}\hfill%
-                \begin{column}[t]{0.95\textwidth}
-                    \begin{theorem}[Лемма подстановки типа для $\lambda_{\rightarrow}$]
-                        $\Gamma\vdash M : \sigma \Rightarrow [\alpha\mapsto\tau]\Gamma\vdash \hspace{3.25em}M : [\alpha\mapsto\tau]\sigma$ {\color{blue} ($\lambda_{\rightarrow}$ по Карри)}
-                        \\
-                        $\Gamma\vdash M : \sigma \Rightarrow [\alpha\mapsto\tau]\Gamma\vdash {\color{red} [\alpha\mapsto\tau]}M : [\alpha\mapsto\tau]\sigma$ {\color{red} ($\lambda_{\rightarrow}$ по Чёрчу)}
-                    \end{theorem}
-                \end{column}
-            \end{columns}
-            \vspace{0.3em}
-            \item Если мы в языке разрешим приписывать типы термам, мы потеряем гибкость:
-            \[
-                \begin{array}{l}
-                    \comb{K} : \alpha \to \beta \to \alpha \\
-                    \comb{K} \ap \term{1} : {\color{red}\text{cannot match } \alpha \text{ with } \term{Int}}
-                \end{array}
-            \]
-            \item Введём в теорию абстракцию на типах и аппликацию термов к типам!
-            \[
-                \begin{array}{l}
-                    \comb{K} : \forall \alpha \ap \beta \ldotp \alpha \to \beta \to \alpha
-                    \\
-                    \comb{K} \ap @\term{Int} : \forall \beta \ldotp \term{Int} \to \beta \to \term{Int}
-                    \\
-                    \comb{K} \ap @\term{Int} \ap @\term{Float} \ap \term{1} : \term{Float} \to \term{Int}
-                \end{array}
-            \]
-            \item Теперь выбор конкретного типа происходит на стороне пользователя функции
-            \item Такие функции называются \textbf{полиморфными} --- умеют работать с различными типами
-        \end{itemize}
-    \end{frame}
-
-    \begin{frame}[fragile]{Полиморфные функции в Haskell \advancedslide}
-        \begin{itemize}
-            \item Haskell неявно приписывает \texttt{forall} по всем типовым переменным:
-            \begin{minted}{haskell}
-                ghci> :set -fprint-explicit-foralls
-                ghci> :t const
-                const :: forall {a} {b}. a -> b -> a
-            \end{minted}
-            \item Типовые переменные всегда начинаются с маленькой буквы (\mintinline{haskell}|a|), в отличие от типовых констант (\mintinline{haskell}|Int| --- конкретный тип)
-            \item Типовые применения компилятор выставляет автоматически неявно
-            \item Иногда бывает полезно типовые применения указывать вручную (\texttt{TypeApplications})
-            \begin{itemize}
-                \item
-                \begin{minted}{haskell}
-                    ghci> :set -XTypeApplications
-                    ghci> :t const @Int
-                    const @Int :: forall {b}. Int -> b -> Int
-                \end{minted}
-                \item В промышленных языках синтаксис примерно такой:
-                \begin{minted}{kotlin}
-                    fun <A, B> const(x: A, y: B): A
-                    const<Int, Float>(1, 2)
-                \end{minted}
-            \end{itemize}
-        \end{itemize}
-    \end{frame}
-
-    \begin{frame}[fragile]{Higher ranked types \advancedslide}
-        \begin{itemize}
-            \item Бывает полезно в функции высшего порядка уметь задавать типы для функции-параметра:
-            \begin{minted}{haskell}
-                fst :: forall a b. (#\framebox{forall c}#. (a -> b -> c) -> c) -> a
-                fst lambdaPair = lambdaPair #\framebox{@a}# const
-            \end{minted}
-            \item Требуется расширение компилятора \texttt{RankNTypes}
-            \item Вывод типов становится неразрешим, компилятору требуются явные подсказки в виде типовых аннотаций и аппликаций
-        \end{itemize}
-    \end{frame}
-
     \sectionplan{Инфраструктура Haskell \practicalslide}
 
     \begin{frame}{Компилятор GHC}
         \begin{itemize}
             \item Единственный компилятор Haskell
-            \item Работает не быстро (зато умный)
-            \item Версия языка зафиксирована в стандарте Haskell Report 2010
-            \item Язык развивается расширениями компилятора
+            \item Язык развивается в основном расширениями компилятора
             \begin{itemize}
                 \item Подключение прагмой в начале файла \texttt{\{-\# LANGUAGE ... \#-\}}
                 \item Или ключами компиляции (в конфигах проекта)
@@ -370,6 +285,7 @@
             \item Форматтер автоматически форматирует код: \texttt{brittany}, \texttt{ormolu}\ldots
             \item Обязателен к использованию во многих языках: экономит время и повышает консистентность кода
             \item В Haskell не всегда удовлетворительно работает
+            \item[\NB] На этом курсе запрещён! (для упрощения ревью)
         \end{itemize}
     \end{frame}
 
@@ -390,7 +306,87 @@
         \end{block}
     \end{frame}
 
-    \sectionplan{Материалы}
+    \sectionplan{Материалы \popslide}
+
+    \appendix
+
+    \begin{frame}{Полиморфные функции \advancedslide}
+        \vspace{-0.5em}
+        \begin{itemize}
+            \item[\advanced] То, что типизация остаётся валидной после подстановки в тип~--- теорема метатеории
+            \vspace{-1.3em}
+            \begin{columns}[onlytextwidth]
+                \begin{column}[t]{0.05\textwidth}
+                \end{column}\hfill%
+                \begin{column}[t]{0.95\textwidth}
+                    \begin{theorem}[Лемма подстановки типа для $\lambda_{\rightarrow}$]
+                        $\Gamma\vdash M : \sigma \Rightarrow [\alpha\mapsto\tau]\Gamma\vdash \hspace{3.25em}M : [\alpha\mapsto\tau]\sigma$ {\color{blue} ($\lambda_{\rightarrow}$ по Карри)}
+                        \\
+                        $\Gamma\vdash M : \sigma \Rightarrow [\alpha\mapsto\tau]\Gamma\vdash {\color{red} [\alpha\mapsto\tau]}M : [\alpha\mapsto\tau]\sigma$ {\color{red} ($\lambda_{\rightarrow}$ по Чёрчу)}
+                    \end{theorem}
+                \end{column}
+            \end{columns}
+            \vspace{0.3em}
+            \item Если мы в языке разрешим приписывать типы термам, мы потеряем гибкость:
+            \[
+                \begin{array}{l}
+                    \comb{K} : \alpha \to \beta \to \alpha \\
+                    \comb{K} \ap \term{1} : {\color{red}\text{cannot match } \alpha \text{ with } \term{Int}}
+                \end{array}
+            \]
+            \item Введём в теорию абстракцию на типах и аппликацию термов к типам!
+            \[
+                \begin{array}{l}
+                    \comb{K} : \forall \alpha \ap \beta \ldotp \alpha \to \beta \to \alpha
+                    \\
+                    \comb{K} \ap @\term{Int} : \forall \beta \ldotp \term{Int} \to \beta \to \term{Int}
+                    \\
+                    \comb{K} \ap @\term{Int} \ap @\term{Float} \ap \term{1} : \term{Float} \to \term{Int}
+                \end{array}
+            \]
+            \item Теперь выбор конкретного типа происходит на стороне пользователя функции
+            \item Такие функции называются \textbf{полиморфными} --- умеют работать с различными типами
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Полиморфные функции в Haskell \advancedslide}
+        \begin{itemize}
+            \item Haskell неявно приписывает \texttt{forall} по всем типовым переменным:
+            \begin{minted}{haskell}
+                ghci> :set -fprint-explicit-foralls
+                ghci> :t const
+                const :: forall {a} {b}. a -> b -> a
+            \end{minted}
+            \item Типовые переменные всегда начинаются с маленькой буквы (\mintinline{haskell}|a|), в отличие от типовых констант (\mintinline{haskell}|Int| --- конкретный тип)
+            \item Типовые применения компилятор выставляет автоматически неявно
+            \item Иногда бывает полезно типовые применения указывать вручную (\texttt{TypeApplications})
+            \begin{itemize}
+                \item
+                \begin{minted}{haskell}
+                    ghci> :set -XTypeApplications
+                    ghci> :t const @Int
+                    const @Int :: forall {b}. Int -> b -> Int
+                \end{minted}
+                \item В C++-like языках синтаксис примерно такой:
+                \begin{minted}{kotlin}
+                    fun <A, B> const(x: A, y: B): A
+                    const<Int, Float>(1, 2)
+                \end{minted}
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+%    \begin{frame}[fragile]{Higher ranked types \advancedslide}
+%        \begin{itemize}
+%            \item Бывает полезно в функции высшего порядка уметь задавать типы для функции-параметра:
+%            \begin{minted}{haskell}
+%                fst :: forall a b. (#\framebox{forall c}#. (a -> b -> c) -> c) -> a
+%                fst lambdaPair = lambdaPair #\framebox{@a}# const
+%            \end{minted}
+%            \item Требуется расширение компилятора \texttt{RankNTypes}
+%            \item Вывод типов становится неразрешим, компилятору требуются явные подсказки в виде типовых аннотаций и аппликаций
+%        \end{itemize}
+%    \end{frame}
 
     \begin{frame}{Что посмотреть в транспорте}
         \begin{itemize}
@@ -416,10 +412,10 @@
         \begin{itemize}
             \item \href{https://www.amazon.com/Get-Programming-Haskell-Will-Kurt/dp/1617293768}{\color{blue} Will Kurt ''Get Programming with Haskell``}
             \item Две части курса Дениса Николаевича на степике: \href{https://stepik.org/course/75/syllabus}{\color{blue} раз} и \href{https://stepik.org/course/693/syllabus}{\color{blue} два}
-            \item \href{https://www.youtube.com/playlist?list=PL-_cKNuVAYAVX_q9XOKoFm95234G6YfOj}{\color{blue} Лекции Дениса Николаевича на МКН}
+            \item \href{https://www.youtube.com/playlist?list=PL-_cKNuVAYAVX_q9XOKoFm95234G6YfOj}{\color{blue} (youtube) Лекции Дениса Николаевича на МКН}
             \item \href{https://www.amazon.com/Haskell-Depth-Vitaly-Bragilevsky-ebook/dp/B098C6ZFZR}{\color{blue} Vitaly Bragilevsky ''Haskell in depth``}
-            \item \href{https://www.youtube.com/watch?v=DS0dgYVnHy4&list=PLvPsfYrGz3wtQeNnms4dKnqqguoEb5TPx}{\color{blue} Компилятор GHC языка Haskell: теория языков программирования в работе}
-            \item \href{https://www.amazon.com/Parallel-Concurrent-Programming-Haskell-Multithreaded/dp/1449335942}{\color{blue} Simon Marlow ''Parallel and Concurrent Programming in Haskell: Techniques for Multicore and Multithreaded Programming``}
+            \item \href{https://www.youtube.com/watch?v=DS0dgYVnHy4&list=PLvPsfYrGz3wtQeNnms4dKnqqguoEb5TPx}{\color{blue} (youtube) Компилятор GHC языка Haskell: теория языков программирования в работе}
+            \item \href{https://youtu.be/8gnhaE2nmQ0?si=A8lDF9pJqa_07x9q}{\color{blue} (youtube) Continuation-passing style, defunctionalization, and associativity.}
         \end{itemize}
     \end{frame}
 
