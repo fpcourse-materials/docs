@@ -13,6 +13,7 @@ clean-meta:
 	rm -i --force *.snm *.synctex.gz *.toc *.vrb *.pyg
 	rm -ri --force _minted*
 	rm -i --force *.synctex* *-pause.tex
+	rm -i --force *.bbl *.blg
 
 clean-all: clean-meta
 	rm -i --force *.pdf

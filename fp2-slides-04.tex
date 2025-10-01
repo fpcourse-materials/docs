@@ -1,0 +1,257 @@
+%! suppress = MissingImport
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+\setminted{xleftmargin=\parindent, autogobble, escapeinside=??}
+\newcommand{\iso}{\sim}
+
+\title{4. Типы данных}
+\author{Андрей Стоян}
+\institute[ИПКН ИТМО]{ИПКН ИТМО}
+
+\date{осень 2025}
+
+\begin{document}
+
+    \mymaketitle
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \sectionplan{Вариантность}
+
+    \begin{frame}[fragile]{(Ковариантный) функтор}
+        \pause
+        \begin{minted}{haskell}
+            class Functor f where
+              fmap :: (a -> b) -> (f a -> f b)
+        \end{minted}
+        \vspace{1em}
+        \begin{figure}[H]
+            \centering
+            \includegraphics[width=0.3\textwidth]{figs/functor}
+        \end{figure}
+    \end{frame}
+
+    \begin{frame}[fragile]{Контравариантный функтор}
+        \pause
+        \begin{minted}{haskell}
+            class Contravariant f where
+              contramap :: (a -> b) -> (f b -> f a)
+        \end{minted}
+        \vspace{1em}
+        \begin{figure}[H]
+            \centering
+            \includegraphics[width=0.3\textwidth]{figs/contra-functor}
+        \end{figure}
+    \end{frame}
+
+    \begin{frame}[fragile]{Знак позиции}
+        \pause
+        \begin{center}
+            \begin{tabular}[h]{|c|c|c|}
+                \hline
+                Тип                              & знак позиции \mintinline{haskell}{A} & знак позиции \mintinline{haskell}{B} \\
+                \hline
+                \mintinline{haskell}{Either A B} & \pause $+$                                  & $+$                                  \\
+                \mintinline{haskell}{(A, B)}     & \pause $+$                                  & $+$                                  \\
+                \mintinline{haskell}{A -> B}     & \pause $-$                                  & $+$                                  \\
+                \hline
+            \end{tabular}
+        \end{center}
+        \vspace{1em}
+        \begin{itemize}
+            \item[\todo] \pause \mintinline{haskell}{f :: ((A, B) -> C) -> (D, E)}
+            \item[\todo] \pause Объявите \mintinline{haskell}{instance Contravariant F} для \mintinline{haskell}{data F a = L (a -> ()) | R Int}.
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Всякие другие функторы}
+        \pause
+        \begin{minted}{haskell}
+            class Bifunctor f where
+              bimap :: (a -> c) -> (b -> d) -> f a b -> f c d
+        \end{minted}
+
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            class Profunctor p where
+              dimap :: (c -> a) -> (b -> d) -> p a b -> p c d
+
+            dimap serialize deserialize (query :: Sql Text Text) :: Sql Age [User]
+        \end{minted}
+    \end{frame}
+
+    \sectionplan{Изоморфизм}
+
+    \begin{frame}[fragile]{Определение}
+        \pause
+        \begin{minted}{c}
+    to . from = id
+    from . to = id
+        \end{minted}
+        \vspace{1em}
+        \pause
+        \begin{minted}{haskell}
+    to :: Bool -> Maybe ()
+    to b = if b then Just () else Nothing
+
+    from :: Maybe () -> Bool
+    from m = case m of Nothing -> False; Just () -> True
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Кардинальность типа}
+        \pause
+        \begin{center}
+            \begin{tabular}{|l|c|}
+                \hline
+                Тип и его декларация                                                                                                                                                                            & кардинальность \\
+                \hline
+                \mintinline{haskell}{data Void}                                                                                                                                                                 & $0$            \\
+                \mintinline{haskell}{data Unit = Unit} & $1$ \\
+                \mintinline{haskell}{data Bool = False | True}                                                                                                                                                  & $2$            \\
+                \hline
+            \end{tabular}
+        \end{center}
+        \pause
+        \begin{center}
+            \begin{tabular}{|l|c|}
+                \hline
+                Тип                                                      & кардинальность   \\
+                \hline
+                \mintinline{haskell}{data Either a b = Left a | Right b} & $|a| + |b|$      \\
+                \mintinline{haskell}{data Pair a b = Pair a b}           & $|a| \times |b|$ \\
+                \hline
+            \end{tabular}
+        \end{center}
+
+        \vspace{1em}
+        \pause
+        \mintinline{haskell}|A -> B| изоморфно \[|A \to B| = |B|^{|A|}\]
+    \end{frame}
+
+    \begin{frame}[fragile]{Примеры}
+        \pause
+        \begin{itemize}
+            \item \mintinline{haskell}{|Either Unit (Eigher Bool Bool)| ?\pause?= |Unit| + (|Bool| + |Bool|) = 5}.
+            \item \mintinline{haskell}{Pair (Either Bool Unit) (Pair Unit Void)| ?\pause?= 0} ~--- тип \mintinline{haskell}|Void| не населён, как и кортеж, его включающий.
+            \item Если \mintinline{haskell}{data Example = FirstAlternative Bool | AnotherOne Unit Bool Bool}, то \\\mintinline{haskell}{|Example| ?\pause?= |Bool| + |Unit| * |Bool| * |Bool| = 2 + 1 * 2 * 2 = 6}.
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Алгебраическое представление типа}
+        \begin{center}
+            \begin{tabular}{|p{0.5\textwidth}|c|}
+                \hline
+                Тип                                                      & алгебраическая формула      \\
+                \hline
+                \mintinline{haskell}{data Void}                          & $0$                         \\
+                \mintinline{haskell}{data Unit = Unit}                   & $1$                         \\
+                \mintinline{haskell}{data Bool = False | True}           & $1 + 1$ (обозначим как $2$) \\
+                \mintinline{haskell}{data Maybe a = Nothing | Just a}    & $1 + a$                     \\
+                \mintinline{haskell}{data Either a b = Left a | Right b} & $a + b$                     \\
+                \mintinline{haskell}{data Pair a b = Pair a b}           & $a \times b$                \\
+                \mintinline{haskell}{a -> b}                             & $b^a$                       \\
+                \hline
+            \end{tabular}
+        \end{center}
+
+        \pause\vspace{1em}
+        Запишите в алгебраическом виде следующий тип:
+        \begin{minted}{haskell}
+        data T a b = Undefined | Defined a (a -> b)
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Школьная алгебра}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{haskell}
+            -- ?$(c^b)^a \iso c^{a\times b}$?
+            to :: (a -> b -> c) -> (a, b) -> c
+            to = uncurry
+            from :: ((a, b) -> c) -> a -> b -> c
+            from = curry
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \pause
+                \begin{figure}
+                    \centering
+                    \includegraphics[width=1\textwidth]{figs/school-alg}
+                \end{figure}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}[fragile]{Больше алгебры}
+        \pause
+        \begin{itemize}
+            \item[\todo] Покажите, что $(a + b) + c \iso a + (b + c)$.
+            \item[\todo] Покажите, что $c^{a + b} \iso c^a\times c^b$.
+        \end{itemize}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            -- ?$a \times a \iso a^2$?
+            get :: (a, a) -> (Bool -> a)
+            get (x, y) idx = if idx then x else y
+            tabulate :: (Bool -> a) -> (a, a)
+            tabulate f = (f True, f False)
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Каноническое представление типа}
+        \pause
+        \[
+            \sum_{i}\prod_{j} t_{ij}
+        \]
+    \end{frame}
+
+    \sectionplan{Рекурсивные типы}
+
+    \begin{frame}[fragile]{Рекурсивные типы}
+        \begin{minted}{haskell}
+            fac n = if n <= 1 then 1 else n * ?\framebox{fac}? (n - 1)
+            data Nat = Zero | Suc ?\framebox{Nat}?
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Список через неподвижную точку}
+        \pause
+        \begin{minted}{haskell}
+            data ListShape a r = Either () (a, r) -- ?$\lambda a~r\ldotp 1 + a\times r$?
+            data FixList a = FixList (ListShape a (FixList a))
+            -- FixList a ?$\iso$? ListShape a (FixList a)
+        \end{minted}
+        \vspace{1em}
+        \pause
+        \begin{minted}{haskell}
+            foldr :: (Either () (a, r) -> r) -> FixList a -> r
+            foldr phi (FixList shape) = case shape of
+              Left () -> phi (Left ())
+              Right (x, xs) -> phi (Right (x, foldr phi xs))
+            -- сравните с классическим определением
+            foldr :: r -> (a -> r -> r) -> [a] -> r
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Неподвижная точка функтора}
+        \pause
+        \begin{minted}{haskell}
+            newtype Fix :: (Type -> Type) -> Type
+            newtype Fix f = In { out :: f (Fix f) }
+
+            data ListF a r = FNil | FCons a r
+            type List a = Fix (ListF a)
+        \end{minted}
+    \end{frame}
+
+\end{document}
