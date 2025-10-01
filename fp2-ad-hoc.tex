@@ -845,10 +845,10 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 Однако, если у нас есть коллекция обёрнутых данных, а мы хотим с ней поработать как с коллекцией сырых, то нам придётся трансформировать коллекцию, несмотря на то, что эта трансформация ничего не делает.
 Оптимизатор Haskell не справится её элиминировать, потому что работает с типизированным промежуточным представлением и не сможет избавиться от преобразования, меняющего тип.
 \begin{minted}{haskell}
-    newtype [Html] = Html { unHtml :: String }
+    newtype Csv = Csv { unCsv :: String }
 
-    linesH :: Html -> [Html]
-    linesH = map Html . lines . ?\framebox{map}? unHtml
+    concatC :: [Csv] -> Csv
+    concatC = Csv . concat . ?\framebox{map}? unCsv
 \end{minted}
 
 Поэтому в Haskell есть механизм безопасных коерций между типами, у которых одинаковое представление во время исполнения.
@@ -868,8 +868,8 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 
 Теперь, можем избавиться от лишней трансформации списка:
 \begin{minted}{haskell}
-    linesH :: Html -> [Html]
-    linesH = coerce lines
+    concatC :: [Csv] -> Csv
+    concatC = coerce concat
 \end{minted}
 
 Безопасность коерций обеспечивает \vocab{система ролей}.

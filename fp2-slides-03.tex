@@ -581,10 +581,10 @@
         \end{minted}
         \pause\vspace{1em}
         \begin{minted}{haskell}
-            newtype [Html] = Html { unHtml :: String }
+            newtype Csv = Csv { unCsv :: String }
 
-            linesH :: Html -> [Html]
-            linesH = map Html . lines . ?\framebox{map}? unHtml
+            concatC :: [Csv] -> Csv
+            concatC = Csv . concat . ?\framebox{map}? unCsv
         \end{minted}
         \pause\vspace{1em}
         \begin{minted}{haskell}
@@ -593,8 +593,8 @@
         \end{minted}
         \pause\vspace{1em}
         \begin{minted}{haskell}
-            linesH :: Html -> [Html]
-            linesH = coerce lines
+            concatC :: [Csv] -> Csv
+            concatC = coerce concat
         \end{minted}
         \pause\vspace{1em}
         \begin{minted}{haskell}
