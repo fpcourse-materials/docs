@@ -11,11 +11,10 @@
 \input{preamble-slides}
 
 \title[5. Типы данных]{Практика 5. Типы данных}
-\date{осень 2024}
+\date{осень 2025}
 
 \begin{document}
 
-    \setcounter{framenumber}{-1}
     \mymaketitle
 
     \begin{frame}[fragile]{В предыдущих сериях}
@@ -34,7 +33,7 @@
 
     \sectionplan{\texttt{data}}
 
-    \begin{frame}[fragile]{Зачем структуры данных в Haskell}
+    \begin{frame}[fragile]{Зачем встроенные структуры данных в Haskell}
         \begin{itemize}
             \item В $\lambda$-исчислении мы уже пользовались всеми необходимыми структурами данных
             \begin{itemize}
@@ -43,11 +42,10 @@
                 \item Числа: $\term{zero}, \term{suc}, \term{natElim}$
                 \item Списки: $\term{nil}, \term{cons}, \term{fold}$
             \end{itemize}
-            \item Однако эти реализации не всегда годятся на практике\footnote{\color{blue} \url{https://reasonablypolymorphic.com/blog/review-codata/index.html}.}:
+            \item Однако эти реализации не всегда годятся на практике:
             \begin{itemize}
-                \item Неэффективны для реального оборудования
-                \item Слишком сложно типизируются
                 \item Элиминация часто требует обхода всей структуры
+                \item Слишком сложно типизируются
             \end{itemize}
             \item Haskell имеет встроенную поддержку структур данных
             \begin{itemize}
@@ -71,12 +69,14 @@
                 \item Имена типов и конструкторов данных не пересекаются --- их можно называть одинаково
             \end{itemize}
         \end{block}
+        \pause
         \begin{block}{Конструирование}
             \begin{minted}{haskell}
                 barsik :: CatT
                 barsik = CatD "barsik" 42
             \end{minted}
         \end{block}
+        \pause
         \begin{block}{Количество значений}
             \begin{minted}{haskell}
                 |CatT| = |String| * |Int|
@@ -97,12 +97,14 @@
                 \item \mintinline{haskell}|Parrot :: Pet|
             \end{itemize}
         \end{block}
+        \pause
         \begin{block}{Конструирование}
             \begin{minted}{haskell}
                 petCat :: CatT -> Pet
                 petCat cat = Cat cat
             \end{minted}
         \end{block}
+        \pause
         \begin{block}{Количество значений}
             \begin{minted}{haskell}
                 |Pet| = |CatT| + |String| * |Int| + 1
@@ -118,6 +120,7 @@
                 data Pet = Cat CatT | Dog String Int | Parrot
             \end{minted}
         \end{block}
+        \pause
         \begin{block}{Паттерн-матчинг (сопоставление с образцом)}
             Элиминация структуры данных путём сопоставления её со способом конструирования.
             \begin{minted}{haskell}
@@ -166,26 +169,27 @@
 
     \begin{frame}[fragile]{Задачки на рекурсивные типы}
         \begin{minted}{haskell}
-            data Tree = Leaf Int | Branch Tree Int Tree
+            data Tree = Leaf Int | Node Tree Int Tree
         \end{minted}
         \begin{itemize}
             \item Рекурсивные типы --- способ реализовывать коллекции в Haskell
-            \item[\todo] Вычислите глубину дерева
-            \item[\todo] Вычислите сумму значений
-            \item[\todo] Примените к каждому значению в дереве функцию
+            \item[\eg] \mintinline{haskell}{Node (Leaf 1) 2 (Node (Leaf 3) 4 (Leaf 5))}
+            \item[\todo] Вычислите глубину дерева и поредуцируйте на примере
+            \item[\todo] Вычислите сумму значений и поредуцируйте на примере
+            \item[\todo] Примените к каждому значению в дереве функцию и поредуцируйте на примере
             \item[\answer] \pause
             \begin{minted}{haskell}
                 height :: Tree -> Int
                 height tree = case tree of
                   Leaf _ -> 1
-                  Branch l _ r -> 1 + max (height l) (height r)
+                  Node l _ r -> 1 + max (height l) (height r)
             \end{minted}
             \item[\answer] \pause
             \begin{minted}{haskell}
                 transform :: (Int -> Int) -> Tree -> Tree
                 transform f tree = case tree of
                   Leaf x -> Leaf (f x)
-                  Branch l x r -> Branch (transform f l) (f x) (transform f r)
+                  Node l x r -> Node (transform f l) (f x) (transform f r)
             \end{minted}
         \end{itemize}
     \end{frame}
@@ -202,7 +206,7 @@
                 age :: Pet -> MaybeInt
             \end{minted}
             \item[\todo] Какие типы будут у конструкторов данных?
-            \item[\todo] Закодируйте полиморфное дерево и функцию трансформации значений
+            \item[\todo] Закодируйте полиморфное бинарное дерево и функцию трансформации значений
             \item[\answer] \pause
             \begin{minted}{haskell}
                 data Maybe a = Nothing | Just a
@@ -240,12 +244,17 @@
         \begin{itemize}
             \item[\todo] \pause Определите кайнд конструктора типа
             \begin{minted}{haskell}
+                data Tree a = Leaf a | Branch (Tree a) a (Tree a)
+            \end{minted}
+            \item[\todo] \pause Определите кайнд конструктора типа
+            \begin{minted}{haskell}
                 data Free f a = Pure a | Free (f (Free f a))
             \end{minted}
             \item[\todo] Определите кайнд конструктора типа
             \begin{minted}{haskell}
                 data HFree f a = Pure a | HFree (f (HFree f) a)
             \end{minted}
+            \item[\answer] \pause \mintinline{haskell}{Tree :: * -> *}
             \item[\answer] \pause \mintinline{haskell}|Free :: (* -> *) -> * -> *|
             \item[\answer] \pause \mintinline{haskell}|HFree :: ((* -> *) -> * -> *) -> * -> *|
         \end{itemize}
@@ -274,8 +283,9 @@
             \item[\answer] \pause
             \begin{minted}{haskell}
                 dupEvens :: [a] -> [a]
-                dupEvens = concat . map f . zip [0..] where
-                  f (i, x) = if odd i then [x] else [x, x]
+                dupEvens = concat . map f . zip [0..]
+                  where
+                    f (i, x) = if odd i then [x] else [x, x]
             \end{minted}
         \end{itemize}
     \end{frame}
@@ -320,7 +330,7 @@
         \end{center}
     \end{frame}
 
-    \sectionplan{Всякое разное}
+    \sectionplan{Всякое разное \practicalslide}
 
     \begin{frame}[fragile]{Записи (records)}
         \vspace{-0.5em}
@@ -386,7 +396,7 @@
                 \item Завершаемость проверить нельзя (halting problem)
                 \item Исключительные ситуации случаются (ошибки программиста, работа с IO)
             \end{itemize}
-            \item Вместо этого используем ``\vocab{очевидную тотальность}''\footnote{Термин придуман и запатентован авторами презентации. По вопросам сотрудничества обращаться\ldots}
+            \item Вместо этого используем ``\vocab{очевидную тотальность}''
             \begin{itemize}
                 \item Моделируем мир типами-суммы, используем exhaustive сопоставления с образцом
                 \item Никогда не забываем базу рекурсии
@@ -429,12 +439,12 @@
             \end{minted}
             \item[\advanced] Это фактически она и есть (только для типов)!
             \begin{align*}
-                &Pair : * \rightarrow * \rightarrow * \\
-                &Pair = \lambda \tau^*~\sigma^*\ldotp\forall \gamma\ldotp(\tau\rightarrow\sigma\rightarrow\gamma)\to\gamma \\
-                &pair : \forall \alpha~\beta\ldotp\alpha \rightarrow \beta \rightarrow Pair~\alpha~\beta \\
-                &pair = \Lambda \alpha^*~\beta^*\ldotp\lambda x^\alpha~y^\beta\ldotp(\Lambda \gamma^*\ldotp\lambda f^{\alpha\rightarrow\beta\rightarrow\gamma}\ldotp f~x~y) \\
-                &fst : \forall \alpha~\beta\ldotp Pair~\alpha~\beta\rightarrow \alpha \\
-                &fst = \Lambda \alpha^*~\beta^*\ldotp\lambda p^{Pair~\alpha~\beta}\ldotp p~\alpha~(\mathbf{K}\ap\alpha\ap\beta)
+                &\term{Pair} : * \rightarrow * \rightarrow * \\
+                &\term{Pair} = \lambda \tau^*~\sigma^*\ldotp\forall \gamma\ldotp(\tau\rightarrow\sigma\rightarrow\gamma)\to\gamma \\
+                &\term{pair} : \forall \alpha~\beta\ldotp\alpha \rightarrow \beta \rightarrow \term{Pair}~\alpha~\beta \\
+                &\term{pair} = \Lambda \alpha^*~\beta^*\ldotp\lambda x^\alpha~y^\beta\ldotp(\Lambda \gamma^*\ldotp\lambda f^{\alpha\rightarrow\beta\rightarrow\gamma}\ldotp f~x~y) \\
+                &\term{fst} : \forall \alpha~\beta\ldotp \term{Pair}~\alpha~\beta\rightarrow \alpha \\
+                &\term{fst} = \Lambda \alpha^*~\beta^*\ldotp\lambda p^{\term{Pair}~\alpha~\beta}\ldotp p~\alpha~(\mathbf{K}\ap\alpha\ap\beta)
             \end{align*}
         \end{itemize}
     \end{frame}
@@ -547,12 +557,15 @@
         \end{minted}
     \end{frame}
 
-    \sectionplan{Материалы}
+    \sectionplan{Материалы \popslide}
+
+    \appendix
 
     \begin{frame}{Что посмотреть в транспорте}
         \begin{itemize}
             \item \href{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}{\color{blue} \underline{Parse, don’t validate}}
-            \item \href{https://youtu.be/qurG_J81_Cs?si=tINacE3c6ZF3CkvF}{\color{blue} Тагир Валеев — Pattern matching в Java и его воображаемые друзья}
+            \item \href{https://youtu.be/qurG_J81_Cs?si=tINacE3c6ZF3CkvF}{\color{blue} (youtube) Тагир Валеев — Pattern matching в Java и его воображаемые друзья}
+            \item \href{https://codewords.recurse.com/issues/three/algebra-and-calculus-of-algebraic-data-types}{\color{blue}  The algebra (and calculus!) of algebraic data types}
         \end{itemize}
     \end{frame}
 
