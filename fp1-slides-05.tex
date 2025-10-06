@@ -311,6 +311,29 @@
         \end{itemize}
     \end{frame}
 
+    \begin{frame}[fragile]{Очевидная тотальность \practicalslide}
+        \begin{itemize}
+            \item[\defi] \vocab{Тотальный код} --- никогда не расходится (зацикливания, исключения)
+            \begin{itemize}
+                \item Но завершаемость проверить нельзя (halting problem)
+                \item И исключительные ситуации случаются (ошибки программиста, работа с IO)
+            \end{itemize}
+            \item Вместо этого используем ``\vocab{очевидную тотальность}''
+            \begin{itemize}
+                \item Моделируем мир типами-суммы, используем exhaustive сопоставления с образцом
+                \item Никогда не забываем базу рекурсии
+                \item Делаем рекурсивный вызов на структурно меньших термах
+            \end{itemize}
+            \item На ошибке программиста --- всё же fail fast\footnote{\color{blue} \url{https://en.wikipedia.org/wiki/Fail-fast}}
+            \item Выстраиваем чёткую границу с внешним миром\footnote{\underline{\color{blue} \href{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}{Parse, don’t validate}}}
+            \begin{itemize}
+                \item Данные парсим и преобразуем в структуры данных
+                \item Активно используем \mintinline{haskell}|newtype| --- очень сильно недооценённая в промышленности концепция (но это пока --- Java inline classes, Rust tuple structs\ldots)
+                \item В программе выполнение инвариантов уже гарантируется системой типов
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
     \begin{frame}[fragile]{Персистентные структуры данных}
         \begin{itemize}
             \item[\defi] \vocab{Эфемерный интерфейс} --- изменение структуры данных меняет саму эту структуру
@@ -386,29 +409,6 @@
                 intsToIds :: [Int64] -> [CourseId]
                 intsToIds = #\framebox{\texttt{coerce}}#
             \end{minted}
-        \end{itemize}
-    \end{frame}
-
-    \begin{frame}[fragile]{Очевидная тотальность \practicalslide}
-        \begin{itemize}
-            \item[\defi] \vocab{Тотальный код} --- никогда не расходится (зацикливания, исключения) --- утопия
-            \begin{itemize}
-                \item Завершаемость проверить нельзя (halting problem)
-                \item Исключительные ситуации случаются (ошибки программиста, работа с IO)
-            \end{itemize}
-            \item Вместо этого используем ``\vocab{очевидную тотальность}''
-            \begin{itemize}
-                \item Моделируем мир типами-суммы, используем exhaustive сопоставления с образцом
-                \item Никогда не забываем базу рекурсии
-                \item Делаем рекурсивный вызов на структурно меньших термах
-            \end{itemize}
-            \item На ошибке программиста --- всё же \href{https://en.wikipedia.org/wiki/Fail-fast}{\color{blue}fail fast}, чтобы не напортить ещё больше
-            \item Выстраиваем чёткую границу с внешним миром (\underline{\color{blue} \href{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}{Parse, don’t validate}})
-            \begin{itemize}
-                \item Данные парсим и преобразуем в структуры данных
-                \item Активно используем \mintinline{haskell}|newtype| --- очень сильно недооценённая в промышленности концепция (но это пока --- Java inline classes, Rust tuple structs\ldots)
-                \item В программе выполнение инвариантов уже гарантируется системой типов
-            \end{itemize}
         \end{itemize}
     \end{frame}
 
