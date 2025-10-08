@@ -326,9 +326,12 @@
 Закодируем это на Haskell.
 В качестве комбинатора рекурсии возьмём \mintinline{haskell}{data FixList a}:
 \begin{minted}{haskell}
-    data ListShape a r = Either () (a, r) -- ?$\lambda a~r\ldotp 1 + a\times r$?
-    data FixList a = FixList (ListShape a (FixList a))
+    type ListShape a r = Either () (a, r) -- ?$\lambda a r\ldotp 1 + a\times r$?
+    data FixList a = In (ListShape a (FixList a))
     -- FixList a ?$\iso$? ListShape a (FixList a)
+
+    example :: FixList Int -- [1, 2, 3]
+    example = In (Right (1, In (Right (2, In (Right 3, Left ())))))
 \end{minted}
 
 Таким образом, мы разделили определение списка на две части: одна отвечает за форму типа, другая --- за рекурсию.
@@ -344,6 +347,7 @@
     -- сравните с классическим определением
     foldr :: r -> (a -> r -> r) -> [a] -> r
 \end{minted}
+% , ?$\displaystyle \left(r^r\right)^{1 + a\times r} \iso r^{r\times (1 + a \times r)} \iso r^{r + a \time r \times r}$?
 
 \subsubsection{Неподвижная точка функтора} \label{subsubsec:functor-fixpoint}
 
@@ -420,19 +424,26 @@
     cata :: Functor f => (f a -> a) -> Fix f -> a
     cata phi = phi . fmap (cata phi) . out
 \end{minted}
+Иначе говоря, \mintinline{haskell}{cata} заменяет все конструкторы \mintinline{haskell}{In} на функцию \texttt{phi}, которая содержит информацию о том, как реагировать на разные варианты конструкторов в дереве:
+\begin{minted}{haskell}
+    example           = In  (FCons 1 (In  (FCons 2 (In  (FCons 3  (In  FNil))))))
+    cata phi example ?$\eqbeta$? phi (FCons 1 (phi (FCons 2 (phi (FCons 3 (phi FNil))))))
+\end{minted}
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.8\textwidth]{figs/cataStep.excalidraw}
-\end{figure}
-
-Например, сумма списка будет выглядеть следующим образом:
+Например, сумма списка будет выглядеть следующим образом (рис.~\ref{fig:cata-step}):
 \begin{minted}{haskell}
     sum :: List Int -> Int
     sum = cata \case
       FNil -> 0
       FCons x result -> x + result
 \end{minted}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/cataStep.excalidraw}
+    \caption{Катаморфизм переиспользует вхождения рекурсивных поддеревьев, чтобы хранить результаты свёртки соответствующих поддеревьев.}
+    \label{fig:cata-step}
+\end{figure}
 
 Функцию \texttt{f a -> a} называют \vocab{f-алгеброй}.
 Действительно, если в качестве функтора \texttt{f} взять сигнатуру алгебры, а в качестве \texttt{a} носитель, то f-алгебра будет задавать некоторую интерпретацию сигнатуры:
