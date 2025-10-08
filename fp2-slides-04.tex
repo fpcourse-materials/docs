@@ -173,7 +173,7 @@
     \begin{frame}[fragile]{Школьная алгебра}
         \vspace{-1em}
         \begin{columns}[onlytextwidth]
-            \begin{column}[t]{0.485\textwidth}
+            \begin{column}{0.485\textwidth}
                 \begin{minted}{haskell}
             -- ?$(c^b)^a \iso c^{a\times b}$?
             to :: (a -> b -> c) -> (a, b) -> c
@@ -183,8 +183,8 @@
                 \end{minted}
             \end{column}\hfill%
             \begin{column}[t]{0.485\textwidth}
-                \pause
-                \begin{figure}
+                \pause\vspace{-1em}
+                \begin{figure}[h]
                     \centering
                     \includegraphics[width=1\textwidth]{figs/school-alg}
                 \end{figure}
@@ -251,6 +251,389 @@
 
             data ListF a r = FNil | FCons a r
             type List a = Fix (ListF a)
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+    to :: [a] -> List a
+    to = \case
+      [] -> In FNil
+      x:xs -> In $ FCons x (to xs)
+
+    from :: List a -> [a]
+    from (In shape) = case shape of
+      FNil -> []
+      FCons x xs -> x : from xs
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Функтор формы}
+        \pause
+        \begin{minted}{haskell}
+            instance Functor (ListF a) where
+              fmap :: (rec -> other) -> ListF a rec -> ListF a other
+              fmap f = \case
+                FNil -> FNil
+                FCons x xs -> FCons x (f xs)
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Свёртка}
+        \pause
+        \begin{center}
+            \includegraphics[width=0.7\textwidth]{figs/foldr}
+        \end{center}
+    \end{frame}
+
+    \begin{frame}[fragile]{Катаморфизм}
+        \pause
+        \begin{minted}{haskell}
+            cata :: Functor f => (f a -> a) -> Fix f -> a
+            cata phi = phi . fmap (cata phi) . out
+        \end{minted}
+        \begin{figure}[h]
+            \centering
+            \includegraphics[width=0.8\textwidth]{figs/cataStep.excalidraw}
+        \end{figure}
+        \begin{minted}{haskell}
+            sum :: List Int -> Int
+            sum = cata \case
+              FNil -> 0
+              FCons x result -> x + result
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Алгебры}
+        \pause
+        \begin{minted}{haskell}
+            data MonoidSig carrier = Mempty | Mappend carrier carrier
+
+            interpretSig :: MonoidSig Int -> Int
+            interpretSig = \case Mempty -> 0; Mappend l r -> l + r
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Анаморфизмы}
+        \pause
+        \begin{minted}{haskell}
+            ana :: Functor f => (s -> f s) -> s -> Fix f
+            ana psi = In . fmap (ana psi) . psi
+            -- сравните с классическим определением развёртки списка
+            unfoldr :: (s -> Maybe (a, s)) -> s -> [a]
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Гилеморфизмы}
+        \pause
+        \begin{minted}{haskell}
+    hylo :: Functor f => (a -> f a) -> (f b -> b) -> a -> b
+    hylo psi phi = cata phi . ana psi
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+    fac n = hylo
+      (\n -> if n > 0 then FCons n (n - 1) else FNil)
+      (\case FNil -> 1; FCons n acc -> n * acc)
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Всё через свёртки}
+        \pause
+        \begin{minted}{haskell}
+    to :: Functor f => Fix f -> (forall a . (f a -> a) -> a)
+    to = flip cata
+
+    from :: (forall a . (f a -> a) -> a) -> Fix f
+    from g = g In
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+    data ListF elem rec = Nil | Cons elem rec
+
+    xs1 :: Fix (ListF Int)
+    xs1 = In (Cons 1 (In (Cons 2 (In (Cons 3 (In Nil))))))
+
+    xs2 :: (ListF Int a -> a) -> a
+    xs2 = \alg -> alg (Cons 1 (alg (Cons 2 (alg (Cons 3 (alg Nil))))))
+
+    ghci> xs2 @Int \case Nil -> 0; Cons x acc -> x + acc
+    6
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Список Чёрча}
+        \pause
+        \begin{align*}
+            \text{\texttt{(ListF elem a -> a) -> a}}
+            \iso a^{\displaystyle a^{\displaystyle 1 + elem\times a}}
+            \iso a^{\displaystyle a\times a^{\displaystyle elem\times a}}
+            \iso \left( a^{\displaystyle a} \right)^{\displaystyle \left(\left( a^{\displaystyle a}\right)^{\displaystyle elem}\right)} \\
+            \iso \text{\texttt{a -> (elem -> a -> a) -> a}}
+        \end{align*}
+    \end{frame}
+
+    \begin{frame}[fragile]{Дефорестация --- мотивация}
+        \pause
+        \begin{minted}{haskell}
+    all p xs = and (map p xs)
+    -- или fused версия
+    all p [] = []
+    all p (x:xs) = p x && all p xs
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Дефорестация}
+        \begin{figure}
+            \centering
+            \includegraphics[width=0.6\textwidth]{figs/deforestation-examples}
+        \end{figure}
+    \end{frame}
+
+    \begin{frame}[fragile]{List fusion}
+        \pause
+        \begin{minted}{haskell}
+    {-# RULES
+    "map/map" forall f g xs. map f (map g xs) = map (f . g) xs
+      #-}
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+    build :: (forall b . (a -> b -> b) -> b -> b) -> [a]
+    build g = g (:) []
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+    list123 :: [Int]
+    list123 = build \s z -> s 1 (s 2 (s 3 z))
+
+    map :: (a -> b) -> [a] -> [b]
+    map f xs = build \s z -> foldr (\x acc -> s (f x) acc) z xs
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+    foldr f ini (build g) ?$\equiv$? g f ini
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Дефорестация вручную}
+        \pause
+        \begin{figure}
+            \centering
+            \begin{tabular}{p{0.5\textwidth} rl}
+                \begin{minipage}[t]{0.5\textwidth}
+                    \begin{minted}{cpp}
+                std::variant<Msg1, Msg2>
+                    deserialize(bytes bs) {
+                    if (...) {
+                        return std::variant{Msg1(...)};
+                    else {
+                        return std::variant{Msg2(...)};
+                    }
+                }
+                    \end{minted}
+                \end{minipage}
+                &
+                \begin{minipage}[t]{0.5\textwidth}
+                    \begin{minted}{cpp}
+                template<class Impl>
+                auto deserialize(bytes bs) {
+                    if (...) {
+                        return Impl::processMsg1(...);
+                    else {
+                        return Impl::processMsg2(...);
+                    }
+                }
+                    \end{minted}
+                \end{minipage}
+            \end{tabular}
+        \end{figure}
+    \end{frame}
+
+    \begin{frame}[fragile]{Visitor pattern}
+        \pause
+        \begin{minted}{haskell}
+    data Tree a = Leaf | Node a [Tree a]
+    foldTree :: Tree a -> r -> (a -> [r] -> r) -> r
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+    data Visitor a r = Visitor { onLeaf :: r, onNode :: a -> [r] -> r }
+    visitTree :: Tree a -> Visitor a r -> r
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+    data Tree a = Tree { visit :: forall r . Visitor a r -> r }
+
+    leaf :: Tree a
+    leaf = Tree { visit = \Visitor{onLeaf} -> onLeaf }
+
+    node :: a -> [Tree a] -> Tree a
+    node x ts = Tree { visit = \v@Visitor{onNode} -> onNode x (map (`visit` v) ts) }
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Visitor pattern}
+        \pause
+        \begin{minted}{kotlin}
+    interface Visitor<a, r> {
+        fun onLeaf(): r
+        fun onNode(x: a, subtrees: List<r>): r
+    }
+
+    interface Tree<a> {
+        fun <r> visit(visitor: Visitor<a, r>): r
+    }
+    class Leaf : Tree<Nothing> {
+        override fun <r> visit(visitor: Visitor<Nothing, r>): r = visitor.onLeaf()
+    }
+    class Node<a>(val value: a, val subtrees: List<Tree<a>>) : Tree<a> {
+        override fun <r> visit(visitor: Visitor<a, r>): r =
+            visitor.onNode(value, subtrees.map { it -> it.visit(visitor) })
+    }
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Всё через развёртку}
+        \pause
+        \begin{minted}{haskell}
+    ana :: Functor f => forall s . (s -> f s) -> s -> Fix f
+    ana psi = In . fmap (ana psi) . psi
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+    ana :: Functor f => (exists s . (s, s -> f s)) -> Fix f
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+    data Box f where
+      --     exists s. (s,    s -> f s)
+      Box :: forall s . s -> (s -> f s) -> Box
+
+    ana' :: Functor f => Box f -> Fix f
+    ana' (Box currSeed psi) =
+      In $ (\nextSeed -> ana' (Box nextSeed psi)) <$> psi currSeed
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Изоморфизм}
+        \pause
+        \begin{minted}{haskell}
+            to :: Fix f -> Box f
+            to x = Box x out
+
+            from :: Functor f => Box f -> Fix f
+            from = ana'
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+    nats :: Box (ListF Int)
+    nats = Box 0 \curr -> Cons curr (curr + 1)
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Stream fusion}
+        \pause
+        \begin{minted}{haskell}
+    data ListF a r = Nil | Cons a r
+    type MyStream a = Box (ListF a) -- ?$\exists$?s . (s -> ListF a s, s)
+    -- ?$\iso$?
+    data Step a s = Done | Yield a s
+    data Stream a where
+      Stream :: forall s . (s -> Step a s) -> s -> Stream a
+
+    stream :: [a] -> Stream a
+    stream xs = Stream (\case [] -> Done; x:xs -> Yield x xs) xs
+
+    unstream :: Stream a -> [a]
+    unstream (Stream next s) = case next s of
+      Done -> []
+      Cons a s' -> a : unstream next s'
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Пример map}
+        \begin{minted}{haskell}
+    mapS :: (a -> b) -> Stream a -> Stream b
+    mapS f (Stream next s) = Stream next' s
+      where
+        next' s = case next s of
+          Done -> Done
+          Yield x s' -> Yield (f x) s'
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Общий пайплайн}
+        \pause
+        \begin{enumerate}
+            \item Мы пишем все функции работы со списками через стримы:
+            \begin{minted}{haskell}
+        map :: (a -> b) -> [a] -> [b]
+        map f = unstream . map f . stream
+            \end{minted}
+            \item С помощью RULES задаём правило переписывания stream/unstream, двойственное foldr/build: \texttt{stream . unstream = id}.
+            \item Далее справляются обычные компиляторные оптимизации.
+        \end{enumerate}
+    \end{frame}
+
+    \begin{frame}[fragile]{Фильтрация стримов}
+        \begin{minted}{haskell}
+    data Step a s = Done | Skip s | Yield a s
+
+    filterS :: (a -> Bool) -> Stream a -> Stream a
+    filterS p (Stream next s) = Stream next' s
+      where
+        next' s = case next s of
+          Done -> Done
+          Skip s' -> Skip s'
+          Yield a s' -> if p a then Yield a s' else Skip s'
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Push vs pull streaming}
+        \pause
+        \begin{minted}{kotlin}
+    events.observe(object : Observer<Event> {
+        override fun onComplete() { .. }
+        override fun onNext(elem: Event) { .. }
+    })
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Data vs codata}
+        \pause
+        \begin{minted}{haskell}
+    data ListF a r = Nil | Cons a r
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+    codata CoList a where
+      force :: CoList a -> ListF a (CoList a)
+
+    unfold :: (s -> ListF a s) -> s -> CoList a
+    force (unfold coalg s) = case coalg s of
+      Nil -> Nil
+      Cons x s' -> Cons x (unfold coalg s')
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{OOP}
+        \pause
+        \begin{minted}[escapeinside=**]{kotlin}
+    class List<a>(val layer: Pair<a, List<a>>?)
+
+    fun <a, r> fold(alg: (Pair<a, r>?) -> r, xs: List<a>): r =
+        if (xs.layer == null) alg(null)
+        else alg(Pair(xs.layer.first, fold(alg, xs.list.second)))
+
+    interface CoList<a> { fun force(): Pair<a, CoList<a>>? }
+
+    fun <a, s> unfold(coalg: (s) -> Pair<a, s>?, ini: s): CoList<a> =
+        object : CoList<a> {
+            override fun force(): Pair<a, CoList<a>>? {
+                val layer = coalg(ini)
+                return if (layer == null) null else
+                    Pair(layer.first, unfold(coalg, layer.second))
+            }
+        }
         \end{minted}
     \end{frame}
 
