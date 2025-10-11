@@ -11,7 +11,7 @@
 \input{preamble-slides}
 
 \title[6. Классы типов]{Практика 6. Классы типов}
-\date{осень 2024}
+\date{осень 2025}
 
 \begin{document}
 
@@ -22,11 +22,11 @@
         \begin{itemize}
             \item Полиморфные функции в Haskell
             \item Структуры данных в Haskell, полиморфизм структур данных
-            \item[\NB] Стиль программирования с явной передачей иммутабельного состояния
-            \begin{equation*}
-                \framebox{$\sigma_1$} \to \sigma_2 \to \cdots \to \sigma_{k - 1} \to \framebox{$\sigma_k$}
-            \end{equation*}
-            \item[\NB] Использование структур данных и идиомы newtype для контроля за выполнением инвариантов предметной области
+%            \item[\NB] Стиль программирования с явной передачей иммутабельного состояния
+%            \begin{equation*}
+%                \framebox{$\sigma_1$} \to \sigma_2 \to \cdots \to \sigma_{k - 1} \to \framebox{$\sigma_k$}
+%            \end{equation*}
+            \item[\NB] Использование структур данных и newtype для контроля за выполнением инвариантов предметной области\footnote{\color{blue} \url{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}}
             \begin{equation*}
                 \framebox{\color{red}$\sigma_1$} {~\color{red} \rightarrow~} \sigma_2 {~\color{blue} \to~} \cdots {~\color{blue} \to~} \sigma_{k - 1} {~\color{blue} \to~} \framebox{$\sigma_k$}
             \end{equation*}
@@ -63,7 +63,7 @@
                 string show(int x) { ... }
                 string show(data d) { ... }
             \end{minted}
-            \item Классы типов требуют задекларировать перегружаемую функцию и варьируемый типовой параметр явно
+            \item \pause Классы типов требуют задекларировать перегружаемую функцию и варьируемый типовой параметр явно
             \begin{minted}{haskell}
                 class Show #\framebox{a}# where
                   show :: #\framebox{a}# -> String
@@ -91,7 +91,7 @@
         \end{columns}
         \vspace{0.5em}
         \begin{itemize}
-            \item В отличие от классической перегрузки, классы типов дружат с параметрическим полиморфизмом
+            \item \pause В отличие от классической перегрузки, классы типов дружат с параметрическим полиморфизмом
             \begin{minted}{haskell}
                 showWithPrefix :: Show a => a -> String -> String
             \end{minted}
@@ -122,18 +122,18 @@
 
     \begin{frame}[fragile]{Ещё задачки}
         \begin{itemize}
-            \item[\todo] Реализуйте функцию \mintinline{haskell}|domain|, перебирающую все значения типа
+            \item[\todo] Реализуйте функцию \mintinline{haskell}|allValues|, перебирающую все значения типа
             \item[\todo] Реализуйте проверку равенства функций
             \item[\answer] \pause
             \begin{minted}{haskell}
-                domain :: (Enum a, Bound a) => [a]
-                domain = [minBound .. maxBound]
+                allValues :: (Enum a, Bound a) => [a]
+                allValues = [minBound .. maxBound]
             \end{minted}
             \item[\answer] \pause
             \begin{minted}{haskell}
-                instance (Enum a, Bounde a, Eq b) => Eq (a -> b) where
+                instance (Enum a, Bound a, Eq b) => Eq (a -> b) where
                   (==) :: (a -> b) -> (a -> b) -> Bool
-                  f == g = all $ zipWith (==) (map f domain) (map g domain)
+                  f == g = map f allValues == map g allValues
             \end{minted}
         \end{itemize}
     \end{frame}
@@ -142,17 +142,17 @@
 
     \begin{frame}[fragile]{Классы высших кайндов и функторы}
         \begin{itemize}
-            \item Рассмотренные ранее классы типов ожидают типы кайнда \mintinline{haskell}|*|\footnote{С помощью расширения \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/kind_signatures.html}{\color{blue}KindSignatures} кайнды можно указывать явно.}\footnote{В современном Haskell вместо звёздочек принято использовать \mintinline{haskell}|Data.Kind.Type|.}
+            \item Рассмотренные ранее классы типов ожидают типы кайнда \mintinline{haskell}|*|\footnote{В современном Haskell вместо звёздочек принято использовать \mintinline{haskell}|Data.Kind.Type|.} % \footnote{С помощью расширения \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/kind_signatures.html}{\color{blue}KindSignatures} кайнды можно указывать явно.}
             \begin{minted}{haskell}
                 class Ord (a :: *) where
                   less :: a -> a -> Bool
             \end{minted}
-            \item Для абстрагирования по контейнерам нужны типы высших кайндов
+            \item Для абстрагирования по коллекциям нужны типы высших кайндов
             \begin{minted}{haskell}
                 class Functor (f :: * -> *) where
                   fmap :: (a -> b) -> f a -> f b
             \end{minted}
-            \item[\todo] Реализуйте \mintinline{haskell}|Functor| для \mintinline{haskell}|Maybe| и списков\footnote{Явные в инстансах можно писать с помощью расширения \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/instances.html\#extension-InstanceSigs}{\color{blue}InstanceSigs}.}
+            \item[\todo] Реализуйте \mintinline{haskell}|Functor| для \mintinline{haskell}|Maybe| и списков %\footnote{Явные в инстансах можно писать с помощью расширения \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/instances.html\#extension-InstanceSigs}{\color{blue}InstanceSigs}.}
             \item[\answer] \pause
             \begin{minted}{haskell}
                 instance Functor Maybe where
@@ -184,58 +184,33 @@
         \end{itemize}
     \end{frame}
 
-    \sectionplan{Природа и возможности классов типов}
+%    \sectionplan{Природа и возможности классов типов}
 
-    \begin{frame}[fragile]{Ad-hoc полиморфизм через типы-суммы vs классы типов}
-        \begin{itemize}
-            \item Паттерн-матчинг позволяет исполнять различный код на элементах типов-сумм
-            \item Классы типов
-            \begin{description}
-                \item[+тип] Просто: завести для него новый инстанс\footnote{Просто --- нужно внести модификацию в код локально, в одном месте, без перекомпиляции всего.}
-                \item[+функцию] Сложно: добавить реализацию в каждый инстанс\footnote{Сложно --- нужно внести модификации в код во множестве различных мест.}
-            \end{description}
-            \item Типы-суммы
-            \begin{description}
-                \item[+тип] Сложно: дополнить паттерн-матчинг во всех функциях
-                \item[+функцию] Просто: завести функцию, разобрать все кейсы
-            \end{description}
-            \item Другие решения: мультиметоды (экзотика)
-            \item {\color{blue}\url{https://en.wikipedia.org/wiki/Expression\_problem}}
-        \end{itemize}
-    \end{frame}
+%    \begin{frame}[fragile]{Ad-hoc полиморфизм через типы-суммы vs классы типов}
+%        \begin{itemize}
+%            \item Паттерн-матчинг позволяет исполнять различный код на элементах типов-сумм
+%            \item Классы типов
+%            \begin{description}
+%                \item[+альтернативу] Просто: завести для неё новый инстанс\footnote{Просто --- нужно внести модификацию в код локально, в одном месте, без перекомпиляции всего.}
+%                \item[+функцию] Сложно: добавить реализацию в каждый инстанс\footnote{Сложно --- нужно внести модификации в код во множестве различных мест.}
+%            \end{description}
+%            \item Типы-суммы
+%            \begin{description}
+%                \item[+альтернативу] Сложно: дополнить паттерн-матчинг во всех функциях
+%                \item[+функцию] Просто: завести функцию, разобрать все кейсы
+%            \end{description}
+%            \item {\color{blue}\url{https://en.wikipedia.org/wiki/Expression\_problem}}
+%        \end{itemize}
+%    \end{frame}
 
-    \begin{frame}[fragile]{Природа классов типов}
-        \begin{itemize}
-            \item \pause Классы типов --- не типы, нельзя \mintinline{haskell}|many :: [Functor]|\footnote{Гетерогенные списки можно делать с помощью экзистенциальных типов. Но это потом.}
-            \item \pause Тип принадлежит классу типов, если для него написан инстанс этого класса типов, удовлетворяющий необходимым законам этого класса
-            \item \pause Иногда полезно смотреть на классы типов как на предикаты на типах
-            \item[$\Rightarrow$] Мультипараметрические классы типов --- отношения
-        \end{itemize}
-    \end{frame}
-
-    \begin{frame}[fragile]{Похожие концепции в других языках \popslide}
-        \begin{itemize}
-            \item А ля классы типов, диспатч по нулевому аргументу функций
-            \begin{itemize}
-                \item Rust traits
-                \item Swift protocols
-                \item Scala traits + implicits
-            \end{itemize}
-            \item Контроль за инстанциацией шаблонов
-            \begin{itemize}
-                \item С++20 концепты
-            \end{itemize}
-            \item Неявные ресиверы
-            \begin{itemize}
-                \item Kotlin context receivers
-            \end{itemize}
-            \item Шаблон visitor для динамического диспатча по нескольким аргументам одновременно
-            \item Мультиметоды
-            \begin{itemize}
-                \item Julia
-            \end{itemize}
-        \end{itemize}
-    \end{frame}
+%    \begin{frame}[fragile]{Природа классов типов}
+%        \begin{itemize}
+%            \item \pause Классы типов --- не типы, нельзя \mintinline{haskell}|many :: [Functor]|\footnote{Гетерогенные списки можно делать с помощью экзистенциальных типов. Но это потом.}
+%            \item \pause Тип принадлежит классу типов, если для него написан инстанс этого класса типов, удовлетворяющий необходимым законам этого класса
+%            \item \pause Иногда полезно смотреть на классы типов как на предикаты на типах
+%            \item[$\Rightarrow$] Мультипараметрические классы типов --- отношения
+%        \end{itemize}
+%    \end{frame}
 
     \sectionplan{Реализация классов типов в GHC \practicalslide}
 
@@ -390,7 +365,34 @@
         \end{itemize}
     \end{frame}
 
-    \sectionplan{Материалы}
+    \sectionplan{Материалы \popslide}
+
+    \appendix
+
+    \begin{frame}[fragile]{Похожие концепции в других языках \popslide}
+        \begin{itemize}
+            \item А ля классы типов, диспатч по нулевому аргументу функций
+            \begin{itemize}
+                \item[\eg] Rust traits
+                \item[\eg] Swift protocols
+                \item[\eg] Scala traits + implicits
+            \end{itemize}
+            \item Контроль за инстанциацией шаблонов
+            \begin{itemize}
+                \item[\eg] С++20 концепты
+            \end{itemize}
+            \item Неявные ресиверы
+            \begin{itemize}
+                \item[\eg] Kotlin context receivers
+            \end{itemize}
+            \item Шаблон visitor для динамического диспатча по нескольким аргументам одновременно
+            \item Мультиметоды
+            \begin{itemize}
+                \item[\eg] Julia
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
 
     \begin{frame}{Полезные ссылки}
         \begin{itemize}
