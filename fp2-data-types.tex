@@ -500,7 +500,7 @@
 \subsection{Всё через свёртки} \label{subsec:all-folds}
 
 Оказывается, что с помощью катаморфизма можно получить изоморфизм между структурами данных и их свёртками:
-\mintinline{haskell}|Fix f ?$\simeq$? forall a . (f a -> a) -> a|.
+\mintinline{haskell}|Fix f ?$\iso$? forall a . (f a -> a) -> a|.
 \begin{minted}{haskell}
     to :: Functor f => Fix f -> (forall a . (f a -> a) -> a)
     to = flip cata

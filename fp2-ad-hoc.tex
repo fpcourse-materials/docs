@@ -671,11 +671,11 @@ Haskell предоставляет явный синтаксис для объя
       Rose x1 rs1 == Rose x2 rs2 = x1 == x2 && rs1 == rs2
 \end{minted}
 
-Также, как и типы, констреинты параметризованы представлением\footnote{\url{https://hackage.haskell.org/package/base-4.21.0.0/docs/GHC-Exts.html\#t:CONSTRAINT}}: % todo пояснить зачем это
-\begin{minted}{haskell}
-    data CONSTRAINT (a :: RuntimeRep)
-    type Constraint = CONSTRAINT LiftedRep
-\end{minted}
+%Также, как и типы, констреинты параметризованы представлением\footnote{\url{https://hackage.haskell.org/package/base-4.21.0.0/docs/GHC-Exts.html\#t:CONSTRAINT}}: % todo пояснить зачем это
+%\begin{minted}{haskell}
+%    data CONSTRAINT (a :: RuntimeRep)
+%    type Constraint = CONSTRAINT LiftedRep
+%\end{minted}
 
 \subsection{Использование ad-hoc полиморфизма}
 

@@ -1,7 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="fp2-build" type="CompoundRunConfigurationType">
-    <toRun name="fp2 bibliography" type="BIBTEX_RUN_CONFIGURATION" />
-    <toRun name="fp2" type="LATEX_RUN_CONFIGURATION" />
-    <method v="2" />
-  </configuration>
-</component>

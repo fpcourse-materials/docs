@@ -4,10 +4,11 @@
       <compiler>PDFLATEX</compiler>
       <compiler-path />
       <sumatra-path />
-      <pdf-viewer>BUILT-IN-PDF-VIEWER</pdf-viewer>
+      <pdf-viewer>NONE</pdf-viewer>
       <viewer-command />
       <compiler-arguments>--shell-escape</compiler-arguments>
       <envs />
+      <expand-macros-in-environment-variables>false</expand-macros-in-environment-variables>
       <before-run-command />
       <main-file>$PROJECT_DIR$/fp2.tex</main-file>
       <output-path>$PROJECT_DIR$</output-path>

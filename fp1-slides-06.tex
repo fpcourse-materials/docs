@@ -21,7 +21,7 @@
     \begin{frame}[fragile]{В предыдущих сериях}
         \begin{itemize}
             \item Полиморфные функции в Haskell
-            \item Структуры данных в Haskell, полиморфизм структур данных
+            \item Структуры данных в Haskell, полиморфные структуры данных
 %            \item[\NB] Стиль программирования с явной передачей иммутабельного состояния
 %            \begin{equation*}
 %                \framebox{$\sigma_1$} \to \sigma_2 \to \cdots \to \sigma_{k - 1} \to \framebox{$\sigma_k$}
@@ -145,7 +145,7 @@
             \item Рассмотренные ранее классы типов ожидают типы кайнда \mintinline{haskell}|*|\footnote{В современном Haskell вместо звёздочек принято использовать \mintinline{haskell}|Data.Kind.Type|.} % \footnote{С помощью расширения \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/kind_signatures.html}{\color{blue}KindSignatures} кайнды можно указывать явно.}
             \begin{minted}{haskell}
                 class Ord (a :: *) where
-                  less :: a -> a -> Bool
+                  (<) :: a -> a -> Bool
             \end{minted}
             \item Для абстрагирования по коллекциям нужны типы высших кайндов
             \begin{minted}{haskell}
