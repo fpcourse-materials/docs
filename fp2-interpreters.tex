@@ -942,7 +942,7 @@
     \end{minted}
     &
     \begin{minted}[numberblanklines=true]{haskell}
-        --                    s -> (s, a)
+        --                    s -> (s, s)
         modify :: (s -> s) -> State s s
         modify f =
           get >>= \x ->
