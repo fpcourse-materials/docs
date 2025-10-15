@@ -227,11 +227,21 @@
     \begin{frame}[fragile]{Список через неподвижную точку}
         \pause
         \begin{minted}{haskell}
-            data ListShape a r = Either () (a, r) -- ?$\lambda a~r\ldotp 1 + a\times r$?
-            data FixList a = FixList (ListShape a (FixList a))
-            -- FixList a ?$\iso$? ListShape a (FixList a)
+            type Shape a r = Either () (a, r) -- ?$\lambda a~r\ldotp 1 + a\times r$?
+            data FixList a = FixList (Shape a (FixList a))
+            -- FixList a ?$\iso$? Shape a (FixList a) ?$\iso$? Shape a (Shape a (FixList a)) ?$\iso$? ...
         \end{minted}
         \vspace{1em}
+        \begin{minted}{haskell}
+            data [a] = [] | a : [a]
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Свёртка}
+        \pause
+        \begin{center}
+            \includegraphics[width=0.7\textwidth]{figs/foldr}
+        \end{center}
         \pause
         \begin{minted}{haskell}
             foldr :: (Either () (a, r) -> r) -> FixList a -> r
@@ -249,20 +259,20 @@
             newtype Fix :: (Type -> Type) -> Type
             newtype Fix f = In { out :: f (Fix f) }
 
-            data ListF a r = FNil | FCons a r
+            data ListF a r = Nil | Cons a r
             type List a = Fix (ListF a)
         \end{minted}
         \pause\vspace{1em}
         \begin{minted}{haskell}
     to :: [a] -> List a
     to = \case
-      [] -> In FNil
-      x:xs -> In $ FCons x (to xs)
+      [] -> In Nil
+      x:xs -> In $ Cons x (to xs)
 
     from :: List a -> [a]
     from (In shape) = case shape of
-      FNil -> []
-      FCons x xs -> x : from xs
+      Nil -> []
+      Cons x xs -> x : from xs
         \end{minted}
     \end{frame}
 
@@ -272,16 +282,9 @@
             instance Functor (ListF a) where
               fmap :: (rec -> other) -> ListF a rec -> ListF a other
               fmap f = \case
-                FNil -> FNil
-                FCons x xs -> FCons x (f xs)
+                Nil -> Nil
+                Cons x xs -> Cons x (f xs)
         \end{minted}
-    \end{frame}
-
-    \begin{frame}[fragile]{Свёртка}
-        \pause
-        \begin{center}
-            \includegraphics[width=0.7\textwidth]{figs/foldr}
-        \end{center}
     \end{frame}
 
     \begin{frame}[fragile]{Катаморфизм}
@@ -297,8 +300,8 @@
         \begin{minted}{haskell}
             sum :: List Int -> Int
             sum = cata \case
-              FNil -> 0
-              FCons x result -> x + result
+              Nil -> 0
+              Cons x result -> x + result
         \end{minted}
     \end{frame}
 
@@ -331,10 +334,12 @@
         \pause\vspace{1em}
         \begin{minted}{haskell}
     fac n = hylo
-      (\n -> if n > 0 then FCons n (n - 1) else FNil)
-      (\case FNil -> 1; FCons n acc -> n * acc)
+      (\n -> if n > 0 then Cons n (n - 1) else Nil)
+      (\case Nil -> 1; Cons n acc -> n * acc)
         \end{minted}
     \end{frame}
+
+    \sectionplan{Всё через свёртки}
 
     \begin{frame}[fragile]{Всё через свёртки}
         \pause
@@ -492,6 +497,8 @@
         \end{minted}
     \end{frame}
 
+    \sectionplan{Всё через развёртку}
+
     \begin{frame}[fragile]{Всё через развёртку}
         \pause
         \begin{minted}{haskell}
@@ -588,6 +595,8 @@
         \end{minted}
     \end{frame}
 
+    \sectionplan{Вездесущий дуализм}
+
     \begin{frame}[fragile]{Push vs pull streaming}
         \pause
         \begin{minted}{kotlin}
@@ -602,6 +611,16 @@
         \pause
         \begin{minted}{haskell}
     data ListF a r = Nil | Cons a r
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data List a where
+              List :: ListF a (List a) -> List a
+
+            fold :: (ListF a r -> r) -> List a -> r
+            fold alg xs = case xs of
+              Fix Nil -> alg Nil
+              Fix (Cons y ys) -> alg (Cons y (fold alg ys))
         \end{minted}
         \pause\vspace{1em}
         \begin{minted}{haskell}

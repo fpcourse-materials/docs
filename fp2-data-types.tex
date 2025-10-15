@@ -368,7 +368,7 @@
     newtype Fix :: (Type -> Type) -> Type
     newtype Fix f = In { out :: f (Fix f) }
 
-    data ListF a r = FNil | FCons a r
+    data ListF a r = Nil | Cons a r
     type List a = Fix (ListF a)
 \end{minted}
 
@@ -380,13 +380,13 @@
 \begin{minted}{haskell}
     to :: [a] -> List a
     to = \case
-      [] -> In FNil
-      x:xs -> In $ FCons x (to xs)
+      [] -> In Nil
+      x:xs -> In $ Cons x (to xs)
 
     from :: List a -> [a]
     from (In shape) = case shape of
-      FNil -> []
-      FCons x xs -> x : from xs
+      Nil -> []
+      Cons x xs -> x : from xs
 \end{minted}
 
 Тип формы можно сделать функтором по последнему параметру.
@@ -395,11 +395,9 @@
     instance Functor (ListF a) where
       fmap :: (rec -> other) -> ListF a rec -> ListF a other
       fmap f = \case
-        FNil -> FNil
-        FCons x xs -> FCons x (f xs)
+        Nil -> Nil
+        Cons x xs -> Cons x (f xs)
 \end{minted}
-
-Таким образом, мы научились кодировать рекурсивный тип в стиле теории категорий, как неподвижную точку функтора.
 
 \begin{task}
     Выразите следующее дерево как неподвижную точку функтора.
@@ -427,16 +425,16 @@
 \end{minted}
 Иначе говоря, \mintinline{haskell}{cata} заменяет все конструкторы \mintinline{haskell}{In} на функцию \texttt{phi}, которая содержит информацию о том, как реагировать на разные варианты конструкторов в дереве:
 \begin{minted}{haskell}
-    example           = In  (FCons 1 (In  (FCons 2 (In  (FCons 3  (In  FNil))))))
-    cata phi example ?$\eqbeta$? phi (FCons 1 (phi (FCons 2 (phi (FCons 3 (phi FNil))))))
+    example           = In  (Cons 1 (In  (Cons 2 (In  (Cons 3  (In  Nil))))))
+    cata phi example ?$\eqbeta$? phi (Cons 1 (phi (Cons 2 (phi (Cons 3 (phi Nil))))))
 \end{minted}
 
 Например, сумма списка будет выглядеть следующим образом (рис.~\ref{fig:cata-step}):
 \begin{minted}{haskell}
     sum :: List Int -> Int
     sum = cata \case
-      FNil -> 0
-      FCons x result -> x + result
+      Nil -> 0
+      Cons x result -> x + result
 \end{minted}
 
 \begin{figure}
@@ -488,8 +486,8 @@
 Например, вычисление факториала может быть реализовано следующим образом:
 \begin{minted}{haskell}
     fac n = hylo
-      (\n -> if n > 0 then FCons n (n - 1) else FNil)
-      (\case FNil -> 1; FCons n acc -> n * acc)
+      (\n -> if n > 0 then Cons n (n - 1) else Nil)
+      (\case Nil -> 1; Cons n acc -> n * acc)
 \end{minted}
 
 Можно ввести ещё много различных рекурсивных схем\footnote{\url{https://wiki.haskell.org/Zygohistomorphic_prepromorphisms}} и описать их свойства.
