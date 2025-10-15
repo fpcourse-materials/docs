@@ -379,10 +379,10 @@
     \begin{frame}[fragile]{Дефорестация --- мотивация}
         \pause
         \begin{minted}{haskell}
-    all p xs = and (map p xs)
-    -- или fused версия
-    all p [] = []
-    all p (x:xs) = p x && all p xs
+            all p xs = and (map p xs)
+            -- или fused версия
+            all p [] = True
+            all p (x:xs) = p x && all p xs
         \end{minted}
     \end{frame}
 
@@ -553,7 +553,7 @@
     unstream :: Stream a -> [a]
     unstream (Stream next s) = case next s of
       Done -> []
-      Cons a s' -> a : unstream next s'
+      Yield a s' -> a : unstream next s'
         \end{minted}
     \end{frame}
 
@@ -574,7 +574,7 @@
             \item Мы пишем все функции работы со списками через стримы:
             \begin{minted}{haskell}
         map :: (a -> b) -> [a] -> [b]
-        map f = unstream . map f . stream
+        map f = unstream . mapS f . stream
             \end{minted}
             \item С помощью RULES задаём правило переписывания stream/unstream, двойственное foldr/build: \texttt{stream . unstream = id}.
             \item Далее справляются обычные компиляторные оптимизации.

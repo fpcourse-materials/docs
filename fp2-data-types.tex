@@ -575,7 +575,7 @@
 \begin{minted}{haskell}
     all p xs = and (map p xs)
     -- или fused версия
-    all p [] = []
+    all p [] = True
     all p (x:xs) = p x && all p xs
 \end{minted}
 
@@ -785,7 +785,7 @@
     unstream :: Stream a -> [a]
     unstream (Stream next s) = case next s of
       Done -> []
-      Cons a s' -> a : unstream next s'
+      Yield a s' -> a : unstream next s'
 \end{minted}
 
 Идея в том, что теперь \point{функции работы со стримами нерекурсивны} и легко подвергаются базовым компиляторным дефорестирующим трансформациям в стиле~\cite{wadler1988deforestation}.
@@ -804,7 +804,7 @@
     \item Мы пишем все функции работы со списками через стримы:
     \begin{minted}{haskell}
         map :: (a -> b) -> [a] -> [b]
-        map f = unstream . map f . stream
+        map f = unstream . mapS f . stream
     \end{minted}
     \item С помощью RULES (см.~\ref{subsubsec:rules}) задаём правило переписывания stream/unstream, двойственное foldr/build: \texttt{stream . unstream = id}.
     \item Далее справляются обычные компиляторные оптимизации.\footnote{Можно гарантировать полную дефорестацию с помощью staging (см. далее~\ref{sec:datatype-generic})~\cite{kiselyov2017stream}.}
@@ -856,6 +856,8 @@ co-Church encoding для списков даёт \vocab{pull stream}, или \v
 Чтобы получить следующий элемент, его нужно явно запросить (pull) потребляющему коду.
 Это представление часто гораздо удобнее с точки зрения использования (см.~\ref{subsubsec:stream-fusion})\footnote{\url{https://github.com/pulldown-cmark/pulldown-cmark/?tab=readme-ov-file\#why-a-pull-parser}}, однако сложнее на стороне имплементации, потому что нужно выделить и поддерживать экзистенциальное состояние в коалгебре.
 Генераторы призваны автоматизировать выделение этого состояния, так как можно заметить, что это continuation вычисления (см. далее~\ref{sec:continuations}).
+
+% todo про коммуникацию двух кусков кода и инициацию этой коммуникации
 
 Нередко работу с потоками называют \vocab{реактивным программированием}\footnote{\href{https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx}{(youtube) React 2014 : Erik Meijer - What does it mean to be Reactive?}}.
 Чистой версией является \vocab{functional reactive programming (FRP)}, представляющее потоки как функции от времени\footnote{\href{https://youtu.be/rfmkzp76M4M?si=TRBq8wWbcDOhSbIO}{(youtube) Conal Elliott - The Essence \& Origins of Functional Reactive Programming}}~\cite{elliott1997functional}.

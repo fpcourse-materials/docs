@@ -1009,11 +1009,29 @@
 \end{center}
 
 Использовать аппликативные функторы предложили существенно позже, чтобы избежать именования промежуточных шагов вычислений, когда в этом нет необходимости~\cite{mcbride2008applicative}.
-Таким образом, аппликативы дают встроенный язык выражений, а монады --- язык стейтментов.
+Таким образом, аппликативы дают встроенный язык выражений, а монады~--- язык стейтментов.
 
-\subsubsection{Bytecode vs threaded code} \label{subsubsec:threaded-code}
-
-% todo https://en.wikipedia.org/wiki/Threaded_code
+%\subsubsection{Bytecode vs threaded code} \label{subsubsec:threaded-code}
+%
+%Рассмотрим два классических представления линейных кодов, популярной разновидности промежуточных представлений программ для виртуальных машин.
+%
+%Байтовый код\footnote{\url{https://en.wikipedia.org/wiki/Bytecode}} представляет собой список инструкций с операндами.
+%Интерпретация байтового кода --- это цикл по инструкциям и \texttt{switch}:
+%\begin{minted}{cpp}
+%    for (;;) {
+%        switch (*instructionPointer++) {
+%            case add: ...
+%        }
+%    }
+%\end{minted}
+%
+%Шитый код\footnote{\url{https://en.wikipedia.org/wiki/Threaded_code}} вместо списка инструкций представлен списком адресов функций, каждая из которых отвечает за исполнение кода, соответствующего этой инструкции.
+%Теперь интерпретатор только итерируется по адресам и вызывает их:
+%\begin{minted}{cpp}
+%    for (;;) {
+%        (*instructionPointer++)()
+%    }
+%\end{minted}
 
 
 \subsection{Expression problem} \label{subsec:expression-problem}
@@ -1036,7 +1054,7 @@
     show = \case Const x -> show x; Plus l r -> show l ++ " + " ++ show r
 \end{minted}
 
-Если язык задан, например, с помощью наследования, то, наоборот, расширить синтаксис легко --- добавить новый класс, а добавить интерпретацию сложно --- добавить реализацию метода в каждом классе: % todo наследование куда-то сюда укладывается?
+Если язык задан, например, с помощью наследования, то, наоборот, расширить синтаксис легко --- добавить новый класс, а добавить интерпретацию сложно --- добавить реализацию метода в каждом классе:
 \begin{minted}{kotlin}
     interface Lang {
         fun eval(): Int
@@ -1094,7 +1112,7 @@ Expression problem возникала и решалась много раз: exp
     data Input rec = Input
 
     algBasic' :: Basic (Int -> Int) -> Int -> Int
-    algBasic' = \case Const x -> const x; Plus l r -> const (l + r)
+    algBasic' = \case Const x -> \_env -> x; Plus l r -> \_env -> l + r
 
     algInput :: Input (Int -> Int) -> Int -> Int
     algInput = \case Input -> \env -> env
@@ -1112,32 +1130,36 @@ Expression problem возникала и решалась много раз: exp
 Теперь мы понимаем, почему stable denotations~--- это ещё одно название для expression problem~\ref{subsec:expression-problem}.
 Далее мы дополним это решение до полноценного~\ref{sec:effect-handlers}.
 
-Полученный терм на встроенном языке пока имеет несколько чудовищную запись, но далее мы рассмотрим, как сделать термы встроенных языков неотличимыми от обычного кода мета-языка.
+%Полученный терм на встроенном языке пока имеет несколько чудовищную запись, но далее мы рассмотрим, как сделать термы встроенных языков неотличимыми от обычного кода мета-языка.
 
-\subsubsection{Произведение алгебр}
+\subsubsection{Произведение алгебр} \label{subsubsec:prod-algebras}
 
-% todo
-
-Ранее, мы пытались решить expression problem путём композирования функторов формы с помощью открытого копроизведения, а также композирования алгебр (см.~\ref{subsubsec:functor-coprod}).
-Перейдя к финальной версии того же самого, композирование становится намного эффективнее и удобнее.
-Вместо копроизведения функторов теперь имеем произведение алгебр, представляемое контекстом классов типов.
-
-Чтобы определить ещё одну конструкцию, просто задаём новый класс с желаемыми интерпретациями:
+Построим tagless final представление для интерпретатора из предыдущего параграфа.
+Теперь синтаксис задаётся классами типов:
 \begin{minted}{haskell}
+    class Basic domain where
+      cnst :: Int -> domain
+      plus :: domain -> domain -> domain
+
     class Input domain where
       input :: domain
+\end{minted}
+
+В качестве домена, как и ранее возьмём функции \mintinline{haskell}{Int -> Int} и реализуем интерпретацию:
+\begin{minted}{haskell}
+    instance Basic (Int -> Int) where
+      cnst value = \_ -> value
+      plus l r = \env -> l env + r env
 
     instance Input (Int -> Int) where
       input = \env -> env
 \end{minted}
 
-Теперь нужно снова не забыть реализовать предыдущие операции \mintinline{haskell}{Expr} для нового домена \mintinline{haskell}{Int -> Int} и можно не лету композировать языки:
+Теперь, чтобы собрать язык по месту, можно просто воспользоваться композируемостью контекстов классов типов, всю остальную работ
 \begin{minted}{haskell}
-    example :: forall domain . (Expr domain, Input domain) => domain
+    example :: forall domain . (Basic domain, Input domain) => domain
     example = cnst 1 `plus` input
 
     ghci> (example :: Int -> Int) 41
     42
 \end{minted}
-
-% todo
