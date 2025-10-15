@@ -1,0 +1,230 @@
+%! suppress = MissingImport
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+\setminted{xleftmargin=\parindent, autogobble, escapeinside=??}
+\newcommand{\iso}{\sim}
+
+\title{5. Интерпретаторы}
+\author{Андрей Стоян}
+\institute[ИПКН ИТМО]{ИПКН ИТМО}
+
+\date{осень 2025}
+
+\begin{document}
+
+    \mymaketitle
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \sectionplan{Башня интерпретаторов}
+
+    \begin{frame}[fragile]{Башня интерпретаторов}
+        \pause
+        \[U_M^N : N\times D\to D\]
+        \pause
+        \[d_{out} = U_M^N\left( \underbrace{\langle p_N, d_{in} \rangle}_{\in N\times D} \right)\]
+        \pause
+        \[
+            d_{out} = U^{x86}\left(\left<\underbrace{U_{x86}^{Asm}}_{\in Asm}, \underbrace{\overbrace{\langle p_{Asm}}^{\in Asm}, \overbrace{d_{in} \rangle}^{\in D}}_{\in D} \right>\right)
+        \]
+        \pause
+        \[
+            d_{out} =
+            U^{x86}\left(\left<
+                             U_{x86}^{Asm}, \left<
+                                                U^C_{Asm}, \left<
+                                                               U^{Has}_C, \left< p_{Has}, d_{in}
+                        \right>\right>\right>\right>\right)
+        \]
+    \end{frame}
+
+    \begin{frame}[fragile]{Интерпретаторы повсюду}
+        \pause
+        \begin{minted}{haskell}
+            eval :: Expr -> Int
+            eval prog = case prog of
+              Const x -> x
+              Plus l r -> eval l + eval r
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Денотационная семантика}
+        \pause
+        \[
+            \sembr{\bullet} : L \mapsto D
+        \]
+        \pause
+        \[
+            \begin{array}{lcl}
+                \sembr{n}     & = & 1                            \\
+                \sembr{l + r} & = & \max{(\sembr{l}, \sembr{r})}
+            \end{array}
+        \]
+        \pause
+        \[
+            \begin{array}{lcl}
+                \sembr{n}     & = & n                     \\
+                \sembr{l + r} & = & \sembr{l} + \sembr{r}
+            \end{array}
+        \]
+        \pause
+        \[
+            \begin{array}{lcl}
+                \sembr{n}(m)     & = & n                           \\
+                \sembr{l + r}(m) & = & \sembr{l}(m) + \sembr{r}(m) \\
+                \sembr{input}(m) & = & m
+            \end{array}
+        \]
+    \end{frame}
+
+    \begin{frame}[fragile]{Денотационная семантика на Haskell}
+        \pause
+        \[
+            \begin{array}{lcl}
+                \sembr{n}(m)     & = & n                           \\
+                \sembr{l + r}(m) & = & \sembr{l}(m) + \sembr{r}(m) \\
+                \sembr{input}(m) & = & m
+            \end{array}
+        \]
+        \pause
+        \begin{minted}{haskell}
+            eval :: Prog -> (Nat -> Nat)
+            eval = \case
+              Val n -> \_ -> n
+              Plus l r -> \m -> eval l m + eval r m
+              Input -> \m -> m
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Смысл конструкций задаётся как операции над доменом}
+        \begin{figure}[h]
+            \centering
+            \includegraphics[width=0.6\textwidth]{figs/eval-prog}
+        \end{figure}
+    \end{frame}
+
+    \begin{frame}[fragile]{Встроенные доменно-специфичные языки}
+        Deep eDSL:
+        \begin{minted}{haskell}
+            f :: Int -> Int
+            f = eval $ Const 1 `Plus` Input
+        \end{minted}
+        \pause\vspace{1em}
+        Shallow eDSL:
+        \begin{minted}{haskell}
+            cnst :: Int -> (Int -> Int)
+            cnst x _ = x
+
+            input :: Int -> Int
+            input env = env
+
+            plus :: (Int -> Int) -> (Int -> Int) -> (Int -> Int)
+            plus l r env = l env + r env
+
+            f :: Int -> Int
+            f = cnst 1 `plus` input
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Meta-circular интерпретаторы}
+        \pause
+        \begin{minted}{haskell}
+            interpret term = case term of
+              App f t -> (interpret f) (interpret t)
+              If c t e -> if interpret c then interpret t else interpret e
+              ...
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Пример: библиотека Accelerate}
+        \pause
+        \begin{minted}{haskell}
+            example :: Acc (Vector Int) -> Acc (Vector Int) -> Acc (Vector Int)
+            example xs ys = A.zipWith (+) xs ys
+        \end{minted}
+    \end{frame}
+
+    \sectionplan{Типы значений}
+
+    \begin{frame}[fragile]{Untyped tagless interpreters}
+        \pause
+        \begin{minted}{haskell}
+            data Expr = Const Int | IsZero Expr | If Expr Expr Expr
+
+            evalUnsafe :: Expr -> forall res . res
+            evalUnsafe = \case
+              Const val -> unsafeCoerce val
+              IsZero cond -> unsafeCoerce $ evalUnsafe @Int cond == 0
+              If c t e -> if evalUnsafe c then evalUnsafe t else evalUnsafe e
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Typed tagged interpreters}
+        \pause
+        \begin{minted}{haskell}
+            data Expr = Const Int | IsZero Expr | If Expr Expr Expr
+
+            data RtValue = RtBool Bool | RtInt Int
+
+            evalRt :: Expr -> RtValue
+            evalRt (IsZero expr) = case evalRt expr of
+              RtBool value -> error "Type error"
+              RtInt value -> RtBool (value == 0)
+            -- ...
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Typed tagless interpreters}
+        \pause
+        \begin{equation*}{}
+            \infer[Const]{Const~n : int}{n : Int}
+            \quad
+            \infer[IsZero]{IsZero~n : bool}{n : int}
+            \quad
+            \infer[If]{If~c~t~e : \tau}{c : bool & t : \tau & e : \tau}
+        \end{equation*}
+        \pause
+        \begin{minted}{haskell}
+            data Expr ty where
+              Const :: Int -> Expr Int
+              IsZero :: Expr Int -> Expr Bool
+              If :: forall ty . Expr Bool -> Expr ty -> Expr ty -> Expr ty
+
+            eval :: Expr ty -> ty
+            eval = \case
+              Const n -> n
+              IsZero e -> eval e == 0
+              If c t e -> if eval c then eval t else eval e
+        \end{minted}
+    \end{frame}
+
+    \sectionplan{Связывания и функции первого класса}
+
+    \begin{frame}[fragile]{Let-in через функции}
+        \pause
+        \[
+            \term{let} \ap x \termdef N \ap \term{in} \ap M \equiv (\lambda x\ldotp M) \ap N
+        \]
+    \end{frame}
+
+    \begin{frame}[fragile]{Связывания имён}
+        \pause
+        \begin{minted}{scala}
+            val f = () => {
+                val x = 4
+                () => x + 1
+            }
+            val x = 41
+            println(f())
+        \end{minted}
+    \end{frame}
+
+\end{document}
