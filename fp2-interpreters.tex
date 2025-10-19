@@ -1001,6 +1001,17 @@
 
 Таким образом, \point{аппликативные функторы --- meta-circular язык с аппликацией}, а \point{монадический bind --- это фактически let-in в higher-order синтаксисе}.
 
+Если вспомнить, что $\text{let } x = M \text{ in } N \equiv (\lambda x\ldotp N)\ap M \equiv \subst{N}{x}{M}$, то мы поймём, что монадическое связывание~--- это подстановка \texttt{a -> m b} вычисления \texttt{m b} вместо результатов типа \texttt{a} в вычислении \texttt{m a}.
+Либо, если в качестве \texttt{m} взять дерево выражения, то связывание будет подстановкой поддеревьев вместо переменных:
+\begin{minted}{haskell}
+    data Expr var = Var var | Empty | Append (Expr var) (Expr var)
+    instance Monad Expr where
+      (>>=) :: Expr var -> (var -> Expr var') -> Expr var'
+      Var name >>= subst = subst name
+      Empty >>= _ = Empty
+      Append l r >>= subst = Append (l >>= subst) (r >>= subst)
+\end{minted}
+
 Изначально использовать теор-категорное понятие монады\footnote{\url{https://ncatlab.org/nlab/show/monad+(in+computer+science)}} в $\lambda$-исчислении было предложено в~\cite{moggi1988computational}, чтобы удобнее записывать денотационную семантику\footnote{Часто сопутствующее монадам понятие эффекта мы рассмотрим далее~\ref{sec:effect-handlers}.}.
 Это оказалось настолько удобно в моменте, что их стали использовать повсеместно в функциональном программировании, чтобы расширять простые функциональные языки различными могущественными возможностями без изменения самих языков~\cite{wadler1990comprehending, wadler1992essence}.
 Был сформулирован Moggi's principle:
