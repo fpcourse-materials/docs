@@ -103,10 +103,10 @@
         \vspace{0.5em}
         \begin{itemize}
             \item[\todo] Реализуйте скалярное умножение двух векторов, заданных списками
-            \item[\todo] Реализуйте группировку пользователей по уровню подписки (\mintinline{haskell}|Data.Map.insertWith :: (a -> a -> a) -> k -> a -> Mak k a -> Map k a|)
+            \item[\todo] Реализуйте группировку пользователей по уровню подписки (\mintinline{haskell}|Data.Map.insertWith :: (a -> a -> a) -> k -> a -> Map k a -> Map k a|)
             \item[\answer] \pause
              \begin{minted}{haskell}
-                 prod xs ys = foldr (+) 1 $ zipWith (*) xs ys
+                 prod xs ys = foldr (+) 0 $ zipWith (*) xs ys
              \end{minted}
             \item[\answer] \pause
             \begin{minted}{haskell}

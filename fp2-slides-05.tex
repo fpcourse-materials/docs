@@ -112,6 +112,7 @@
     \end{frame}
 
     \begin{frame}[fragile]{Встроенные доменно-специфичные языки}
+        \pause
         Deep eDSL:
         \begin{minted}{haskell}
             f :: Int -> Int
@@ -215,7 +216,7 @@
         \]
     \end{frame}
 
-    \begin{frame}[fragile]{Связывания имён}
+    \begin{frame}[fragile]{Динамическое и лекцическое связывание}
         \pause
         \begin{minted}{scala}
             val f = () => {
@@ -224,6 +225,468 @@
             }
             val x = 41
             println(f())
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Подстановки}
+        \pause
+        \[
+            (\lambda x\ldotp (\lambda x\ldotp \lambda y\ldotp x + y) \ap 4) \ap 41 \rightsquigarrow (\lambda x\ldotp (\lambda y\ldotp 4 + y)) \ap 41
+        \]
+    \end{frame}
+
+    \begin{frame}[fragile]{Замыкания}
+        \pause
+        \begin{minted}{haskell}
+            data Term1 = Var1 String | App1 Term1 Term1 | Lam1 String Term1
+               | Closure Env String Term1 -- только для вычислений
+            type Env = Map String Term1
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            eval1 :: Term1 -> Env -> Term1
+            eval1 term env = case term of ?\pause?
+              Var1 name -> Map.findWithDefault (Var1 name) name env ?\pause?
+              App1 f arg -> case eval1 f env of
+                Closure env' body ->
+                    let arg' = eval1 arg env in
+                    eval1 body (Map.insert name arg' $ env' <> env)
+                t -> App1 t (eval1 arg env) ?\pause?
+              Lam1 name body -> Closure env name body
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Типизированный контекст}
+        \pause
+        \begin{minted}{haskell}
+    (4, (4.0, "hello")) :: (Int, (Double, String))
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data Ref env ty where
+              Here :: Ref (ty, env) ty
+              There :: Ref env ty -> Ref (ty', env) ty
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            There Here :: Ref (ty', (ty, env)) ty
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            envLookup :: env -> Ref env ty -> ty
+            envLookup env ref = case (ref, env) of
+              (Here, (x, _)) -> x
+              (There ref', (_, env')) -> envLookup env' ref'
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Meta-circular интерпретация}
+        \pause
+        \begin{minted}{haskell}
+            data Term2 env ty where
+              Var2 :: Ref env ty -> Term2 env ty
+              App2 :: Term2 env (arg -> res) -> Term2 env arg -> Term2 env res
+              Lam2 :: Term2 (arg, env) res -> Term2 env (arg -> res)
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            eval2 :: Term2 env ty -> env -> ty
+            eval2 term env = case term of ?\pause?
+              Var2 ref -> env `envLookup` ref ?\pause?
+              App2 f arg -> (eval2 f env) (eval2 arg env) ?\pause?
+              Lam2 t -> \arg -> eval2 t (arg, env)
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Переиспользуем мета-язык}
+        \pause
+        \begin{minted}{haskell}
+            data Term2 env ty where
+              Val2 :: ty -> Term2 env ty
+              -- ...
+
+            eval2 :: Term2 env ty -> env -> ty
+            eval2 term env = case term of
+              Val2 x -> x
+              -- ...
+
+            example :: Term2 env (Int -> Int)
+            example = Lam (Val2 (+) `App2` Val2 1 `App2` Var2 Here)
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Синтаксис высшего порядка}
+        \pause
+        \begin{minted}{haskell}
+            data Term3 ty where
+              Val3 :: ty -> Term3 ty
+              Plus :: Term3 Int -> Term3 Int -> Term3 Int
+              App3 :: Term3 (arg -> res) -> Term3 arg -> Term3 res
+              Lam3 :: (Term3 arg -> Term3 res) -> Term3 (arg -> res)
+
+            example3 :: Term3 Int
+            example3 = (Lam3 \x -> x `Plus` Val3 41) `App3` Val3 1
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            eval3 :: Term3 ty -> ty
+            eval3 term = case term of
+              Val3 x -> x
+              Plus l r -> eval3 l + eval3 r
+              App3 f arg -> (eval3 f) (eval3 arg)
+              Lam3 f -> \arg -> eval3 (f (Val3 arg))
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Сериализация функций}
+        \pause
+        \begin{minted}{haskell}
+            data Closure a where
+              StaticPtr :: StaticPtr b -> Closure b
+              Encoded :: ByteString -> Closure ByteString
+              Ap :: Closure (b -> c) -> Closure b -> Closure c
+
+            main = send "some-node" $
+              closure (static factorial) `closureAp` closurePure 10
+        \end{minted}
+    \end{frame}
+
+    \sectionplan{Tagless final интерпретаторы}
+
+    \begin{frame}[fragile]{Вспоминаем про семантику}
+        \pause
+        \[
+            \sembr{\bullet} : L \to D
+        \]
+    \end{frame}
+
+    \begin{frame}[fragile]{Разные интерпретации для shallow embedding}
+        \pause
+        \begin{minted}{haskell}
+            Fix f ?$\iso$? forall a . (f a -> a) -> a
+            List e ?$\iso$? forall a . (e -> a -> a) -> a -> a
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            example :: (Int -> a) -> (a -> a -> a) -> a
+            example cnst plus = cnst 1 `plus` cnst 41
+
+            ghci> example show (\l r -> l ++ " + " ++ r)
+            "1 + 41"
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Функции расширяют язык}
+        \pause
+        \begin{figure}[h]
+            \centering
+            \begin{tabular}{|p{0.45\linewidth}|p{0.45\linewidth}|}
+                \hline
+                Deep                                                                                                                                 & Shallow                                                                              \\
+                \hline
+                Синтаксис языка задаётся набором допустимых нод дерева                                                                               & Декларация функции задаёт новую ноду дерева: вызов этой функции                      \\
+                \hline
+                Интерпретатор при виде каждой ноды выполняет соответствующий код на мета-языке (ветку паттерн-матчинга) после вычисления поддеревьев & Интерпретатор при виде вызова выполняет код тела функции после вычисления аргументов \\
+                \hline
+            \end{tabular}
+        \end{figure}
+    \end{frame}
+
+    \begin{frame}[fragile]{Дойти до конца}
+        \pause
+        \begin{minted}{haskell}
+            data ExprF rec = Const Int | Plus rec rec
+
+            eval :: Fix ExprF -> Int
+            eval = cata \case Const x -> x; Plus l r -> l + r
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            class Expr domain where
+              cnst :: Int -> domain
+              plus :: domain -> domain -> domain
+
+            instance Expr Int where
+              cnst x = x
+              plus l r = l + r
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            example :: forall domain . Expr domain => domain
+            example = cnst 1 `plus` cnst 41
+
+            ghci> example :: Int
+            42
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Восстановление композиционности семантики}
+        % todo
+    \end{frame}
+
+    \begin{frame}[fragile]{Typed tagless final interpreter}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}{haskell}
+                    data Expr ty where
+                      Const :: Int -> Expr Int
+                      IsZero :: Expr Int -> Expr Bool
+                      If :: forall ty .
+                            Expr Bool
+                         -> Expr ty -> Expr ty
+                         -> Expr ty
+
+                    eval :: Expr ty -> ty
+                    eval = \case
+                      Const x  -> x
+                      IsZero t -> eval == 0
+                      If c t e ->
+                        if eval c then eval t else eval e
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}[t]{0.495\textwidth}
+                \begin{minted}{haskell}
+                    class Expr (domain :: Type -> Type) where
+                      cnst :: Int -> domain Int
+                      isZero :: domain Int -> domain Bool
+                      if' :: forall ty .
+                             domain Bool
+                          -> domain ty -> domain ty
+                          -> domain ty
+
+                    class Expr Identity where
+
+                      cnst x = Identity x
+                      isZero (Identity x) = Identity (x == 0)
+                      if' (Identity c) t e =
+                        if c then t else e
+                \end{minted}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}[fragile]{Встречаем старых друзей}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}[numberblanklines=true]{haskell}
+                    data Expr s ty where
+                      Val   :: ty -> Expr s ty
+                      App   :: Expr s (arg -> res)
+                            -> Expr s arg
+                            -> Expr s res
+
+
+                      LetIn :: Expr s ty
+                            -> (ty -> Expr s ty')
+                            -> Expr s ty'
+
+
+                      Get   :: Expr s s
+                      Put   :: s -> Expr s ()
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}[numberblanklines=true]{haskell}
+                    class Applicative domain where
+                      pure  :: ty -> domain ty
+                      (<*>) :: domain (arg -> res)
+                            -> domain arg
+                            -> domain res
+
+                    class Monad domain where
+                      (>>=) :: domain ty
+                            -> (ty -> domain ty')
+                            -> domain ty'
+
+                    class MonadState s domain where
+                      get :: domain s
+                      put :: s -> domain ()
+                \end{minted}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}[fragile]{Встречаем старых друзей}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}[numberblanklines=true]{haskell}
+                    --
+                    modify :: (s -> s) -> Expr s s
+                    modify f =
+                      Get `LetIn` \x ->
+                      Put (f x) `LetIn` \() ->
+                      Val x
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}[numberblanklines=true]{haskell}
+                    --                    s -> (s, s)
+                    modify :: (s -> s) -> State s s
+                    modify f =
+                      get >>= \x ->
+                      put (f x) >>= \() ->
+                      pure x
+                \end{minted}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}[fragile]{Встретили старых друзей}
+        \vspace{-2em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}[numberblanklines=true]{haskell}
+                    eval :: Expr s ty -> s -> (s, ty)
+                    eval = \case
+
+
+                      Val x -> \s -> (s, x)
+                      App fs xs -> \s1 ->
+                        let (s2, f) = eval fs s1 in
+                        let (s3, x) = eval xs s2 in
+                        (s3, f x)
+
+
+                      LetIn comp k -> \s ->
+                        let (s', x) = eval comp s in
+                        eval (k x) s'
+
+
+                      Get -> \s -> (s, s)
+                      Put s -> \_ -> (s, ())
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}[t]{0.485\textwidth}
+                \begin{minted}[numberblanklines=true]{haskell}
+                    newtype State s a = State
+                      { runState :: s -> (s, a) }
+
+                    instance Applicative (State s) where
+                      pure x = State \s -> (s, x)
+                      fs <*> xs = State \s1 ->
+                        let (s2, f) = runState fs s1 in
+                        let (s3, x) = runState xs s2 in
+                        (s3, f x)
+
+                    instance Monad (State s) where
+                      comp >>= k = State \s ->
+                        let (s', x) = runState comp s in
+                        runState (k x) s'
+
+                    instance MonadState s (State s) where
+                      get = State \s -> (s, s)
+                      put s' = State \s -> (s', ())
+                \end{minted}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}[fragile]{Монады это подстановка}
+        \pause
+        $\text{let } x = M \text{ in } N \equiv (\lambda x\ldotp N)\ap M \equiv \subst{N}{x}{M}$
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data Expr var = Var var | Empty | Append (Expr var) (Expr var)
+            instance Monad Expr where
+              (>>=) :: Expr var -> (var -> Expr var') -> Expr var'
+              Var name >>= subst = subst name
+              Empty >>= _ = Empty
+              Append l r >>= subst = Append (l >>= subst) (r >>= subst)
+        \end{minted}
+    \end{frame}
+
+    \sectionplan{Expression problem}
+
+    \begin{frame}[fragile]{Алгебраические типы}
+        \pause
+        \begin{minted}{haskell}
+            data Expr
+              = Const Int
+              | Plus Expr Expr -- добавляем
+
+            eval :: Expr -> Int
+            eval = \case Const x -> x; Plus l r -> eval l + eval r
+
+            show :: Expr -> String
+            show = \case Const x -> show x; Plus l r -> show l ++ " + " ++ show r
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Наследование (свёртки)}
+        \pause
+        \begin{minted}{kotlin}
+            interface Lang {
+                fun eval(): Int
+                fun show(): String
+            }
+            class Const(val x: Int) : Lang {
+                override fun eval() = x
+                override fun show() = x.toString()
+            }
+            class Plus(val l: Lang, val r: Lang) : Lang {
+                override fun eval() = l.eval() + r.eval()
+                override fun show() = "$l + $r"
+            }
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Копроизведение функторов}
+        \pause
+        \begin{minted}{haskell}
+            data (l :+: r) rec = L (l rec) | R (r rec)
+
+            (\/) :: (l a -> a) -> (r a -> a) -> ((l :+: r) a -> a)
+            phi \/ psi = \case L l -> phi l; R r -> psi r
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            data Basic rec = Const Int | Plus rec rec
+            data Input rec = Input
+
+            algBasic' :: Basic (Int -> Int) -> Int -> Int
+            algBasic' = \case Const x -> \_env -> x; Plus l r -> \_env -> l + r
+
+            algInput :: Input (Int -> Int) -> Int -> Int
+            algInput = \case Input -> \env -> env
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            f :: Int -> Int
+            f = cata (algBasic' \/ algInput) $
+              In (L (Plus (In (L (Const 1))) (In (R Input)))) -- 1 + input
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Произведение алгебр}
+        \pause
+        \vspace{-1em}
+        \begin{minted}{haskell}
+            class Basic domain where
+              cnst :: Int -> domain
+              plus :: domain -> domain -> domain
+
+            class Input domain where
+              input :: domain
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            instance Basic (Int -> Int) where
+              cnst value = \_ -> value
+              plus l r = \env -> l env + r env
+
+            instance Input (Int -> Int) where
+              input = \env -> env
+        \end{minted}
+        \pause\vspace{1em}
+        \begin{minted}{haskell}
+            example :: forall domain . (Basic domain, Input domain) => domain
+            example = cnst 1 `plus` input
+
+            ghci> (example :: Int -> Int) 41
+            42
         \end{minted}
     \end{frame}
 

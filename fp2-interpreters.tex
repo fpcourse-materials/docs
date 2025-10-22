@@ -477,7 +477,9 @@
     eval1 term env = case term of
       Var1 name -> Map.findWithDefault (Var1 name) name env
       App1 f arg -> case eval1 f env of
-        Closure env' body -> eval1 body (Map.insert name arg $ env <> env')
+        Closure env' body ->
+            let arg' = eval1 arg env in
+            eval1 body (Map.insert name arg' $ env' <> env)
         t -> App1 t (eval1 arg env)
       Lam1 name body -> Closure env name body
 \end{minted}
@@ -1166,7 +1168,7 @@ Expression problem возникала и решалась много раз: exp
       input = \env -> env
 \end{minted}
 
-Теперь, чтобы собрать язык по месту, можно просто воспользоваться композируемостью контекстов классов типов, всю остальную работ
+Теперь, чтобы собрать язык по месту, можно просто воспользоваться композируемостью контекстов классов типов, всю остальную работу:
 \begin{minted}{haskell}
     example :: forall domain . (Basic domain, Input domain) => domain
     example = cnst 1 `plus` input
