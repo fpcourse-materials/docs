@@ -33,7 +33,7 @@
         \[d_{out} = U_M^N\left( \underbrace{\langle p_N, d_{in} \rangle}_{\in N\times D} \right)\]
         \pause
         \[
-            d_{out} = U^{x86}\left(\left<\underbrace{U_{x86}^{Asm}}_{\in Asm}, \underbrace{\overbrace{\langle p_{Asm}}^{\in Asm}, \overbrace{d_{in} \rangle}^{\in D}}_{\in D} \right>\right)
+            d_{out} = U^{x86}\left(\left<\underbrace{U_{x86}^{Asm}}_{\in x86}, \underbrace{\overbrace{\langle p_{Asm}}^{\in Asm}, \overbrace{d_{in} \rangle}^{\in D}}_{\in D} \right>\right)
         \]
         \pause
         \[
@@ -65,7 +65,7 @@
         \[
             \begin{array}{lcl}
                 \sembr{n}     & = & 1                            \\
-                \sembr{l + r} & = & \max{(\sembr{l}, \sembr{r})}
+                \sembr{l + r} & = & 1 + \max{(\sembr{l}, \sembr{r})}
             \end{array}
         \]
         \pause
@@ -216,13 +216,11 @@
         \]
     \end{frame}
 
-    \begin{frame}[fragile]{Динамическое и лекцическое связывание}
+    \begin{frame}[fragile]{Динамическое и лекcическое связывание}
         \pause
         \begin{minted}{scala}
-            val f = () => {
-                val x = 4
-                () => x + 1
-            }
+            val x = 4
+            val f = () => x + 1
             val x = 41
             println(f())
         \end{minted}
@@ -250,7 +248,7 @@
               App1 f arg -> case eval1 f env of
                 Closure env' body ->
                     let arg' = eval1 arg env in
-                    eval1 body (Map.insert name arg' $ env' <> env)
+                    eval1 body (Map.insert name arg' env')
                 t -> App1 t (eval1 arg env) ?\pause?
               Lam1 name body -> Closure env name body
         \end{minted}
@@ -455,7 +453,7 @@
                           -> domain ty -> domain ty
                           -> domain ty
 
-                    class Expr Identity where
+                    instance Expr Identity where
 
                       cnst x = Identity x
                       isZero (Identity x) = Identity (x == 0)

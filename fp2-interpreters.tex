@@ -29,7 +29,7 @@
 Вспомним, что программа --- это тоже данные, просто в некотором специальном формате.
 Тогда результат применения $p_{Asm}$ на данных мы получим следующим образом:
 \[
-    d_{out} = U^{x86}\left(\left<\underbrace{U_{x86}^{Asm}}_{\in Asm}, \underbrace{\overbrace{\langle p_{Asm}}^{\in Asm}, \overbrace{d_{in} \rangle}^{\in D}}_{\in D} \right>\right)
+    d_{out} = U^{x86}\left(\left<\underbrace{U_{x86}^{Asm}}_{\in x86}, \underbrace{\overbrace{\langle p_{Asm}}^{\in Asm}, \overbrace{d_{in} \rangle}^{\in D}}_{\in D} \right>\right)
 \]
 
 Но язык ассемблера, тоже не очень приятен для программирования.
@@ -104,8 +104,8 @@
 Например, чтобы узнать размер программы (тут, выражения со сложением), в качестве домена можно взять натуральные числа:
 \[
     \begin{array}{lcl}
-        \sembr{n}     & = & 1                            \\
-        \sembr{l + r} & = & \max{(\sembr{l}, \sembr{r})}
+        \sembr{n}     & = & 1                                \\
+        \sembr{l + r} & = & 1 + \max{(\sembr{l}, \sembr{r})}
     \end{array}
 \]
 Если нас интересует конечный результат, можно посчитать его:
@@ -352,7 +352,7 @@
 
 Напомним, что от функций первого класса можно избавиться с помощью дефункционализации, рассмотренной ранее~\ref{subsubsec:defunctionalization}.
 
-\subsubsection{Связывание имён} \label{subsubsec:name-bindings}
+\subsubsection{Семантика имён} \label{subsubsec:name-bindings}
 
 Существует несколько способов задания семантики идентификаторам.
 
@@ -360,10 +360,8 @@
 То есть разрешение имени происходит в момент обращения к переменной.
 Например, следующий код напечатает \texttt{42}:
 \begin{minted}{scala}
-    val f = () => {
-        val x = 4
-        () => x + 1
-    }
+    val x = 4
+    val f = () => x + 1
     val x = 41
     println(f())
 \end{minted}
@@ -479,7 +477,7 @@
       App1 f arg -> case eval1 f env of
         Closure env' body ->
             let arg' = eval1 arg env in
-            eval1 body (Map.insert name arg' $ env' <> env)
+            eval1 body (Map.insert name arg' env')
         t -> App1 t (eval1 arg env)
       Lam1 name body -> Closure env name body
 \end{minted}
@@ -815,7 +813,7 @@
       isZero :: domain Int -> domain Bool
       if' :: forall ty . domain Bool -> domain ty -> domain ty -> domain ty
 
-    class Expr Identity where
+    instance Expr Identity where
       cnst x = Identity x
       isZero (Identity x) = Identity (x == 0)
       if' (Identity c) t e = if c then t else e
@@ -824,70 +822,6 @@
 \begin{task}
     Какой домен подойдёт для печати выражения?
 \end{task}
-
-%% todo перенести в домашку?
-%Можно сделать константы полиморфными, но тогда разумно дать возможность реализациям наложить ограничения на их полиморфизм.
-%Добьёмся этого с помощью ассоциированного семейства констреинтов:
-%\begin{minted}{haskell}
-%    class Expr domain where
-%      type C domain ty :: Constraint
-%      val :: C domain ty => ty -> domain ty
-%      -- ...
-%
-%    instance Expr Identity where
-%      type C Identity ty = ()
-%      val x = Identity x
-%      -- ...
-%
-%    instance Expr (Const String) Where
-%      type C (Const String) ty = Show ty
-%      val x = Const $ show x
-%      -- ...
-%
-%    example :: forall domain . (C domain ty, Expr domain) => domain ty
-%    example = val 42
-%
-%    ghci> example :: Const String Int
-%\end{minted}
-%
-%\begin{minted}{haskell}
-%     data Term3 ty where
-%       Val3 :: ty -> Term3 ty
-%       Plus :: Term3 Int -> Term3 Int -> Term3 Int
-%       App3 :: Term3 (arg -> res) -> Term3 arg -> Term3 res
-%       Lam3 :: (Term3 arg -> Term3 res) -> Term3 (arg -> res)
-%
-%     example3 :: Term3 Int
-%     example3 = (Lam3 \x -> x `Plus` Val3 41) `App3` Val3 1
-%
-%     eval3 :: Term3 ty -> ty
-%\end{minted}
-%
-%\begin{minted}{haskell}
-%    class Term d where
-%      type C d ty :: Constraint
-%      val :: C d ty => ty -> d ty
-%      plus :: d Int -> d Int -> d Int
-%      app :: d (arg -> res) -> d arg -> d res
-%      lam :: (d arg -> d res) -> d (arg -> res)
-%
-%    example :: (Term d, C d Int) => d Int
-%    example = (lam \x -> x `plus` val 41) `app` val 1
-%
-%    instance Term Identity where
-%      type C Identity ty = ()
-%      val = Identity
-%      plus = liftA2 (+)
-%      app = liftA2 ($)
-%      lam = coerce
-%
-%    instance Term (Const String) where
-%      type C (Const String) ty = Show ty
-%      val = Const . show
-%      plus (Const l) (Const r) = Const $ "(" ++ l ++ " + " ++ r ++ ")"
-%      app (Const f) (Const arg) = Const $ "(" ++ f ++ " " ++ arg ++ ")"
-%      lam f = Const $ "(" ++ "\\x -> " ++ getConst (f (Const "x")) ++ ")"
-%\end{minted}
 
 \subsubsection{Встречаем старых друзей: \mintinline{haskell}{Applicative}, \mintinline{haskell}{Monad}}
 
@@ -1045,7 +979,6 @@
 %        (*instructionPointer++)()
 %    }
 %\end{minted}
-
 
 \subsection{Expression problem} \label{subsec:expression-problem}
 
