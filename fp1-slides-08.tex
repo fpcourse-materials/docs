@@ -63,27 +63,27 @@
 
     \sectionplan{Аппликативные функторы}
 
-    \begin{frame}[fragile]{Больше, чем результат \popslide}
-        \begin{block}{Moggi's principle}
-            \begin{center}
-                \large
-                \vspace{0.3em}
-                <<Computations of type $\alpha$ correspond to values of type $f\ap\alpha$>>
-                \vspace{0.3em}
-            \end{center}
-        \end{block}
-        %! suppress = EscapeUnderscore
-        \begin{itemize}
-            \item В чистом языке функция может только принять что-то и вернуть: $a\to b$
-            \item А что если хочется сделать что-то ещё? --- породить \emph{эффект}
-            \item Будем возвращать результат в коробочке с доп. информацией: $a\to f\ap b$
-            \item[\eg] \mintinline{haskell}|Identity _| --- просто результат
-            \item[\eg] \mintinline{haskell}|Maybe _| --- результата может не быть
-            \item[\eg] \mintinline{haskell}|(w, _)| --- к результату есть доп. значение
-            \item[\eg] \mintinline{haskell}|[_]| --- результатов может быть сколько угодно
-            \item[\eg] \mintinline{haskell}|e -> _| --- для получения результата требуется доп. значение
-        \end{itemize}
-    \end{frame}
+%    \begin{frame}[fragile]{Больше, чем результат \popslide}
+%        \begin{block}{Moggi's principle}
+%            \begin{center}
+%                \large
+%                \vspace{0.3em}
+%                <<Computations of type $\alpha$ correspond to values of type $f\ap\alpha$>>
+%                \vspace{0.3em}
+%            \end{center}
+%        \end{block}
+%        %! suppress = EscapeUnderscore
+%        \begin{itemize}
+%            \item В чистом языке функция может только принять что-то и вернуть: $a\to b$
+%            \item А что если хочется сделать что-то ещё? --- породить \emph{эффект}
+%            \item Будем возвращать результат в коробочке с доп. информацией: $a\to f\ap b$
+%            \item[\eg] \mintinline{haskell}|Identity _| --- просто результат
+%            \item[\eg] \mintinline{haskell}|Maybe _| --- результата может не быть
+%            \item[\eg] \mintinline{haskell}|(w, _)| --- к результату есть доп. значение
+%            \item[\eg] \mintinline{haskell}|[_]| --- результатов может быть сколько угодно
+%            \item[\eg] \mintinline{haskell}|e -> _| --- для получения результата требуется доп. значение
+%        \end{itemize}
+%    \end{frame}
 
     \begin{frame}[fragile]{Аппликативные функторы для вычислений над содержимым коробочек}
         \begin{minted}{haskell}
@@ -94,6 +94,7 @@
         \vspace{0.5em}
         \begin{itemize}
             \item Применяя функции вида $a \to f \ap b$ получаем значения вида $f \ap b$
+            \item[\eg] \mintinline{haskell}{Map.lookup :: k -> Map k v -> Maybe v}
             \item Хотим продолжать вычисления над значениями в коробочках
             \item Нужен специальный код для каждого $f$
             \item[\todo] Реализуйте \mintinline{haskell}|liftA3| через \mintinline{haskell}|liftA2|
@@ -123,11 +124,10 @@
             \begin{minted}{haskell}
                 advantage :: Db -> [Id] -> [Id] -> Either DbError Bool
                 advantage db ids1 ids2 = liftA2 (<) (teamRank ids1) (teamRank ids2) where
-                  teamRank = fmap (sumBy rank) . liftAll (dbLookup db)
+                  teamRank = fmap (sumBy rank) . mapA (dbLookup db)
                   sumBy f = sum . map f
-
-                liftAll :: Applicative f => (a -> f b) -> [a] -> f [b]
-                liftAll f = foldr (liftA2 (:)) (pure []) . map f
+                mapA :: Applicative f => (a -> f b) -> [a] -> f [b]
+                mapA f = foldr (liftA2 (:)) (pure []) . map f
             \end{minted}
         \end{itemize}
     \end{frame}
@@ -143,12 +143,12 @@
             \item[\todo] Найдите всех пользователей по Id в надёжной БД
             \begin{minted}{haskell}
                 dbLookup :: Id -> Db -> Player
-                liftAll :: Applicative f => (a -> f b) -> [a] -> f [b]
+                mapA :: Applicative f => (a -> f b) -> [a] -> f [b]
             \end{minted}
             \item[\answer] \pause
             \begin{minted}{haskell}
                 lookupAll :: [Id] -> Db -> [Player]
-                lookupAll = liftAll dbLookup
+                lookupAll = mapA dbLookup
             \end{minted}
         \end{itemize}
     \end{frame}
@@ -175,6 +175,7 @@
                 \item \mintinline{haskell}|pure f <*> a <*> b <*> c <*> d :: (f r)|
             \end{itemize}
             \item Боллее идеоматично пользоваться \texttt{pure f <*> x = f <\$> x}
+            \item[\NB] Аппликативные функторы позволяют замести под ковёр неинтересную рутину и церемонии, оставив нас наедине с бизнес-логикой (в форме идиомы)
         \end{itemize}
     \end{frame}
 
@@ -218,7 +219,10 @@
             %! suppress = EscapeHashOutsideCommand
             \begin{itemize}
                 \item Def: \mintinline{haskell}|newtype Compose f g a = Compose (f (g a))|
-                \item Пропала эквивалентность \mintinline{haskell}|Compose f g a #$\sim$# f (g a)|
+                \item Получаем новый тип, эквивалентный (изоморфный) композиции
+                \begin{minted}{haskell}
+                    Compose f g a #$\sim$# f (g a)
+                \end{minted}
                 \item[\NB] Реализации классов типов ищутся для \mintinline{haskell}|Compose|, а не для \texttt{f}
             \end{itemize}
         \end{itemize}
@@ -272,7 +276,6 @@
                 type Effs = Compose ((->) Db) (Either DbError)
                 dbLookup :: Id -> Effs Player -- больше не передаём БД вручную
             \end{minted}
-            \item[\NB] Аппликативные функторы позволяют замести под ковёр неинтересную рутину и церемонии, оставив нас наедине с бизнес-логикой
         \end{itemize}
     \end{frame}
 
