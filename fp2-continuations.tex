@@ -9,26 +9,29 @@
 Как написать определяющий интерпретатор, отправляющий программу в этот домен?
 Решением стала возможность сослаться на семантику остатка программы, продолжение, в определённой точке (например, на метке).
 
-Если мы внимательно рассмотрим процесс вычисления выражений, мы обнаружим, что он состоит из двух этапов: поиска подвыражения (редекса), в котором можно сделать элементарный шаг вычислений, выполнение этого шага, и так далее\footnote{На самом деле вычислениям с продолжениями учат в начальных классах, когда рассказывают про вычисление выражений ``по действиям''.}.
+О продолжениях всегда должен думать автор языка, ведь вычислителю в каждой точке программы нужно знать, что исполнять дальше.
+А как мы уже поняли, любой программист является автором множества языков, приближающих его к решению задачи.
+Более того, многие повседневные языковые конструкции явно или неявно непосредственно манипулируют продолжениями.
+
+\subsection{Концепция продолжения}
+
+Рассмотрим семантику выражения с операционной точки зрения, как последовательность шагов переписывания (см.\ \ref{subsubsec:semantics}).
+Если внимательно рассмотреть каждый шаг, то мы обнаружим, что он состоит из двух этапов: поиска подвыражения (редекса), в котором можно сделать элементарный шаг вычислений, выполнение этого шага, и так далее\footnote{На самом деле вычислениям с продолжениями учат в начальных классах, когда рассказывают про вычисление выражений ``по действиям''.}.
 Во время поиска редекса, выражение разбивается на две части (см.~\ref{fig:basic-continuation}):
 \begin{itemize}
     \item Фокус --- подвыражение в котором ищем редекс;
     \item Продолжение --- остаток выражения с ``дыркой'', обозначающий место, куда нужно подставить результат шага вычислений.
 \end{itemize}
 
-\begin{figure}[h]
+\begin{figure}
     \centering
     \includegraphics[width=0.35\textwidth]{figs/cont-expr}
     \caption{Выражение разделяется на фокус (красный) и продолжение (синее), когда в фокусе удалось сделать шаг, они объединяются в новое выражение, для которого процесс повторяется.}
     \label{fig:basic-continuation}
 \end{figure}
 
-Это наблюдение лежит в основе популярного формального метода задания операционной семантики~--- \vocab{reduction semantics}\footnote{\url{https://en.wikipedia.org/wiki/Operational_semantics}}.
-Есть стандартный инструмент PLT Redex\footnote{\url{https://redex.racket-lang.org/}} для описания и тестирования семантики в таком стиле.
-
 Как правило, продолжения существуют вне пользовательского кода как состояние интерпретатора, которому нужно помнить, что и как исполнять дальше в каждый момент времени.
-Однако, языки предоставляют пользователям множество конструкций, позволяющих управлять продолжениями:
-
+Однако, языки предоставляют пользователям множество конструкций, позволяющих управлять продолжениями (см.\ \ref{fig:exit-exceptions}):
 \begin{itemize}
     \item Функция \mintinline{kotlin}|exit| выбрасывает продолжение программы целиком;
     \item Конструкция \mintinline{kotlin}|try-catch| позволяет выбросить часть продолжения до места поимки исключения и восстановить доставшееся;
@@ -36,7 +39,7 @@
     \item Конструкции \mintinline{kotlin}|break| и \mintinline{kotlin}|continue| восстанавливают продолжение после цикла и до\ldots
 \end{itemize}
 
-\begin{figure}[h]
+\begin{figure}
     \centering
     \begin{subfigure}[h]{0.29\linewidth}
         \includegraphics[width=1\textwidth]{figs/cont-exit}
@@ -44,105 +47,259 @@
     \begin{subfigure}[h]{0.7\linewidth}
         \includegraphics[width=1\textwidth]{figs/cont-try-catch}
     \end{subfigure}
+    \caption{Конструкция \mintinline{kotlin}|exit| выбрасывает продолжение и программа останавливается, в то время как \mintinline{kotlin}{throw} выбрасывает лишь часть продолжения до ближайшего \mintinline{kotlin}{try-catch}.}
+    \label{fig:exit-exceptions}
 \end{figure}
 
-В примерах выше конструкции языка управляют продолжениями неявно.
-Однако, иногда вводят операторы, позволяющие явно оперировать продолжениями.
+\subsubsection{Reduction semantics}
 
-\vocab{Продолжения первого класса (first-class continuations)} --- продолжения, которые представимы в программе в виде значений.
-Учитывая, что продолжение имеет вакантное место ещё не вычисленного подвыражения, продолжения первого класса представляют функциями первого класса.
-
-Чтобы получить в коде продолжение первого класса, нужно либо написать код в специальном виде, либо воспользоваться встроенным в язык оператором~\cite[приложение A]{hillerstrom2022foundations}.
-Например, $J$, \texttt{escape}~\cite{reynolds1972definitional}, \texttt{call/cc}\ldots % todo ref CPS
-
-\subsection{Continuation semantics} \label{subsec:definctionalized-cont}
-
-Как обычно, следуя Hutton's Razor, рассмотрим интерпретацию маленького простого язычка с вычитанием (несимметричная операция для проверки реализации):
+Стиль задания операционной семантики через описание поиска примитивных (``\vocab{головных}'') редексов и их редукций называют \vocab{семантикой редукционных контекстов (reduction semantics)}\footnote{\url{https://en.wikipedia.org/wiki/Operational_semantics}}.
+Для примера, запишем её для примитивного языка с вычитаниями:
 \begin{minted}{haskell}
     data Expr = Const Int | Diff Expr Expr
-
-    eval :: Expr -> Int
-    eval = \case Const x -> x; Diff l r -> eval l - eval r
 \end{minted}
 
-Перепишем этот интерпретатор в стиле с явными продолжениями, явно выделяя шаги поиска элементарных подвыражений.
-
-% todo reduction semantics, plt redex
-
-\subsubsection{Прямолинейная реализация}
-
-Заведём структуру данных, буквально соответствующую ``выражению с дыркой''.
-Заметьте, что тут мы уже однозначно фиксируем порядок вычисления операндов.
+Для начала нам нужно определить синтаксис продолжений, ``выражений с дыркой'', и операцию разбиения выражения на фокус и продолжение:
 \begin{minted}{haskell}
     data K
       = Hole         -- дырка ?$\boxempty$?
       | LDiff K Expr -- фокус пошел в правое подвыражение, запомнили левое
       | RDiff Int K  -- посчитали левое, фокус пошел вправо
+
+    split :: Expr -> (Expr, K)
+    split e = case e of
+      Const _ -> (e, Hole)
+      Diff (Const _) (Const _) -> (e, Hole) -- примитивный редекс
+      Diff (Const l) r ->                   -- левое подвыражение уже посчитано
+        let (focus, k) = split r in         -- ищем редекс в правом
+        (focus, RDiff l k)
+      Diff l r ->                           -- ничего ещё не посчитано
+        let (focus, k) = split l in         -- начинам с поиска редекса слева
+        (focus, LDiff k r)
+
+    ghci> split (Diff (Diff (Const 1) (Const 2)) (Const 3)) -- (1 - 2) - 3
+    (Diff (Const 1) (Const 2), LDiff Hole (Const 3)) -- (1 - 2, ?$\boxempty$? - 3)
 \end{minted}
 
-По мере того как мы спускаемся вглубь фокуса, нам нужно уметь наращивать продолжение, подставляя новый кусочек вместо дырки:
+Шаг примитивной редукции умеет только вычитать числа:
 \begin{minted}{haskell}
-    substHole :: K -> K -> K
-    substHole to target = case to of
-      Hole -> target
-      LDiff to' r -> LDiff (to' `substHole` target) r
-      RDiff l to' -> RDiff l (to' `substHole` target)
+    headReduction :: Expr -> Expr
+    headReduction = \case
+      Diff (Const l) (Const r) -> Const (l - r)
+      e -> e
 \end{minted}
 
-Теперь напишем интерпретатор в виде двух взаиморекурсивных функций:
+После шага примитивной редукции нам понадобится подставить результат обратно в продолжение, чтобы из ``выражения с дыркой'' получить полноценное выражение, которое можно продолжить редуцировать:
 \begin{minted}{haskell}
-    evalK :: Expr -> K -> Int
-    evalK expr k = case expr of
-      Const x -> k `appK` x
-      Diff l r ->
-        let k' = k `substHole` LDiff Hole r in -- запоминаем, что пошли влево
-        evalK l k'                             -- идём влево
-
-    appK :: K -> Int -> Int
-    appK k result = case k of
-      Hole -> result
-      LDiff k' r ->
-        let result' = k' `appK` result in -- довычисляем левое подвыражение
-        evalK r (RDiff result' Hole)      -- идём вправо, запомнив результат слева
-      RDiff l k' -> l - k' `appK` result  -- наконец-то вычисляем минус
+    plugIn :: Expr -> K -> Expr
+    plugIn e k = case k of
+      Hole -> e
+      LDiff k' r -> Diff (e `plugIn` k') r
+      RDiff l k' -> Diff (Const l) (e `plugIn` k')
 \end{minted}
 
-Выражение можно вычислить, запустив \texttt{evalK} на пустом продолжении \mintinline{haskell}{Hole}.
-
-Заметим, что \mintinline{haskell}{K} вместе с \texttt{appK} представляют собой набор дефункционализированных замыканий.
-Вернёмся к этому далее. % todo ref
-
-\subsubsection{Продолжение как стек}
-
-Перепишем структуру данных \mintinline{haskell}{K} эквивалентным образом (см~\ref{subsec:recursive-types}):
-\[
-    \begin{array}{l}
-        K = 1 + K \times Expr + Int \times K \\
-        K = 1 + (Expr + Int) \times K
-    \end{array}
-\]
-Так, продолжение можно представить в виде функционального списка фреймов:
+Теперь мы можем определить полноценный шаг:
 \begin{minted}{haskell}
+    transition :: Expr -> Expr
+    transition e =
+      let (focus, k) = split e in    -- разбиваем на фокус и контекст
+      headReduction focus `plugIn` k -- делаем вычисление в фокусе и подставляем
+\end{minted}
+
+Тода операционная семантика это развёртка списка промежуточных выражений:
+\begin{minted}{haskell}
+    eval :: Expr -> [Expr]
+    eval = List.unfoldr \prev ->
+      let next = transition prev in
+      if prev == next then Nothing else Just (next, next)
+\end{minted}
+
+Можно заметить, что \texttt{split} и \texttt{plugIn} однозначно определяется по синтаксису продолжений, а \texttt{transition} и \texttt{eval} одинаковы для произвольного языка.
+Поэтому семантику редукционных контекстов обычно задают как синтаксис продолжений, перечень главных редукций и единственное правило вывода --- шаг в контексте.
+%\[
+%    \begin{array}{lrl}
+%        \text{Terms} & t & \Coloneqq \mathbb{Z} ~|~ t \ominus t \\
+%        \text{Evaluation context} & E & \Coloneqq \square ~|~ E \ominus t ~|~ \mathbb{Z} \ominus E \\
+%        \text{(diff)} & & \mathbb{Z} \ominus \mathbb{Z} \longrightarrow \mathbb{Z} - \mathbb{Z}
+%    \end{array}
+%\]
+
+Существует стандартный инструмент PLT Redex\footnote{\url{https://redex.racket-lang.org/}} для описания и тестирования семантики в стиле редукционных контекстов.
+
+\subsubsection{Денотационная семантика с продолжениями}
+
+Запишем денотационную семантику нашего языка:
+\begin{minted}{haskell}
+    evalDirect :: Expr -> Int
+    evalDirect = \case
+      Const n -> n
+      Diff l r -> evalDirect l - evalDirect r
+\end{minted}
+
+Перепишем денотационную семантику в стиле с явными продолжениями.
+Но сначала поработаем с типом \mintinline{haskell}{K} и упростим работу с ним:
+\begin{minted}{haskell}
+    data K = Hole | LDiff K Expr | RDiff Int K
+    -- ?$K = 1 + (K \times Expr) + (Int \times K) = 1 + (Expr + Int) \times K$?
     data Frame = LDiff Expr | RDiff Int
     type K = [Frame]
 \end{minted}
-Новые фреймы будем добавлять не в конец, как мы делали ранее, а в начало:
+Получили представление продолжения как стека фреймов.
+
+Запишем теперь денотационную семантику для домена \mintinline{haskell}{K -> Int} как пару взаимно-рекурсивных функций:
 \begin{minted}{haskell}
     evalK :: Expr -> K -> Int
-    evalK expr k = case expr of
-      Const x -> k `appK` x
-      Diff l r -> eval l (LDiff r : k)
+    evalK e k = case e of
+      Const n -> k `appK` n             -- выполнить остаток программы
+      Diff l r -> evalK l (LDiff r : k) -- запомнить дальше вычислить правое поддерево
 
     appK :: K -> Int -> Int
     appK k result = case k of
-      [] -> result
-      LDiff r : k' -> evalK r (RDiff result : k')
-      RDiff l : k' -> k' `appK` (l - result)
+      [] -> result                                -- дальше делать нечего
+      LDiff r : k' -> evalK r (RDiff result : k') -- идем вычислять вправо
+      RDiff l' : k' -> k' `appK` (l' - result)    -- вычисляем продолжение на результате
 \end{minted}
 
-Таким образом, мы представили продолжение в виде стека.
-На самом деле аппаратный стек как раз и выполняет роль продолжения (вместе с регистрами).
-Заметим также, что эти функции взаимно-хвостово-рекурсивны, поэтому их можно скомпилировать без потребления аппаратного стека мета-языка.
+Первая рекурсивная реализация \texttt{evalDirect} не заботилась о продолжениях.
+Однако, продолжения --- это неотъемлемая часть процесса вычисления, вычислителю нужно знать, что делать дальше в каждый момент.
+То есть \texttt{evalDirect} лишь делегирует работу с продолжениями определяемого языка мета-языку, но каким образом?
+Заметьте, что полученная в итоге реализация \texttt{evalK} хвостово-рекурсивная, а значит, может быть скомпилирована в цикл, не потребляющий аппаратный стек, при этом \mintinline{haskell}{K} это стек.
+Таким образом, в первом случае мы делали рекурсивные вызовы и продолжение аллоцировалось как (аппаратный) стек мета-языка, а во втором случае мы самостоятельно аллоцируем стек в куче.
+
+В случае, если стек мета-языка реализован поверх аппаратного, есть риск ошибки его переполнения.
+Чтобы этого избежать, используется техника \vocab{trampolining}, которая как раз состоит в ручной аллокации продолжения в куче~\cite{ganz1999trampolined, bjarnarson2012stackless}.
+
+Подобно тому как тип контекста зиппера можно вычислить как производную алгебраического представления соответствующего типа~\cite{huet1997zipper, mcbride2001derivative, abbott2003derivatives}, так можно вычислить тип продолжения свёртки~\cite{mcbride2008clowns}.
+
+\subsubsection{Продолжения первого класса}
+
+
+
+% todo
+
+
+
+
+% todo историческое введение
+
+% todo про концепцию продолжений, first-class продолжений
+
+% todo continuation passing style, representing monads
+
+% todo delimited continuations
+
+% todo реализация продолжений
+
+% todo приложения продолжений
+
+
+
+
+
+
+
+%Это наблюдение лежит в основе популярного формального метода задания операционной семантики~--- \vocab{reduction semantics}\footnote{\url{https://en.wikipedia.org/wiki/Operational_semantics}}.
+%
+%
+
+
+%В примерах выше конструкции языка управляют продолжениями неявно.
+%Однако, иногда вводят операторы, позволяющие явно оперировать продолжениями.
+%
+%\vocab{Продолжения первого класса (first-class continuations)} --- продолжения, которые представимы в программе в виде значений.
+%Учитывая, что продолжение имеет вакантное место ещё не вычисленного подвыражения, продолжения первого класса представляют функциями первого класса.
+%
+%Чтобы получить в коде продолжение первого класса, нужно либо написать код в специальном виде, либо воспользоваться встроенным в язык оператором~\cite[приложение A]{hillerstrom2022foundations}.
+%Например, $J$, \texttt{escape}~\cite{reynolds1972definitional}, \texttt{call/cc}\ldots % todo ref CPS
+%
+%\subsection{Continuation semantics} \label{subsec:definctionalized-cont}
+%
+%Как обычно, следуя Hutton's Razor, рассмотрим интерпретацию маленького простого язычка с вычитанием (несимметричная операция для проверки реализации):
+%\begin{minted}{haskell}
+%    data Expr = Const Int | Diff Expr Expr
+%
+%    eval :: Expr -> Int
+%    eval = \case Const x -> x; Diff l r -> eval l - eval r
+%\end{minted}
+%
+%Перепишем этот интерпретатор в стиле с явными продолжениями, явно выделяя шаги поиска элементарных подвыражений.
+%
+%% todo reduction semantics, plt redex
+%
+%\subsubsection{Прямолинейная реализация}
+%
+%Заведём структуру данных, буквально соответствующую ``выражению с дыркой''.
+%Заметьте, что тут мы уже однозначно фиксируем порядок вычисления операндов.
+%\begin{minted}{haskell}
+%    data K
+%      = Hole         -- дырка ?$\boxempty$?
+%      | LDiff K Expr -- фокус пошел в правое подвыражение, запомнили левое
+%      | RDiff Int K  -- посчитали левое, фокус пошел вправо
+%\end{minted}
+%
+%По мере того как мы спускаемся вглубь фокуса, нам нужно уметь наращивать продолжение, подставляя новый кусочек вместо дырки:
+%\begin{minted}{haskell}
+%    substHole :: K -> K -> K
+%    substHole to target = case to of
+%      Hole -> target
+%      LDiff to' r -> LDiff (to' `substHole` target) r
+%      RDiff l to' -> RDiff l (to' `substHole` target)
+%\end{minted}
+%
+%Теперь напишем интерпретатор в виде двух взаиморекурсивных функций:
+%\begin{minted}{haskell}
+%    evalK :: Expr -> K -> Int
+%    evalK expr k = case expr of
+%      Const x -> k `appK` x
+%      Diff l r ->
+%        let k' = k `substHole` LDiff Hole r in -- запоминаем, что пошли влево
+%        evalK l k'                             -- идём влево
+%
+%    appK :: K -> Int -> Int
+%    appK k result = case k of
+%      Hole -> result
+%      LDiff k' r ->
+%        let result' = k' `appK` result in -- довычисляем левое подвыражение
+%        evalK r (RDiff result' Hole)      -- идём вправо, запомнив результат слева
+%      RDiff l k' -> l - k' `appK` result  -- наконец-то вычисляем минус
+%\end{minted}
+%
+%Выражение можно вычислить, запустив \texttt{evalK} на пустом продолжении \mintinline{haskell}{Hole}.
+%
+%Заметим, что \mintinline{haskell}{K} вместе с \texttt{appK} представляют собой набор дефункционализированных замыканий.
+%Вернёмся к этому далее. % todo ref
+%
+%\subsubsection{Продолжение как стек}
+%
+%Перепишем структуру данных \mintinline{haskell}{K} эквивалентным образом (см~\ref{subsec:recursive-types}):
+%\[
+%    \begin{array}{l}
+%        K = 1 + K \times Expr + Int \times K \\
+%        K = 1 + (Expr + Int) \times K
+%    \end{array}
+%\]
+%Так, продолжение можно представить в виде функционального списка фреймов:
+%\begin{minted}{haskell}
+%    data Frame = LDiff Expr | RDiff Int
+%    type K = [Frame]
+%\end{minted}
+%Новые фреймы будем добавлять не в конец, как мы делали ранее, а в начало:
+%\begin{minted}{haskell}
+%    evalK :: Expr -> K -> Int
+%    evalK expr k = case expr of
+%      Const x -> k `appK` x
+%      Diff l r -> eval l (LDiff r : k)
+%
+%    appK :: K -> Int -> Int
+%    appK k result = case k of
+%      [] -> result
+%      LDiff r : k' -> evalK r (RDiff result : k')
+%      RDiff l : k' -> k' `appK` (l - result)
+%\end{minted}
+%
+%Таким образом, мы представили продолжение в виде стека.
+%На самом деле аппаратный стек как раз и выполняет роль продолжения (вместе с регистрами).
+%Заметим также, что эти функции взаимно-хвостово-рекурсивны, поэтому их можно скомпилировать без потребления аппаратного стека мета-языка.
 
 % todo calculating correct compilers, compiling with continuations W. Appel
 
@@ -538,3 +695,5 @@
 
 %% todo коиндуктивные домены
 %
+
+% todo rust continuations
