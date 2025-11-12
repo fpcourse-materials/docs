@@ -1,0 +1,88 @@
+%! suppress = MissingImport
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+\setminted{xleftmargin=\parindent, autogobble, escapeinside=??}
+\newcommand{\iso}{\sim}
+
+\title{6. Продолжения}
+\author{Андрей Стоян}
+\institute[ИПКН ИТМО]{ИПКН ИТМО}
+
+\date{осень 2025}
+
+\begin{document}
+
+    \mymaketitle
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \sectionplan{Концепция продолжений}
+
+    \begin{frame}[fragile]{Фокус и продолжение}
+        \pause
+        \begin{figure}
+            \centering
+            \includegraphics[width=0.5\textwidth]{figs/cont-expr}
+        \end{figure}
+    \end{frame}
+
+    \begin{frame}[fragile]{exit}
+        \pause
+        \begin{figure}
+            \centering
+            \includegraphics[width=0.5\textwidth]{figs/cont-exit}
+        \end{figure}
+    \end{frame}
+
+    \begin{frame}[fragile]{try-catch}
+        \pause
+        \begin{figure}
+            \centering
+            \includegraphics[width=1\textwidth]{figs/cont-try-catch}
+        \end{figure}
+    \end{frame}
+
+    \begin{frame}[fragile]{Reduction semantics}
+        \pause
+        \[
+            \begin{array}{lrl}
+                \text{Values}             & v & \Coloneqq \mathbb{Z}                                       \\
+                \text{Terms}              & t & \Coloneqq v ~|~ t \ominus t                                \\
+                \text{Evaluation context} & E & \Coloneqq \square ~|~ E \ominus t ~|~ \mathbb{Z} \ominus E \\
+                \text{(diff)}             &   & v_1 \ominus v_2 \longrightarrow v_1 - v_2                  \\
+                \text{step}               &   & \infer{E[t] \longrightarrow E[t']}{t \longrightarrow t'}
+            \end{array}
+        \]
+    \end{frame}
+
+    \sectionplan{Функциональные продолжения}
+
+    \sectionplan{Delimited continuations}
+
+    \begin{frame}[fragile]{Базовые операции}
+        \pause
+        \begin{itemize}
+            \item $newPrompt$ --- создаёт свежий идентификатор (метку) ограничения;
+            \item $pushPrompt \ap p \ap e$ --- устанавливает ограничение с меткой $p$ и исполняет выражение $e$;
+            \item $withSubCont\ap p\ap f$ --- захватывает частичное продолжение до ограничения с меткой $p$ и передаёт в функцию $f$, возвращает результат $f$;
+            \item $pushSubCont\ap k \ap v$ --- исполняет композицию текущего продолжения и $k$ на значении $v$.
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Операционная семантика}
+        \pause
+        \begin{figure}
+            \centering
+            \includegraphics[width=0.8\textwidth]{figs/dc-operational}
+        \end{figure}
+    \end{frame}
+
+\end{document}

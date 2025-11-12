@@ -459,6 +459,136 @@ Example: coroutines.}}.
 
 \subsubsection{The mother of all monads} \label{subsubsec:monadic-reflection}
 
+\begin{minted}{haskell}
+    newtype Cont r a = Cont { runCont :: (a -> r) -> r }
+
+    instance Functor (Cont r) where
+      -- fmap :: (a -> b) -> ((a -> r) -> r) -> ((b -> r) -> r)
+      fmap f (Cont comp) = Cont \k -> comp (k . f)
+
+    instance Applicative (Cont r) where
+      pure x = Cont \k -> k x
+      (<*>) = ap
+
+    instance Monad (Cont r) where
+      Cont comp >>= k = Cont \k' -> comp \x -> runCont (k x) k'
+
+    fibCont :: Int -> Cont r Int
+    fibCont n = if n <= 2 then pure 1 else do
+      res1 <- fibCont (n - 1)
+      res2 <- fibCont (n - 2)
+      pure (res1 + res2)
+
+
+    runIdentityC :: (forall r . Cont r a) -> a
+    runIdentityC comp = runCont comp id
+
+    exampleIdentity :: Int
+    exampleIdentity = runIdentityC do
+      x <- pure 4
+      y <- pure 5
+      pure (x + y)
+
+
+    raise :: Cont (Maybe r) a
+    raise = Cont $ const Nothing
+
+    runExn :: (forall r . Cont (Maybe r) a) -> Maybe a
+    runExn comp = runCont comp Just
+
+    exampleExn :: Int -> Maybe Int
+    exampleExn n = runExn do
+      when (n < 0) raise
+      pure (n + 1)
+
+
+    choice :: Cont [r] Bool
+    choice = Cont \k -> k True ++ k False ++ k True ++ k False
+
+    runNondet :: (forall r . Cont [r] a) -> [a]
+    runNondet comp = runCont comp (:[])
+
+    exampleNondet :: Int -> [Int]
+    exampleNondet n = runNondet do
+      b <- choice
+      if b then pure n else pure (n - 1)
+
+
+    -- s -> (s, a) ~ ((s, a) -> r) -> (s -> r)
+    -- ~ (a -> s -> r) -> (s -> r) ~ Cont (s -> r) a
+
+    get :: Cont (s -> r) s -- (s -> s -> r) -> (s -> r)
+    get = Cont \k s -> k s s
+
+    put :: s -> Cont (s -> r) ()
+    put s' = Cont \k _s -> k () s'
+
+    runStateK :: (forall r . Cont (s -> r) a) -> s -> (a, s)
+    runStateK comp = runCont comp (,)
+
+    exampleState :: Int -> ((), Int)
+    exampleState = runStateK do
+      s <- get
+      put (s + 1)
+
+
+    reflect' :: Monad m => m a -> forall r . Cont (m r) a
+    reflect' comp = Cont (comp >>=) -- k :: a -> m r
+
+    reify' :: Monad m => (forall r . Cont (m r) a) -> m a
+    reify' comp = runCont comp pure
+
+    newtype ContT r m a = ContT { runContT :: (a -> m r) -> m r }
+    newtype CodensityT m a = CodensityT
+      { runCodensityT :: forall r . (a -> m r) -> m r }
+      deriving Functor
+
+    instance Applicative (CodensityT m) where
+      pure x = CodensityT \k -> k x
+      (<*>) = ap
+
+    instance Monad (CodensityT m) where
+      CodensityT comp >>= k = CodensityT \k' ->
+        comp \x -> runCodensityT (k x) k'
+
+    exampleCodensity :: Int -> (Int, Int)
+    exampleCodensity = runState $ run $ do
+      s <- getCod
+      putCod (s + 1)
+      pure 1
+      where
+        run :: CodensityT (State Int) Int -> State Int Int
+        run cod = (runCodensityT cod) @Int pure
+
+    getCod :: CodensityT (State s) s
+    getCod = CodensityT \k -> State \s -> runState (k s) s
+
+    putCod :: s -> CodensityT (State s) ()
+    putCod s' = CodensityT \k -> State \_s -> runState (k ()) s'
+
+
+    class MonadR m where
+      -- m a -> (a -> m r) -> m r
+      reflect :: m a -> forall r . Cont (m r) a
+      -- (forall r . (a -> m r) -> m r) -> m a
+      reify :: (forall r . Cont (m r) a) -> m a
+
+    newtype State s a = State { runState :: s -> (a, s) } deriving Functor
+
+    instance Applicative (State s) where
+      pure x = State \s -> (x, s)
+      (<*>) = undefined
+
+    instance MonadR (State s) where
+      reflect :: State s a -> (forall r . Cont (State s r) a)
+      reflect comp = Cont \k -> State \s ->
+        let (a, s') = runState comp s in
+        runState (k a) s'
+
+      reify :: (forall r . Cont (State s r) a) -> State s a
+      reify comp = State $ runState (runCont comp (\x -> State (x,)))
+\end{minted}
+
 % todo Monads and composable continuations by Phill Wadler
 
 % todo Representing Monads Filinsky
@@ -639,3 +769,5 @@ Example: coroutines.}}.
 % todo коиндуктивные домены
 
 % todo rust continuations
+
+% todo runtime кишками наизнанку
