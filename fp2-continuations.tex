@@ -129,7 +129,7 @@
 
 Существует стандартный инструмент PLT Redex\footnote{\url{https://redex.racket-lang.org/}} для описания и тестирования семантики в стиле редукционных контекстов.
 
-\subsubsection{Денотационная семантика с продолжениями}
+\subsubsection{Денотационная семантика с продолжениями} \label{subsubsec:denotational-cont}
 
 Запишем денотационную семантику нашего языка:
 \begin{minted}{haskell}
@@ -278,6 +278,8 @@
 
 \subsection{Continuation-passing style (CPS)} \label{subsec:cps}
 
+% todo higher-order CPS
+
 Если операция получения текущего продолжения не встроена в язык, текущее продолжение всё равно можно получить, переписав программу в \vocab{continuation-passing style (CPS)}.
 
 CPS эксплуатирует следующий изоморфизм:
@@ -305,199 +307,235 @@ CPS эксплуатирует следующий изоморфизм:
     facCps n k
       | n <= 1 = k 1
       | otherwise = facCps (n - 1) \res -> k (n * res)
-\end{minted}
 
-\begin{task}
-    Вручную поредуцируйте определение \mintinline{haskell}|facCps| на простом примере.
-\end{task}
+    facCps 3 id ?$\step$? facCps 2 \res -> id (3 * res)
+    ?$\step$? facCps 1 \res -> id (3 * (2 * res)) ?$\step$? id (3 * (2 * 1)) ?$\step$? 6
+\end{minted}
 
 \begin{task}
     Сколько функция \mintinline{haskell}|facCps| потребляет стековой памяти?
 \end{task}
 
-\subsubsection{Дефункционализация и аккумуляторы}
+\subsubsection{Дефункционализация и аккумуляторы} \label{subsubsec:defunctionalization-cont}
+
+Дефункционализируем продолжения в \texttt{facCps}.
+Мы используем две функции высших порядков, \texttt{id} и \mintinline{haskell}{\res -> k (n * res)}, они дают нам два конструктора:
+\begin{minted}{haskell}
+    data K = Id | Times Int K
+    -- ?$\iso$?
+    type K = [Int]
+
+    evalK :: K -> Int
+    evalK = product
+
+    facCps :: Int -> K -> Int
+    facCps n k
+      | n <= 1 = evalK k
+      | otherwise = facCps (n - 1) (snoc k n)
+
+    facCps 3 [] ?$\step$? facCps 2 [3] ?$\step$? facCps 1 [3, 2] ?$\step$? evalK [3, 2] ?$\step$? 3 * (2 * 1)
+\end{minted}
+
+Мы снова получили представление продолжения в виде стека фреймов.
+А значит, интерпретатор полученный нами ранее (\ref{subsubsec:denotational-cont}) является CPS версией обычного интерпретатора, только с дефункционализированными продолжениями (они удобны для отладки~--- их можно распечатать, в отличие от функций Haskell).
+Если расширить тот наш язык и написать на нём факториал, а потом сделать fusion (рефункционализацию дерева программы), мы получим текущую реализацию факториала.
+
+Теперь заметим, что операция умножения ассоциативна, а значит, можно \texttt{snoc} заменить на умножение, а продолжение представить одним числом.
+Получим привычную реализацию факториала с аккумулятором:
+\begin{minted}{haskell}
+    facAcc :: Int -> Int -> Int
+    facAcc n acc
+      | n <= 1 = acc
+      | otherwise = facAcc (n - 1) (acc * n)
+
+    facAcc 3 1 ?$\step$? facAcc 2 (1 * 3) ?$\step$? facAcc 1 ((1 * 3) * 2) ?$\step$? (1 * 3) * 2 ?$\step$? 6
+\end{minted}
+Этой техникой можно пользоваться и в более сложных случаях, чтобы получать хвостово-рекурсивные реализации~\cite{gibbons2021continuation}\footnote{\href{https://youtu.be/8gnhaE2nmQ0?si=pEJX4jQteYmy7ZZn}{(youtube) Jeremy Gibbons - Continuation-passing style, defunctionalization, and associativity.}}.
+Также, можно фреймы представить в рефункционализированном виде и в качестве ассоциативной операции использовать композицию функций\footnote{\url{https://wiki.haskell.org/Difference_list}}.
+
+% todo можно ли не пользоваться тем, что единица нейтральная
+
+\subsubsection{\mintinline{haskell}{Monad Cont}} \label{subsubsec:monad-cont}
+
+Из-за CPS код потерял привычную структуру, при которой функции напрямую возвращают свои результаты (i.e. \vocab{direct style}).
+При наличии большого количества вызовов трансформированных функций, код становится плохо читаемым (проблема известна как \vocab{callback hell}):
+\begin{minted}{haskell}
+    fibCps :: Int -> (forall r . (Int -> r) -> r)
+    fibCps n k = if n <= 2 then k 1 else
+      fibCps (n - 1) \res1 ->
+      fibCps (n - 2) \res2 ->
+      k (res1 + res2)
+\end{minted}
+
+Домен \mintinline{haskell}{(a -> r) -> r} можно сделать монадой и восстановить direct style код внутри \mintinline{haskell}{do}-нотации.
+Заведём \mintinline{haskell}|newtype| обёртку для объявления инстансов:
+\begin{minted}{haskell}
+    newtype Cont r a = Cont { runCont :: (a -> r) -> r }
+\end{minted}
+
+Функтор добавляет пост-процессинг результату перед передачей в продолжение:
+\begin{minted}{haskell}
+    instance Functor (Cont r) where
+      -- fmap :: (a -> b) -> ((a -> r) -> r) -> ((b -> r) -> r)
+      fmap f (Cont comp) = Cont \k -> comp (k . f)
+\end{minted}
+
+Аппликатив просто передаёт значение продолжению:
+\begin{minted}{haskell}
+    instance Applicative (Cont r) where
+      pure x = Cont \k -> k x
+      (<*>) = ap
+\end{minted}
+
+Можно заметить, что монадическое связывание вторым аргументом тоже принимает продолжение, но ``маленькое'', до конца \mintinline{haskell}|do|-блока.
+Таким образом, смысл реализации монадического связывания для \mintinline{haskell}{Cont}~--- это композиция ``маленького'' продолжения с ``большим'' продолжением, передаваемым снаружи:
+\begin{minted}{haskell}
+    instance Monad (Cont r) where
+      (>>=) :: Cont r a -> (a -> Cont r b) -> Cont r b
+      Cont comp >>= k = Cont \k' -> comp \x -> runCont (k x) k'
+\end{minted}
+
+Теперь мы можем писать линейный код, а монадическая машинерия сама конструирует продолжения и подкладывает в предыдущие вычисления:
+\begin{minted}{haskell}
+    fibCont :: Int -> Cont r Int
+    fibCont n = if n <= 2 then pure 1 else do
+      res1 <- fibCont (n - 1)
+      res2 <- fibCont (n - 2)
+      pure (res1 + res2)
+\end{minted}
+
+\begin{task}
+    Оборвите вычисление, если \texttt{res1} больше \texttt{50}.
+\end{task}
+
+\begin{task}
+    Оборвите вычисление как только общий результат стал больше 50.
+\end{task}
+
+Монада \mintinline{haskell}{Cont} даёт реализацию встроенного языка, в котором можно получить продолжение вычисления:
+\begin{minted}{haskell}
+    cont :: ((a -> r) -> r) -> Cont r a
+\end{minted}
+
+\subsubsection{\texttt{call/cc}}
+
+Можно получить доступ к продолжению просто написав где-то в \mintinline{haskell}|do|-нотации конструктор:
+\begin{minted}{haskell}
+    do ...; Cont \?\framebox{k}? -> ...; ...
+\end{minted}
+Однако, для получения продолжений, как правило, пользуются специальными операторами.
+Классическим примером является \texttt{call/cc} (call with current continuation):
+\begin{minted}{haskell}
+    callCC :: ((a -> Cont r b) -> Cont r a) -> Cont r a
+    callCC f = Cont \k -> runCont (f \x -> Cont \_ -> k x) k
+\end{minted}
+
+\texttt{call/cc} принимает функцию \texttt{f}, в которую передаёт текущее продолжение (рис.~\ref{fig:call-cc}).
+При этом вызов продолжения работает как \mintinline{kotlin}|return| для \texttt{f} (продолжение не содержит кода \texttt{f}):
+\begin{minted}{haskell}
+    foo :: Int -> Cont r String
+    foo x = callCC $ \k -> do
+      let y = x ^ 2 + 3
+      when (y > 20) $ k "over twenty"
+      pure (show $ y - 4)
+\end{minted}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.6\linewidth]{figs/call-cc}
+    \caption{\texttt{call/cc} вызывает функцию \texttt{f} с продолжением \texttt{k}.
+    Аргумент \texttt{k} (или результат \texttt{f}) подставляется вместо вхождения \texttt{call/cc}.}
+    \label{fig:call-cc}
+\end{figure}
+
+Например, с помощью \texttt{call/cc} можно реализовать кооперативную многозадачность\footnote{\href{https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style\#Example:_coroutines}{(wiki) Continuation-passing style.
+Example: coroutines.}}.
+Однако, считается, что \texttt{call/cc} --- не самый удачный примитив\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
+
+\subsubsection{The mother of all monads} \label{subsubsec:monadic-reflection}
+
+% todo Monads and composable continuations by Phill Wadler
+
+% todo Representing Monads Filinsky
+% todo paper delimited continuations in WebAssembly
+
+% todo связь с континуэйшенами
+
+% todo mother of all monads
+
+% todo monads in python with nice syntax
+
+% todo monadic reflection & direct style (lib from scala)
+% todo https://github.com/lampepfl/monadic-reflection/blob/main/TUTORIAL.md
+
+% todo reflection without remorse
+
+% todo C# expression trees
+% todo F# что-то про монады и forM https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/computation-expressions
+
+% todo https://blog.poisson.chat/posts/2019-10-27-continuation-submonads.htm
+
+% todo https://www.unison-lang.org/docs/fundamentals/abilities/for-monadically-inclined/
+
+% todo https://www.schoolofhaskell.com/school/to-infinity-and-beyond/pick-of-the-week/the-mother-of-all-monads
+
+% todo http://www.valuedlessons.com/2008/01/monads-in-python-with-nice-syntax.html
+
+% todo
+
+\subsubsection{Эффективная реализация продолжений} \label{subsubsec:efficient-cps}
+
+Существует несколько классических подходов реализации продолжений на языковом уровне, которые, как правило, используются для построения генераторов или корутин.
+
+\vocab{Стековая (stackful)} реализация подразумевает, что продолжение представляется в виде аппаратного стека.
+Как только требуется захватить продолжение, стек копируется в кучу (возможно, лениво)\footnote{\href{https://youtu.be/kwS3OeoVCno?si=c4MkSkmLHNeywPrZ}{(youtube) Иван Углянский - Java Project Loom.}}.
+То есть этот подход полагается на поддержку со стороны рантайма языка.
+
+\vocab{Сегментный стек} --- стек вызовов представляется как связный список аллоцированных в куче фреймов. % todo cite
+Так, не требуется делать копирования, достаточно подмены указателей.
+Однако, в таком случае стек нелокален, что не очень хорошо для работы кешей.
+
+\vocab{Безстековая (stackless)} реализация подразумевает автоматическую CPS трансформацию пользовательского кода.
+Это можно сделать лишь средствами компилятора.
+
+В нашей реализации CPS производится огромное количество аллокаций замыканий, реифицирующих продолжения.
+Однако, если CPS получается автоматической трансляцией, можно делать эффективнее.
+Изначально продолжения придумывались для описания семантики прыжков, но можно пойти и в обратную сторону, реализовав продолжения эффективно для современных машин через \texttt{goto}.
+
+Так, состояние функции целиком один раз аллоцируется в куче, а перемещения по телу реализованы как машина состояний --- с помощью меток и прыжков.
+Таким образом, например, реализованы безстековые корутины в Kotlin\footnote{\url{https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md\#state-machines} \label{note:kotlin-state}}, генераторы в C\#\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}\ldots
+
+Даже в таком виде CPS остаётся тяжеловесной трансформацией, способной замедлить исполнение кода на порядки.
+Дело, в частности, в том, что переменные в таком подходе сложно размещать в регистрах (у функций много точек выходов и входов\footref{note:kotlin-state}), приходится постоянно записывать их в RAM --- производить \vocab{spilling}\footnote{\url{https://en.wikipedia.org/wiki/Register_allocation}}.
+
+% todo объяснение через дефункционализацию
+
+% todo плюсы минусы подводные камни каждого из них
+
+% todo картинки
+
+\subsection{Delimited continuations} \label{subsec:delimited-cont}
+
+% todo
+
+\subsection{Приложения продолжений} \label{subsec:cont-applications}
+
+% todo
 
 
 
-% todo higher-order CPS
 
 
 
 
-
-% todo да тут всё CPS
-
-% todo continuation passing style, representing monads
-
-% todo delimited continuations
-
-% todo реализация продолжений
-
-% todo приложения продолжений
 
 
 % todo calculating correct compilers, compiling with continuations W. Appel
 
 
 
-%\subsubsection{Монада \texttt{Cont}}
-%
-%Из-за CPS код потерял привычную структуру, при которой функции напрямую возвращают свои результаты (i.e. \vocab{direct style}).
-%При наличии большого количества вызовов трансформированных функций, код становится плохо читаемым.
-%
-%\begin{minted}{haskell}
-%    fibCps :: Int -> (forall r . (Int -> r) -> r)
-%    fibCps n k = if n <= 2 then k 1 else
-%      fibCps (n - 1) \res1 ->
-%      fibCps (n - 2) \res2 ->
-%      k (res1 + res2)
-%\end{minted}
-%
-%Однако, можно заметить, что монадическое связывание вторым аргументом тоже принимает продолжение, но ``маленькое'', до конца \mintinline{haskell}|do|-блока.
-%Таким образом, можно попробовать линеаризовать CPS код с помощью монад.
-%
-%Заведём \mintinline{haskell}|newtype| обёртку для объявления инстансов:
-%\begin{minted}{haskell}
-%    newtype Cont r a = Cont { runCont :: (a -> r) -> r }
-%\end{minted}
-%
-%Функтор добавляет пост-процессинг результату перед передачей в продолжение:
-%\begin{minted}{haskell}
-%    instance Functor (Cont r) where
-%      -- fmap :: (a -> b) -> ((a -> r) -> r) -> ((b -> r) -> r)
-%      fmap f (Cont comp) = Cont \k -> comp (k . f)
-%\end{minted}
-%
-%Аппликатив просто передаёт значение продолжению:
-%\begin{minted}{haskell}
-%    instance Applicative (Cont r) where
-%      pure x = Cont \k -> k x
-%      (<*>) = ap
-%\end{minted}
-%
-%Наконец, монада принимает в связывании ``маленькое'' продолжение, композирует его с ``большим'' продолжением, пришедшим снаружи, и передаёт в данное вычисление:
-%\begin{minted}{haskell}
-%    instance Monad (Cont r) where
-%      Cont comp >>= k = Cont \k' -> comp \x -> runCont (k x) k'
-%\end{minted}
-%
-%Теперь мы можем писать линейный код, а монадическая машинерия сама конструирует продолжения и подкладывает в предыдущие вычисления:
-%\begin{minted}{haskell}
-%    fibCont :: Int -> Cont r Int
-%    fibCont n = if n <= 2 then pure 1 else do
-%      res1 <- fibCont (n - 1)
-%      res2 <- fibCont (n - 2)
-%      pure (res1 + res2)
-%\end{minted}
-%
-%\begin{task}
-%    Оборвите вычисление, если \texttt{res1} больше \texttt{50}.
-%\end{task}
-%
-%\begin{task}
-%    Оборвите вычисление как только общий результат стал больше 50.
-%\end{task}
-%
-%\subsubsection{\texttt{call/cc}}
-%
-%Можно получить доступ к продолжению просто написав где-то в \mintinline{haskell}|do|-нотации конструктор:
-%\begin{minted}{haskell}
-%    do ...; Cont \?\framebox{k}? -> ...; ...
-%\end{minted}
-%Однако, для получения продолжений, как правило, пользуются специальными операторами.
-%Классическим примером является \texttt{call/cc} (call with current continuation):
-%\begin{minted}{haskell}
-%    callCC :: ((a -> Cont r b) -> Cont r a) -> Cont r a
-%    callCC f = Cont \k -> runCont (f \x -> Cont \_ -> k x) k
-%\end{minted}
-%
-%\texttt{call/cc} принимает функцию \texttt{f}, в которую передаёт текущее продолжение (рис.~\ref{fig:call-cc}).
-%При этом вызов продолжения работает как \mintinline{kotlin}|return| для \texttt{f} (продолжение не содержит кода \texttt{f}):
-%\begin{minted}{haskell}
-%    foo :: Int -> Cont r String
-%    foo x = callCC $ \k -> do
-%      let y = x ^ 2 + 3
-%      when (y > 20) $ k "over twenty"
-%      return (show $ y - 4)
-%\end{minted}
-%
-%\begin{figure}[h]
-%    \centering
-%    \includegraphics[width=0.6\linewidth]{figs/call-cc}
-%    \caption{\texttt{call/cc} вызывает функцию \texttt{f} с продолжением \texttt{k}.
-%    Аргумент \texttt{k} (или результат \texttt{f}) подставляется вместо вхождения \texttt{call/cc}.}
-%    \label{fig:call-cc}
-%\end{figure}
-%
-%Например, с помощью \texttt{call/cc} можно реализовать кооперативную многозадачность\footnote{\href{https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style\#Example:_coroutines}{(wiki) Continuation-passing style.
-%Example: coroutines.}}.
-%Однако, считается, что \texttt{call/cc} --- не самый удачный примитив\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
-%
-%\subsubsection{Continuation semantics}
-%
-%Существует стиль формальных семантики, называемый \vocab{continuation semantics}.
-%Фактически он соответствует написанию определяющих интерпретаторов в CPS\footnote{\url{https://ncatlab.org/nlab/show/continuation-passing+style}}.
-%CPS эксплицирует продолжения, иначе они были бы полностью в ведении какого-нибудь более базового интерпретатора в башне.
-%
-%Заметьте, что то, что мы строили выше, является shallow embedding некоторого языка, заданного в continuation semantics.
-%Реализация интерпретатора для deep embedding из~\ref{subsubsec:h-syntax}, например, будет выглядеть следующим образом:
-%\begin{minted}{haskell}
-%    eval3' :: Term3 ty -> (forall r . (ty -> Maybe r) -> Maybe r)
-%    eval3' term k = case term of
-%      Val3 x -> k x
-%      Plus l r -> eval3' l \l' -> eval3' r \r' -> k (l' + r')
-%      App3 f arg -> eval3' f \f' -> eval3' arg \arg' -> k (f' arg')
-%      Lam3 f -> k \arg -> eval3' (f (Val3 arg)) id
-%      Abort -> Nothing
-%\end{minted}
-%
-%Язык с CPS интерпретатором расширить управляющими конструкциями вроде \texttt{call/cc}.
-%Также можно заметить, что реализация интерпретатора стала хвостово-рекурсивной, а стратегии больше не определяется мета-языком~\cite{reynolds1972definitional}.
-%
-%% todo call/cc
-%
-%Проследить семантику операций также можно в следующей нотации, эксплицирующей продолжения:
-%
-%\begin{align*}
-%    E[abort(e)] &\rightsquigarrow e\\
-%    E[call/cc(f)] &\rightsquigarrow E[f(\lambda x\ldotp E[x])]
-%\end{align*}
-%
-%\subsubsection{Эффективный CPS}
-%
-%В нашей реализации CPS производится огромное количество аллокаций замыканий, реифицирующих продолжения.
-%Однако, если CPS получается автоматической трансляцией, можно делать эффективнее.
-%Изначально продолжения придумывались для описания семантики прыжков, но можно пойти и в обратную сторону, реализовав продолжения эффективно для современных машин через \texttt{goto}.
-%
-%Так, состояние функции целиком один раз аллоцируется в куче, а перемещения по телу реализованы как машина состояний --- с помощью меток и прыжков.
-%Таким образом, например, реализованы безстековые корутины в Kotlin\footnote{\url{https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md\#state-machines} \label{note:kotlin-state}}, генераторы в C\#\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}\ldots
-%
-%Даже в таком виде CPS остаётся тяжеловесной трансформацией, способной замедлить исполнение кода на порядки.
-%Дело, в частности, в том, что переменные в таком подходе сложно размещать в регистрах (у функций много точек выходов и входов\footref{note:kotlin-state}), приходится постоянно записывать их в RAM --- производить spilling\footnote{\url{https://en.wikipedia.org/wiki/Register_allocation}}.
-%
-%% todo объяснение через дефункционализацию
-%
-%% todo move to implementation section
-%
-%%\subsection{Дефункционализация продолжений}
-%%
-%%\cite{ager2003functional, huet1997zipper, mcbride2001derivative}
-%%
-%%\footnote{\url{https://ncatlab.org/nlab/show/defunctionalization}}
-%%
-%%\cite{reynolds1972definitional}
-%
-%% todo link to youtube
-%
-%% todo zipper and nested continuations
-%
-%% todo huet zipper
-%
-%% todo zipper context and derivations
-%
+
 %% todo abstract machines
-%
-%% todo
 %
 %\subsection{Delimited continuations}
 %
@@ -582,55 +620,13 @@ CPS эксплуатирует следующий изоморфизм:
 %Остальные операторы более-менее выражаются через обсуждённые нами.
 %Существует классификаций операторов по признакам --- включает ли захватываемое частичное продолжение ограничение и оставляет ли его за собой~\cite{dyvbig2007monadic}.
 %
-%%\subsubsection{Реализация ограниченных продолжений}
-%
-%%\begin{task}
-%%    Что изменится в реализации, если продолжения должны быть multi-shot?
-%%\end{task}
-%
-%%\cite{mcbride2001derivative, huet1997zipper, ager2003functional}
-%
-%% todo in paper
-%
-%%\subsubsection{State machine}
-%
-%% todo Cont is for delimited continuations
-%
-%% todo
-%
-%%\subsubsection{Continuios stack}
-%
-%% todo
-%
-%%\subsubsection{Segmented stack}
-%
-%% todo
-%
 %% todo in haskell
 %
 %%\subsection{Использование продолжений}
 %
-%% todo trampolining
-%
-%% todo difference lists
-%
-%% todo lens
-%
-%% todo CPS интерпретаторы, переходы
-%
-%% todo корутины
-%
-%% todo генераторы
-%
-%% todo эффекты
-%
-%% todo transducers, pipelines and internal iteration
-%
 %% todo CEKT
 %
 %% todo continuation semantics
-%
-%% todo continuations and operating systems
 %
 %% todo single-shot/multi-shot
 %
@@ -641,8 +637,6 @@ CPS эксплуатирует следующий изоморфизм:
 %% todo implementing while & break
 %
 %% todo control operator, runtime наизнанку
-%
-%% todo sicp
 %
 %% todo CPS трансформация интерпретаторов
 %
@@ -656,21 +650,11 @@ CPS эксплуатирует следующий изоморфизм:
 %
 %% todo game semantics from Carl's slides
 %
-%% todo STG machine and lazyness
-%
 %% todo http://www.serpentine.com/blog/2011/02/25/cps-is-great-cps-is-terrible/
 %
 %% todo https://www.joachim-breitner.de/blog/778-Don%E2%80%99t_think,_just_defunctionalize
 
-% todo реализация продолжений
-
-% todo семантика редукционных контекстов
-
-% todo список Чёрча
-
 % todo связь с Box f
-
-%% todo коиндуктивные домены
-%
+% todo коиндуктивные домены
 
 % todo rust continuations
