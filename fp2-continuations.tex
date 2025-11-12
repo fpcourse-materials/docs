@@ -129,7 +129,7 @@
 
 Существует стандартный инструмент PLT Redex\footnote{\url{https://redex.racket-lang.org/}} для описания и тестирования семантики в стиле редукционных контекстов.
 
-\subsubsection{Денотационная семантика с продолжениями} \label{subsubsec:denotational-cont}
+\subsubsection{Continuation semantics} \label{subsubsec:continuation-semantics}
 
 Запишем денотационную семантику нашего языка:
 \begin{minted}{haskell}
@@ -149,7 +149,11 @@
 \end{minted}
 Получили представление продолжения как стека фреймов.
 
-Запишем теперь денотационную семантику для домена \mintinline{haskell}{K -> Int} как пару взаимно-рекурсивных функций:
+Денотационную семантику будем записывать для домена \mintinline{haskell}{K -> Int}.
+Такая разновидность денотационной семантики с явным представлением смысла остатка программы (в виде \mintinline{haskell}{K}) иногда называют \vocab{continuation semantics}.
+А соответствующий стиль программирования с передачей продолжений --- \vocab{continuation passing style (CPS)}.
+
+В нашем continuation semantics будет выглядеть как пара взаимно-рекурсивных функций:
 \begin{minted}{haskell}
     evalK :: Expr -> K -> Int
     evalK e k = case e of
@@ -180,9 +184,9 @@
 
 Первая рекурсивная реализация \texttt{evalDirect} не заботилась о продолжениях.
 Однако, продолжения --- это неотъемлемая часть процесса вычисления, вычислителю нужно знать, что делать дальше в каждый момент.
-То есть \texttt{evalDirect} лишь делегирует работу с продолжениями определяемого языка мета-языку, но каким образом?
-Заметьте, что полученная в итоге реализация \texttt{evalK} хвостово-рекурсивная, а значит, может быть скомпилирована в цикл, не потребляющий аппаратный стек, при этом \mintinline{haskell}{K} это стек.
-Таким образом, в первом случае мы делали рекурсивные вызовы и продолжение аллоцировалось как (аппаратный) стек мета-языка, а во втором случае мы самостоятельно аллоцируем стек в куче.
+На самом деле \texttt{evalDirect} лишь делегирует работу с продолжениями определяемого языка мета-языку, но каким образом?
+Заметьте, что полученная в итоге реализация \texttt{evalK} хвостово-рекурсивная, а значит, может быть скомпилирована в цикл, не потребляющий стек вызовов, при этом \mintinline{haskell}{K} это стек.
+Таким образом, в первом случае мы делали рекурсивные вызовы и продолжение аллоцировалось на (аппаратном) стеке мета-языка, а во втором случае мы самостоятельно аллоцируем стек в куче.
 
 В случае, если стек мета-языка реализован поверх аппаратного, есть риск ошибки его переполнения.
 Чтобы этого избежать, используется техника \vocab{trampolining}, которая как раз состоит в ручной аллокации продолжения в куче~\cite{ganz1999trampolined, bjarnarson2012stackless}.
@@ -198,7 +202,7 @@
 \vocab{Продолжения первого класса (first-class continuations)} --- продолжения, которые представимы в программе в виде значений.
 Учитывая, что продолжение имеет вакантное место ещё не вычисленного подвыражения, продолжения первого класса представляют функциями первого класса.
 
-Чтобы получить в коде продолжение первого класса, нужно либо написать код в специальном виде (см.\ далее\ \ref{subsec:cps}), либо воспользоваться встроенным в язык оператором, которых придумано великое множество~\cite[приложение A]{hillerstrom2022foundations}.
+Чтобы получить в коде продолжение первого класса, нужно либо написать код в CPS, либо воспользоваться встроенным в язык оператором, которых придумано великое множество~\cite[приложение A]{hillerstrom2022foundations}.
 Например, $J$, \texttt{escape}~\cite{reynolds1972definitional}, \texttt{call/cc}\ldots
 
 Для примера реализуем в языке операцию \texttt{Cont}, позволяющую захватить текущее продолжение.
@@ -276,13 +280,14 @@
     \item \mintinline{haskell}{c 10 -. contLam "k" (v "k" @ c 1 -. v "k" @ c 2)} --- $\step k \ap 1 - k \ap 2 \step 9 - 8 \step 1$.
 \end{itemize}
 
-\subsection{Continuation-passing style (CPS)} \label{subsec:cps}
+\subsection{Функциональные продолжения} \label{subsec:functional-cps}
 
 % todo higher-order CPS
 
-Если операция получения текущего продолжения не встроена в язык, текущее продолжение всё равно можно получить, переписав программу в \vocab{continuation-passing style (CPS)}.
+Воспользуемся CPS в контексте shallow embedding, который будет сразу строить значение в домене \mintinline{haskell}{forall r . (a -> r) -> r}, где \mintinline{haskell}{a -> r}~--- функциональное представление продолжения.
+Так, мы в коде программы в каждой точке будем иметь доступ к продолжению.
 
-CPS эксплуатирует следующий изоморфизм:
+Такой CPS эксплуатирует следующий изоморфизм:
 \begin{minted}{haskell}
     to :: a -> (forall r . (a -> r) -> r)
     to x k = k x
@@ -300,8 +305,8 @@ CPS эксплуатирует следующий изоморфизм:
     a \le b \iff \forall r\ldotp (b \le r) \Rightarrow (a \le r)
 \end{gather*}
 
-Например, мы можем переписать факториал в стиле CPS.
-Заметьте, что код имеет доступ к продолжению первого класса (однако, никак нетривиально не использует его).
+Например, мы можем переписать факториал в CPS.
+Заметьте, что код имеет доступ к продолжению первого класса (однако, пока никак нетривиально не использует его).
 \begin{minted}{haskell}
     facCps :: Int -> (forall r . (Int -> r) -> r)
     facCps n k
@@ -337,8 +342,8 @@ CPS эксплуатирует следующий изоморфизм:
 \end{minted}
 
 Мы снова получили представление продолжения в виде стека фреймов.
-А значит, интерпретатор полученный нами ранее (\ref{subsubsec:denotational-cont}) является CPS версией обычного интерпретатора, только с дефункционализированными продолжениями (они удобны для отладки~--- их можно распечатать, в отличие от функций Haskell).
-Если расширить тот наш язык и написать на нём факториал, а потом сделать fusion (рефункционализацию дерева программы), мы получим текущую реализацию факториала.
+А значит, интерпретатор \texttt{evalK} полученный нами ранее (\ref{subsubsec:continuation-semantics}) является CPS версией обычного интерпретатора, только с дефункционализированными продолжениями (они удобны для отладки~--- их можно распечатать, в отличие от функций Haskell).
+Если расширить тот наш язык и написать на нём факториал, а потом сделать fusion (рефункционализацию дерева программы), мы получим текущую реализацию факториала. % todo
 
 Теперь заметим, что операция умножения ассоциативна, а значит, можно \texttt{snoc} заменить на умножение, а продолжение представить одним числом.
 Получим привычную реализацию факториала с аккумулятором:
@@ -414,7 +419,7 @@ CPS эксплуатирует следующий изоморфизм:
 
 Монада \mintinline{haskell}{Cont} даёт реализацию встроенного языка, в котором можно получить продолжение вычисления:
 \begin{minted}{haskell}
-    cont :: ((a -> r) -> r) -> Cont r a
+    Cont :: ((a -> r) -> r) -> Cont r a
 \end{minted}
 
 \subsubsection{\texttt{call/cc}}
@@ -516,143 +521,119 @@ Example: coroutines.}}.
 
 \subsection{Delimited continuations} \label{subsec:delimited-cont}
 
+Ранее мы рассматривали \vocab{неограниченные (undelimited) продолжения}, которые представляют собой весь остаток программы до её конца.
+В том числе, мы рассматривали оператор \texttt{call/cc}, который реифицирует неограниченное продолжение в виде функции для непосредственного использования пользователем.
+Однако, предоставление пользователю неограниченных продолжений ведёт к множеству проблем и не очень полезно на практике~\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
+
+Более того, неограниченные продолжения де-факто --- не совсем функции, так как они не возвращают результата (он уже ``beyond the grave''), следовательно, они также не композируются (как и странно композировать \texttt{abort} с \texttt{exit})\footnote{\url{https://okmij.org/ftp/continuations/undelimited.html}}.
+Неограниченные продолжения --- это скорее ко-значения, пока часть программы выполняется, они ожидают её результата~\cite{curien2000duality}.
+
+Вместо этого вводятся парные операторы для работы с \vocab{ограниченными (delimited) продолжениями}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}.
+Один позволяет пользователю ограничить продолжение, второй --- захватить всё продолжение до вхождения первого, ограничивающего, оператора.
+Таким образом, всё продолжение нарезается на сегменты, некоторый префикс которых может быть реифицирован.
+
+Например, операция кидания и поимки исключения состоит из конструкции \mintinline{kotlin}|try-catch|, ограничивающей продолжение, и \mintinline{kotlin}|throw|, которая позволяет выкинуть частичное продолжения (не захватывая его):
+\[
+    E_1[catch\{E_2[throw(v)], f\}] \to E_1[f(v)]
+\]
+
+В литературе встречается огромное количество операторов, для работы с ограниченными продолжениями~\cite[приложение А]{hillerstrom2022foundations}.
+Мы рассмотрим классификацию из классической работы~\cite{dyvbig2007monadic}.
+
+Работа вводит следующий набор синтаксических конструкций (рис.~\ref{fig:prompt-syntax} и~\ref{fig:dc-operational}) для работы с ограниченными продолжениями в дополнение к чистому call-by-value лямбда-исчислению.
+Исторически в лиспах неограниченные продолжения были ограничены лишь REPL, отсюда название ограничений --- ``prompt''.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.75\linewidth]{figs/prompt-syntax}
+    \caption{Синтаксис $\lambda$-исчисления с примитивами для работы с продолжениями.}
+    \label{fig:prompt-syntax}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/dc-operational}
+    \caption{Операционная семантика.}
+    \label{fig:dc-operational}
+\end{figure}
+
+\begin{itemize}
+    \item $newPrompt$ --- создаёт свежий идентификатор (метку) ограничения;
+    \item $pushPrompt \ap p \ap e$ --- устанавливает ограничение с меткой $p$ и исполняет выражение $e$;
+    \item $withSubCont\ap p\ap f$ --- захватывает частичное продолжение до ограничения с меткой $p$ и передаёт в функцию $f$, возвращает результат $f$ (рис.~\ref{fig:push-prompt});
+    \item $pushSubCont\ap k \ap v$ --- исполняет композицию текущего продолжения и $k$ на значении $v$.
+\end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{figs/push-prompt}
+    \caption{Пример работы \texttt{withSubCont}.}
+    \label{fig:push-prompt}
+\end{figure}
+
+Операторы ограниченных продолжений легко понять как \vocab{resumable exceptions}, исключения, которые можно поймать, а программу возобновить с того места, где исключение было выброшено (с некоторым значением).
+Необычно то, что классические операторы ограниченных продолжений принимают код, работающий с частичным продолжением в месте ``кидания исключения'', а не в месте ``поимки''.
+То есть блок обработки пишется не с \mintinline{kotlin}|catch|, а с \mintinline{kotlin}|throw|:
+
+\begin{gather*}
+    ч
+    E_1[withSubCont \ap p \ap \{E_2[pushSubCont \ap f]\}] \to E_1[f \ap E_2]
+    \\
+    E_1[catch\{E_2[throw \ap v], f\}] \to E_1[f \ap v \ap (\lambda x\ldotp E_2[x])]
+\end{gather*}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\linewidth]{figs/dc-example}
+    \caption{Пример выражения (результат --- $9$).}
+    \label{fig:dc-example}
+\end{figure}
+
+\begin{task}
+    Поредуцируйте пример рис.~\ref{fig:dc-example}.
+\end{task}
+
+Остальные операторы более-менее выражаются через обсуждённые нами.
+Существует классификаций операторов по признакам --- включает ли захватываемое частичное продолжение ограничение и оставляет ли его за собой~\cite{dyvbig2007monadic}.
+
+% todo in haskell native implementation
+
 % todo
 
 \subsection{Приложения продолжений} \label{subsec:cont-applications}
 
-% todo
-
-
-
-
-
-
-
-
-
 % todo calculating correct compilers, compiling with continuations W. Appel
 
+% todo CEKT
+% todo abstract machines
 
+% todo continuation semantics
 
+% todo single-shot/multi-shot
 
-%% todo abstract machines
-%
-%\subsection{Delimited continuations}
-%
-%Ранее мы рассматривали \vocab{неограниченные (undelimited) продолжения}, которые представляют собой весь остаток программы до её конца.
-%В том числе, мы рассматривали оператор \texttt{call/cc}, который реифицирует неограниченное продолжение в виде функции для непосредственного использования пользователем.
-%Однако, предоставление пользователю неограниченных продолжений ведёт к множеству проблем и не очень полезно на практике~\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
-%
-%Более того, неограниченные продолжения де-факто --- не совсем функции, так как они не возвращают результата (он уже ``beyond the grave''), следовательно, они также не композируются (как и странно композировать \texttt{abort} с \texttt{exit})\footnote{\url{https://okmij.org/ftp/continuations/undelimited.html}}.
-%Неограниченные продолжения --- это скорее ко-значения, пока часть программы выполняется, они ожидают её результата~\cite{curien2000duality}.
-%
-%Вместо этого вводятся парные операторы для работы с \vocab{ограниченными (delimited) продолжениями}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}.
-%Один позволяет пользователю ограничить продолжение, второй --- захватить всё продолжение до вхождения первого, ограничивающего, оператора.
-%Таким образом, всё продолжение нарезается на сегменты, некоторый префикс которых может быть реифицирован.
-%
-%Например, операция кидания и поимки исключения состоит из конструкции \mintinline{kotlin}|try-catch|, ограничивающей продолжение, и \mintinline{kotlin}|throw|, которая позволяет выкинуть частичное продолжения (не захватывая его):
-%\[
-%    E_1[catch\{E_2[throw(v)], f\}] \to E_1[f(v)]
-%\]
-%
-%Оказывается, ограниченные продолжения первого класса --- крайне могущественная языковая возможность.
-%Что, может быть, и не так удивительно, ведь через них программисту доступно состояние интерпретатора, изнанка исполнения.
-%Например, через них можно выразить все монадические и алгебраические эффекты.
-%Подробнее поговорим об этом в следующих разделах~\ref{sec:monads} и~\ref{sec:effect-handlers}.
-%
-%\subsubsection{Delimited continuations operators}
-%
-%В литературе встречается огромное количество операторов, для работы с ограниченными продолжениями~\cite[приложение А]{hillerstrom2022foundations}.
-%Мы рассмотрим классификацию из классической работы~\cite{dyvbig2007monadic}.
-%
-%Работа вводит следующий набор синтаксических конструкций (рис.~\ref{fig:prompt-syntax} и~\ref{fig:dc-operational}) для работы с ограниченными продолжениями в дополнение к чистому call-by-value лямбда-исчислению.
-%Исторически в лиспах неограниченные продолжения были ограничены лишь REPL, отсюда название ограничений --- ``prompt''.
-%
-%\begin{figure}[h]
-%    \centering
-%    \includegraphics[width=0.75\linewidth]{figs/prompt-syntax}
-%    \caption{Синтаксис $\lambda$-исчисления с примитивами для работы с продолжениями.}
-%    \label{fig:prompt-syntax}
-%\end{figure}
-%
-%\begin{figure}
-%    \centering
-%    \includegraphics[width=0.8\textwidth]{figs/dc-operational}
-%    \caption{Операционная семантика.}
-%    \label{fig:dc-operational}
-%\end{figure}
-%
-%\begin{itemize}
-%    \item $newPrompt$ --- создаёт свежий идентификатор (метку) ограничения;
-%    \item $pushPrompt \ap p \ap e$ --- устанавливает ограничение с меткой $p$ и исполняет выражение $e$;
-%    \item $withSubCont\ap p\ap f$ --- захватывает частичное продолжение до ограничения с меткой $p$ и передаёт в функцию $f$, возвращает результат $f$ (рис.~\ref{fig:push-prompt});
-%    \item $pushSubCont\ap k \ap v$ --- исполняет композицию текущего продолжения и $k$ на значении $v$.
-%\end{itemize}
-%
-%\begin{figure}[h]
-%    \centering
-%    \includegraphics[width=0.7\linewidth]{figs/push-prompt}
-%    \caption{Пример работы \texttt{withSubCont}.}
-%    \label{fig:push-prompt}
-%\end{figure}
-%
-%Операторы ограниченных продолжений легко понять как \vocab{resumable exceptions}, исключения, которые можно поймать, а программу возобновить с того места, где исключение было выброшено (с некоторым значением).
-%Необычно то, что классические операторы ограниченных продолжений принимают код, работающий с частичным продолжением в месте ``кидания исключения'', а не в месте ``поимки''.
-%То есть блок обработки пишется не с \mintinline{kotlin}|catch|, а с \mintinline{kotlin}|throw|:
-%
-%\begin{gather*}ч
-%    E_1[withSubCont \ap p \ap \{E_2[pushSubCont \ap f]\}] \to E_1[f \ap E_2]
-%    \\
-%    E_1[catch\{E_2[throw \ap v], f\}] \to E_1[f \ap v \ap (\lambda x\ldotp E_2[x])]
-%\end{gather*}
-%
-%\begin{figure}[h]
-%    \centering
-%    \includegraphics[width=0.8\linewidth]{figs/dc-example}
-%    \caption{Пример выражения (результат --- $9$).}
-%    \label{fig:dc-example}
-%\end{figure}
-%
-%\begin{task}
-%    Поредуцируйте пример рис.~\ref{fig:dc-example}.
-%\end{task}
-%
-%Остальные операторы более-менее выражаются через обсуждённые нами.
-%Существует классификаций операторов по признакам --- включает ли захватываемое частичное продолжение ограничение и оставляет ли его за собой~\cite{dyvbig2007monadic}.
-%
-%% todo in haskell
-%
-%%\subsection{Использование продолжений}
-%
-%% todo CEKT
-%
-%% todo continuation semantics
-%
-%% todo single-shot/multi-shot
-%
-%% todo codensity
-%
-%% todo problems with continuations: typing and resources
-%
-%% todo implementing while & break
-%
-%% todo control operator, runtime наизнанку
-%
-%% todo CPS трансформация интерпретаторов
-%
-%% todo SPJ compiling without continuations
-%
-%% todo The Essence of Compiling with Continuations
-%
-%% todo calculating correct compilers
-%
-%% todo reference to best refactoring https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html
-%
-%% todo game semantics from Carl's slides
-%
-%% todo http://www.serpentine.com/blog/2011/02/25/cps-is-great-cps-is-terrible/
-%
-%% todo https://www.joachim-breitner.de/blog/778-Don%E2%80%99t_think,_just_defunctionalize
+% todo codensity
+
+% todo problems with continuations: typing and resources
+
+% todo implementing while & break
+
+% todo control operator, runtime наизнанку
+
+% todo CPS трансформация интерпретаторов
+
+% todo SPJ compiling without continuations
+
+% todo The Essence of Compiling with Continuations
+
+% todo calculating correct compilers
+
+% todo reference to best refactoring https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html
+
+% todo game semantics from Carl's slides
+
+% todo http://www.serpentine.com/blog/2011/02/25/cps-is-great-cps-is-terrible/
+
+% todo https://www.joachim-breitner.de/blog/778-Don%E2%80%99t_think,_just_defunctionalize
 
 % todo связь с Box f
 % todo коиндуктивные домены
