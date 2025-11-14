@@ -651,6 +651,8 @@ Example: coroutines.}}.
 
 \subsection{Delimited continuations} \label{subsec:delimited-cont}
 
+% todo Monads and composable continuations
+
 Ранее мы рассматривали \vocab{неограниченные (undelimited) продолжения}, которые представляют собой весь остаток программы до её конца.
 В том числе, мы рассматривали оператор \texttt{call/cc}, который реифицирует неограниченное продолжение в виде функции для непосредственного использования пользователем.
 Однако, предоставление пользователю неограниченных продолжений ведёт к множеству проблем и не очень полезно на практике~\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
@@ -658,7 +660,7 @@ Example: coroutines.}}.
 Более того, неограниченные продолжения де-факто --- не совсем функции, так как они не возвращают результата (он уже ``beyond the grave''), следовательно, они также не композируются (как и странно композировать \texttt{abort} с \texttt{exit})\footnote{\url{https://okmij.org/ftp/continuations/undelimited.html}}.
 Неограниченные продолжения --- это скорее ко-значения, пока часть программы выполняется, они ожидают её результата~\cite{curien2000duality}.
 
-Вместо этого вводятся парные операторы для работы с \vocab{ограниченными (delimited) продолжениями}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}.
+Вместо этого вводятся парные операторы для работы с \vocab{ограниченными (delimited) продолжениями}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}. % todo разграниченными/composable/subcontinuations
 Один позволяет пользователю ограничить продолжение, второй --- захватить всё продолжение до вхождения первого, ограничивающего, оператора.
 Таким образом, всё продолжение нарезается на сегменты, некоторый префикс которых может быть реифицирован.
 
@@ -771,3 +773,12 @@ Example: coroutines.}}.
 % todo rust continuations
 
 % todo runtime кишками наизнанку
+
+% todo продолжение как структура данных поддерживаемая интерпретатором чтобы знать куда идти дальше
+% todo продолжения и реальное железо
+
+% todo controlling allocations of continuations
+
+% todo Delimited Continuations in Operating Systems
+
+% todo Revisiting Coroutines
