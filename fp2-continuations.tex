@@ -432,20 +432,17 @@
 
 \subsubsection{\texttt{call/cc}}
 
-Можно получить доступ к продолжению просто написав где-то в \mintinline{haskell}|do|-нотации конструктор:
-\begin{minted}{haskell}
-    do ...; Cont \?\framebox{k}? -> ...; ...
-\end{minted}
-Однако, для получения продолжений, как правило, пользуются специальными операторами.
-Классическим примером является \texttt{call/cc} (call with current continuation):
+Самым известным классическим оператором, который использовали в Scheme для получения продолжений первого класса, является \vocab{\texttt{call/cc} (call with current continuation)}\footnote{\url{https://en.wikipedia.org/wiki/Call-with-current-continuation}}\footnote{\url{https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style\#callCC}}.
+Предоставляемое продолжение является \vocab{неограниченным (undelimited/abortive)}, так как оно содержит ``конец программы'' --- никакой код не будет исполняться после его вызова.
+Неограниченные продолжения де-факто --- не совсем функции, так как они не возвращают результата (он уже ``beyond the grave''), следовательно, они также не композируются (также как странно композировать \texttt{abort} с \texttt{exit})\footnote{\url{https://okmij.org/ftp/continuations/undelimited.html}}\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
+Они скорее являются ко-значениями: пока часть программы выполняется, они ожидают её результата~\cite{curien2000duality}.
+
+Давайте сэмулируем \texttt{call/cc} в монаде \mintinline{haskell}{Cont}.
+Захватить всё продолжение программы у нас не выйдет, так как оно собирается только в рамках \mintinline{haskell}{Cont}, но мы можем проигнорировать продолжение вызова захваченного продолжения:
 \begin{minted}{haskell}
     callCC :: ((a -> Cont r b) -> Cont r a) -> Cont r a
     callCC f = Cont \k -> runCont (f \x -> Cont \_ -> k x) k
-\end{minted}
 
-\texttt{call/cc} принимает функцию \texttt{f}, в которую передаёт текущее продолжение (рис.~\ref{fig:call-cc}).
-При этом вызов продолжения работает как \mintinline{kotlin}|return| для \texttt{f} (продолжение не содержит кода \texttt{f}):
-\begin{minted}{haskell}
     foo :: Int -> Cont r String
     foo x = callCC \k -> do
       let y = x ^ 2 + 3
@@ -453,149 +450,240 @@
       pure (show $ y - 4)
 \end{minted}
 
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.6\linewidth]{figs/call-cc}
-    \caption{\texttt{call/cc} вызывает функцию \texttt{f} с продолжением \texttt{k}.
-    Аргумент \texttt{k} (или результат \texttt{f}) подставляется вместо вхождения \texttt{call/cc}.}
-    \label{fig:call-cc}
-\end{figure}
-
-Например, с помощью \texttt{call/cc} можно реализовать кооперативную многозадачность\footnote{\href{https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style\#Example:_coroutines}{(wiki) Continuation-passing style.
-Example: coroutines.}}.
-Однако, считается, что \texttt{call/cc} --- не самый удачный примитив\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
-
-\subsubsection{The mother of all monads} \label{subsubsec:monadic-reflection}
-
-\begin{minted}{haskell}
-    newtype Cont r a = Cont { runCont :: (a -> r) -> r }
-
-    instance Functor (Cont r) where
-      -- fmap :: (a -> b) -> ((a -> r) -> r) -> ((b -> r) -> r)
-      fmap f (Cont comp) = Cont \k -> comp (k . f)
-
-    instance Applicative (Cont r) where
-      pure x = Cont \k -> k x
-      (<*>) = ap
-
-    instance Monad (Cont r) where
-      Cont comp >>= k = Cont \k' -> comp \x -> runCont (k x) k'
-
-    fibCont :: Int -> Cont r Int
-    fibCont n = if n <= 2 then pure 1 else do
-      res1 <- fibCont (n - 1)
-      res2 <- fibCont (n - 2)
-      pure (res1 + res2)
+\subsection{Delimited continuations} \label{subsec:delimited-cont}
 
 
-    runIdentityC :: (forall r . Cont r a) -> a
-    runIdentityC comp = runCont comp id
-
-    exampleIdentity :: Int
-    exampleIdentity = runIdentityC do
-      x <- pure 4
-      y <- pure 5
-      pure (x + y)
 
 
-    raise :: Cont (Maybe r) a
-    raise = Cont $ const Nothing
-
-    runExn :: (forall r . Cont (Maybe r) a) -> Maybe a
-    runExn comp = runCont comp Just
-
-    exampleExn :: Int -> Maybe Int
-    exampleExn n = runExn do
-      when (n < 0) raise
-      pure (n + 1)
+В современном мире наибольшую популярность имеют операторы, работающие с
 
 
-    choice :: Cont [r] Bool
-    choice = Cont \k -> k True ++ k False ++ k True ++ k False
 
-    runNondet :: (forall r . Cont [r] a) -> [a]
-    runNondet comp = runCont comp (:[])
-
-    exampleNondet :: Int -> [Int]
-    exampleNondet n = runNondet do
-      b <- choice
-      if b then pure n else pure (n - 1)
+В современном мире
 
 
-    -- s -> (s, a) ~ ((s, a) -> r) -> (s -> r)
-    -- ~ (a -> s -> r) -> (s -> r) ~ Cont (s -> r) a
-
-    get :: Cont (s -> r) s -- (s -> s -> r) -> (s -> r)
-    get = Cont \k s -> k s s
-
-    put :: s -> Cont (s -> r) ()
-    put s' = Cont \k _s -> k () s'
-
-    runStateK :: (forall r . Cont (s -> r) a) -> s -> (a, s)
-    runStateK comp = runCont comp (,)
-
-    exampleState :: Int -> ((), Int)
-    exampleState = runStateK do
-      s <- get
-      put (s + 1)
+В современном мире особую популярность имеют
 
 
-    reflect' :: Monad m => m a -> forall r . Cont (m r) a
-    reflect' comp = Cont (comp >>=) -- k :: a -> m r
-
-    reify' :: Monad m => (forall r . Cont (m r) a) -> m a
-    reify' comp = runCont comp pure
-
-    newtype ContT r m a = ContT { runContT :: (a -> m r) -> m r }
-    newtype CodensityT m a = CodensityT
-      { runCodensityT :: forall r . (a -> m r) -> m r }
-      deriving Functor
-
-    instance Applicative (CodensityT m) where
-      pure x = CodensityT \k -> k x
-      (<*>) = ap
-
-    instance Monad (CodensityT m) where
-      CodensityT comp >>= k = CodensityT \k' ->
-        comp \x -> runCodensityT (k x) k'
-
-    exampleCodensity :: Int -> (Int, Int)
-    exampleCodensity = runState $ run $ do
-      s <- getCod
-      putCod (s + 1)
-      pure 1
-      where
-        run :: CodensityT (State Int) Int -> State Int Int
-        run cod = (runCodensityT cod) @Int pure
-
-    getCod :: CodensityT (State s) s
-    getCod = CodensityT \k -> State \s -> runState (k s) s
-
-    putCod :: s -> CodensityT (State s) ()
-    putCod s' = CodensityT \k -> State \_s -> runState (k ()) s'
 
 
-    class MonadR m where
-      -- m a -> (a -> m r) -> m r
-      reflect :: m a -> forall r . Cont (m r) a
-      -- (forall r . (a -> m r) -> m r) -> m a
-      reify :: (forall r . Cont (m r) a) -> m a
+%Вместо этого вводятся парные операторы для работы с \vocab{ограниченными (delimited) продолжениями}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}.
+%Один позволяет пользователю ограничить продолжение, второй --- захватить всё продолжение до вхождения первого, ограничивающего, оператора.
+%Таким образом, всё продолжение нарезается на сегменты, некоторый префикс которых может быть реифицирован.
+%
+%Например, операция кидания и поимки исключения состоит из конструкции \mintinline{kotlin}|try-catch|, ограничивающей продолжение, и \mintinline{kotlin}|throw|, которая позволяет выкинуть частичное продолжения (не захватывая его):
+%\[
+%    E_1[catch\{E_2[throw(v)], f\}] \to E_1[f(v)]
+%\]
+%
+%В литературе встречается огромное количество операторов, для работы с ограниченными продолжениями~\cite[приложение А]{hillerstrom2022foundations}.
+%Мы рассмотрим классификацию из классической работы~\cite{dyvbig2007monadic}.
+%
+%Работа вводит следующий набор синтаксических конструкций (рис.~\ref{fig:prompt-syntax} и~\ref{fig:dc-operational}) для работы с ограниченными продолжениями в дополнение к чистому call-by-value лямбда-исчислению.
+%Исторически в лиспах неограниченные продолжения были ограничены лишь REPL, отсюда название ограничений --- ``prompt''.
+%
+%\begin{figure}[h]
+%    \centering
+%    \includegraphics[width=0.75\linewidth]{figs/prompt-syntax}
+%    \caption{Синтаксис $\lambda$-исчисления с примитивами для работы с продолжениями.}
+%    \label{fig:prompt-syntax}
+%\end{figure}
+%
+%\begin{figure}
+%    \centering
+%    \includegraphics[width=0.8\textwidth]{figs/dc-operational}
+%    \caption{Операционная семантика.}
+%    \label{fig:dc-operational}
+%\end{figure}
+%
+%\begin{itemize}
+%    \item $newPrompt$ --- создаёт свежий идентификатор (метку) ограничения;
+%    \item $pushPrompt \ap p \ap e$ --- устанавливает ограничение с меткой $p$ и исполняет выражение $e$;
+%    \item $withSubCont\ap p\ap f$ --- захватывает частичное продолжение до ограничения с меткой $p$ и передаёт в функцию $f$, возвращает результат $f$ (рис.~\ref{fig:push-prompt});
+%    \item $pushSubCont\ap k \ap v$ --- исполняет композицию текущего продолжения и $k$ на значении $v$.
+%\end{itemize}
+%
+%\begin{figure}[h]
+%    \centering
+%    \includegraphics[width=0.7\linewidth]{figs/push-prompt}
+%    \caption{Пример работы \texttt{withSubCont}.}
+%    \label{fig:push-prompt}
+%\end{figure}
+%
+%Операторы ограниченных продолжений легко понять как \vocab{resumable exceptions}, исключения, которые можно поймать, а программу возобновить с того места, где исключение было выброшено (с некоторым значением).
+%Необычно то, что классические операторы ограниченных продолжений принимают код, работающий с частичным продолжением в месте ``кидания исключения'', а не в месте ``поимки''.
+%То есть блок обработки пишется не с \mintinline{kotlin}|catch|, а с \mintinline{kotlin}|throw|:
+%
+%\begin{gather*}
+%    ч
+%    E_1[withSubCont \ap p \ap \{E_2[pushSubCont \ap f]\}] \to E_1[f \ap E_2]
+%    \\
+%    E_1[catch\{E_2[throw \ap v], f\}] \to E_1[f \ap v \ap (\lambda x\ldotp E_2[x])]
+%\end{gather*}
+%
+%\begin{figure}[h]
+%    \centering
+%    \includegraphics[width=0.8\linewidth]{figs/dc-example}
+%    \caption{Пример выражения (результат --- $9$).}
+%    \label{fig:dc-example}
+%\end{figure}
+%
+%\begin{task}
+%    Поредуцируйте пример рис.~\ref{fig:dc-example}.
+%\end{task}
+%
+%Остальные операторы более-менее выражаются через обсуждённые нами.
+%Существует классификаций операторов по признакам --- включает ли захватываемое частичное продолжение ограничение и оставляет ли его за собой~\cite{dyvbig2007monadic}.
 
-    newtype State s a = State { runState :: s -> (a, s) } deriving Functor
+% todo in haskell native implementation
 
-    instance Applicative (State s) where
-      pure x = State \s -> (x, s)
-      (<*>) = undefined
+% todo
 
-    instance MonadR (State s) where
-      reflect :: State s a -> (forall r . Cont (State s r) a)
-      reflect comp = Cont \k -> State \s ->
-        let (a, s') = runState comp s in
-        runState (k a) s'
 
-      reify :: (forall r . Cont (State s r) a) -> State s a
-      reify comp = State $ runState (runCont comp (\x -> State (x,)))
-\end{minted}
+
+
+
+
+
+%\begin{figure}[h]
+%    \centering
+%    \includegraphics[width=0.6\linewidth]{figs/call-cc}
+%    \caption{\texttt{call/cc} вызывает функцию \texttt{f} с продолжением \texttt{k}.
+%    Аргумент \texttt{k} (или результат \texttt{f}) подставляется вместо вхождения \texttt{call/cc}.}
+%    \label{fig:call-cc}
+%\end{figure}
+
+%\subsubsection{The mother of all monads} \label{subsubsec:monadic-reflection}
+%
+%\begin{minted}{haskell}
+%    newtype Cont r a = Cont { runCont :: (a -> r) -> r }
+%
+%    instance Functor (Cont r) where
+%      -- fmap :: (a -> b) -> ((a -> r) -> r) -> ((b -> r) -> r)
+%      fmap f (Cont comp) = Cont \k -> comp (k . f)
+%
+%    instance Applicative (Cont r) where
+%      pure x = Cont \k -> k x
+%      (<*>) = ap
+%
+%    instance Monad (Cont r) where
+%      Cont comp >>= k = Cont \k' -> comp \x -> runCont (k x) k'
+%
+%    fibCont :: Int -> Cont r Int
+%    fibCont n = if n <= 2 then pure 1 else do
+%      res1 <- fibCont (n - 1)
+%      res2 <- fibCont (n - 2)
+%      pure (res1 + res2)
+%
+%
+%    runIdentityC :: (forall r . Cont r a) -> a
+%    runIdentityC comp = runCont comp id
+%
+%    exampleIdentity :: Int
+%    exampleIdentity = runIdentityC do
+%      x <- pure 4
+%      y <- pure 5
+%      pure (x + y)
+%
+%
+%    raise :: Cont (Maybe r) a
+%    raise = Cont $ const Nothing
+%
+%    runExn :: (forall r . Cont (Maybe r) a) -> Maybe a
+%    runExn comp = runCont comp Just
+%
+%    exampleExn :: Int -> Maybe Int
+%    exampleExn n = runExn do
+%      when (n < 0) raise
+%      pure (n + 1)
+%
+%
+%    choice :: Cont [r] Bool
+%    choice = Cont \k -> k True ++ k False ++ k True ++ k False
+%
+%    runNondet :: (forall r . Cont [r] a) -> [a]
+%    runNondet comp = runCont comp (:[])
+%
+%    exampleNondet :: Int -> [Int]
+%    exampleNondet n = runNondet do
+%      b <- choice
+%      if b then pure n else pure (n - 1)
+%
+%
+%    -- s -> (s, a) ~ ((s, a) -> r) -> (s -> r)
+%    -- ~ (a -> s -> r) -> (s -> r) ~ Cont (s -> r) a
+%
+%    get :: Cont (s -> r) s -- (s -> s -> r) -> (s -> r)
+%    get = Cont \k s -> k s s
+%
+%    put :: s -> Cont (s -> r) ()
+%    put s' = Cont \k _s -> k () s'
+%
+%    runStateK :: (forall r . Cont (s -> r) a) -> s -> (a, s)
+%    runStateK comp = runCont comp (,)
+%
+%    exampleState :: Int -> ((), Int)
+%    exampleState = runStateK do
+%      s <- get
+%      put (s + 1)
+%
+%
+%    reflect' :: Monad m => m a -> forall r . Cont (m r) a
+%    reflect' comp = Cont (comp >>=) -- k :: a -> m r
+%
+%    reify' :: Monad m => (forall r . Cont (m r) a) -> m a
+%    reify' comp = runCont comp pure
+%
+%    newtype ContT r m a = ContT { runContT :: (a -> m r) -> m r }
+%    newtype CodensityT m a = CodensityT
+%      { runCodensityT :: forall r . (a -> m r) -> m r }
+%      deriving Functor
+%
+%    instance Applicative (CodensityT m) where
+%      pure x = CodensityT \k -> k x
+%      (<*>) = ap
+%
+%    instance Monad (CodensityT m) where
+%      CodensityT comp >>= k = CodensityT \k' ->
+%        comp \x -> runCodensityT (k x) k'
+%
+%    exampleCodensity :: Int -> (Int, Int)
+%    exampleCodensity = runState $ run $ do
+%      s <- getCod
+%      putCod (s + 1)
+%      pure 1
+%      where
+%        run :: CodensityT (State Int) Int -> State Int Int
+%        run cod = (runCodensityT cod) @Int pure
+%
+%    getCod :: CodensityT (State s) s
+%    getCod = CodensityT \k -> State \s -> runState (k s) s
+%
+%    putCod :: s -> CodensityT (State s) ()
+%    putCod s' = CodensityT \k -> State \_s -> runState (k ()) s'
+%
+%
+%    class MonadR m where
+%      -- m a -> (a -> m r) -> m r
+%      reflect :: m a -> forall r . Cont (m r) a
+%      -- (forall r . (a -> m r) -> m r) -> m a
+%      reify :: (forall r . Cont (m r) a) -> m a
+%
+%    newtype State s a = State { runState :: s -> (a, s) } deriving Functor
+%
+%    instance Applicative (State s) where
+%      pure x = State \s -> (x, s)
+%      (<*>) = undefined
+%
+%    instance MonadR (State s) where
+%      reflect :: State s a -> (forall r . Cont (State s r) a)
+%      reflect comp = Cont \k -> State \s ->
+%        let (a, s') = runState comp s in
+%        runState (k a) s'
+%
+%      reify :: (forall r . Cont (State s r) a) -> State s a
+%      reify comp = State $ runState (runCont comp (\x -> State (x,)))
+%\end{minted}
 
 % todo Monads and composable continuations by Phill Wadler
 
@@ -624,32 +712,34 @@ Example: coroutines.}}.
 
 % todo http://www.valuedlessons.com/2008/01/monads-in-python-with-nice-syntax.html
 
+% todo \subsection*{Tardis}
+
 % todo
 
-\subsubsection{Эффективная реализация продолжений} \label{subsubsec:efficient-cps}
-
-Существует несколько классических подходов реализации продолжений на языковом уровне, которые, как правило, используются для построения генераторов или корутин.
-
-\vocab{Стековая (stackful)} реализация подразумевает, что продолжение представляется в виде аппаратного стека.
-Как только требуется захватить продолжение, стек копируется в кучу (возможно, лениво)\footnote{\href{https://youtu.be/kwS3OeoVCno?si=c4MkSkmLHNeywPrZ}{(youtube) Иван Углянский - Java Project Loom.}}.
-То есть этот подход полагается на поддержку со стороны рантайма языка.
-
-\vocab{Сегментный стек} --- стек вызовов представляется как связный список аллоцированных в куче фреймов. % todo cite
-Так, не требуется делать копирования, достаточно подмены указателей.
-Однако, в таком случае стек нелокален, что не очень хорошо для работы кешей.
-
-\vocab{Безстековая (stackless)} реализация подразумевает автоматическую CPS трансформацию пользовательского кода.
-Это можно сделать лишь средствами компилятора.
-
-В нашей реализации CPS производится огромное количество аллокаций замыканий, реифицирующих продолжения.
-Однако, если CPS получается автоматической трансляцией, можно делать эффективнее.
-Изначально продолжения придумывались для описания семантики прыжков, но можно пойти и в обратную сторону, реализовав продолжения эффективно для современных машин через \texttt{goto}.
-
-Так, состояние функции целиком один раз аллоцируется в куче, а перемещения по телу реализованы как машина состояний --- с помощью меток и прыжков.
-Таким образом, например, реализованы безстековые корутины в Kotlin\footnote{\url{https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md\#state-machines} \label{note:kotlin-state}}, генераторы в C\#\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}\ldots
-
-Даже в таком виде CPS остаётся тяжеловесной трансформацией, способной замедлить исполнение кода на порядки.
-Дело, в частности, в том, что переменные в таком подходе сложно размещать в регистрах (у функций много точек выходов и входов\footref{note:kotlin-state}), приходится постоянно записывать их в RAM --- производить \vocab{spilling}\footnote{\url{https://en.wikipedia.org/wiki/Register_allocation}}.
+%\subsubsection{Эффективная реализация продолжений} \label{subsubsec:efficient-cps}
+%
+%Существует несколько классических подходов реализации продолжений на языковом уровне, которые, как правило, используются для построения генераторов или корутин.
+%
+%\vocab{Стековая (stackful)} реализация подразумевает, что продолжение представляется в виде аппаратного стека.
+%Как только требуется захватить продолжение, стек копируется в кучу (возможно, лениво)\footnote{\href{https://youtu.be/kwS3OeoVCno?si=c4MkSkmLHNeywPrZ}{(youtube) Иван Углянский - Java Project Loom.}}.
+%То есть этот подход полагается на поддержку со стороны рантайма языка.
+%
+%\vocab{Сегментный стек} --- стек вызовов представляется как связный список аллоцированных в куче фреймов. % todo cite
+%Так, не требуется делать копирования, достаточно подмены указателей.
+%Однако, в таком случае стек нелокален, что не очень хорошо для работы кешей.
+%
+%\vocab{Безстековая (stackless)} реализация подразумевает автоматическую CPS трансформацию пользовательского кода.
+%Это можно сделать лишь средствами компилятора.
+%
+%В нашей реализации CPS производится огромное количество аллокаций замыканий, реифицирующих продолжения.
+%Однако, если CPS получается автоматической трансляцией, можно делать эффективнее.
+%Изначально продолжения придумывались для описания семантики прыжков, но можно пойти и в обратную сторону, реализовав продолжения эффективно для современных машин через \texttt{goto}.
+%
+%Так, состояние функции целиком один раз аллоцируется в куче, а перемещения по телу реализованы как машина состояний --- с помощью меток и прыжков.
+%Таким образом, например, реализованы безстековые корутины в Kotlin\footnote{\url{https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md\#state-machines} \label{note:kotlin-state}}, генераторы в C\#\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}\ldots
+%
+%Даже в таком виде CPS остаётся тяжеловесной трансформацией, способной замедлить исполнение кода на порядки.
+%Дело, в частности, в том, что переменные в таком подходе сложно размещать в регистрах (у функций много точек выходов и входов\footref{note:kotlin-state}), приходится постоянно записывать их в RAM --- производить \vocab{spilling}\footnote{\url{https://en.wikipedia.org/wiki/Register_allocation}}.
 
 % todo объяснение через дефункционализацию
 
@@ -657,88 +747,7 @@ Example: coroutines.}}.
 
 % todo картинки
 
-\subsection{Delimited continuations} \label{subsec:delimited-cont}
-
-Ранее мы рассматривали \vocab{неограниченные (undelimited) продолжения}, которые представляют собой весь остаток программы до её конца.
-В том числе, мы рассматривали оператор \texttt{call/cc}, который реифицирует неограниченное продолжение в виде функции для непосредственного использования пользователем.
-Однако, предоставление пользователю неограниченных продолжений ведёт к множеству проблем и не очень полезно на практике~\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
-
-Более того, неограниченные продолжения де-факто --- не совсем функции, так как они не возвращают результата (он уже ``beyond the grave''), следовательно, они также не композируются (как и странно композировать \texttt{abort} с \texttt{exit})\footnote{\url{https://okmij.org/ftp/continuations/undelimited.html}}.
-Неограниченные продолжения --- это скорее ко-значения, пока часть программы выполняется, они ожидают её результата~\cite{curien2000duality}.
-
-Вместо этого вводятся парные операторы для работы с \vocab{ограниченными (delimited) продолжениями}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}.
-Один позволяет пользователю ограничить продолжение, второй --- захватить всё продолжение до вхождения первого, ограничивающего, оператора.
-Таким образом, всё продолжение нарезается на сегменты, некоторый префикс которых может быть реифицирован.
-
-Например, операция кидания и поимки исключения состоит из конструкции \mintinline{kotlin}|try-catch|, ограничивающей продолжение, и \mintinline{kotlin}|throw|, которая позволяет выкинуть частичное продолжения (не захватывая его):
-\[
-    E_1[catch\{E_2[throw(v)], f\}] \to E_1[f(v)]
-\]
-
-В литературе встречается огромное количество операторов, для работы с ограниченными продолжениями~\cite[приложение А]{hillerstrom2022foundations}.
-Мы рассмотрим классификацию из классической работы~\cite{dyvbig2007monadic}.
-
-Работа вводит следующий набор синтаксических конструкций (рис.~\ref{fig:prompt-syntax} и~\ref{fig:dc-operational}) для работы с ограниченными продолжениями в дополнение к чистому call-by-value лямбда-исчислению.
-Исторически в лиспах неограниченные продолжения были ограничены лишь REPL, отсюда название ограничений --- ``prompt''.
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.75\linewidth]{figs/prompt-syntax}
-    \caption{Синтаксис $\lambda$-исчисления с примитивами для работы с продолжениями.}
-    \label{fig:prompt-syntax}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.8\textwidth]{figs/dc-operational}
-    \caption{Операционная семантика.}
-    \label{fig:dc-operational}
-\end{figure}
-
-\begin{itemize}
-    \item $newPrompt$ --- создаёт свежий идентификатор (метку) ограничения;
-    \item $pushPrompt \ap p \ap e$ --- устанавливает ограничение с меткой $p$ и исполняет выражение $e$;
-    \item $withSubCont\ap p\ap f$ --- захватывает частичное продолжение до ограничения с меткой $p$ и передаёт в функцию $f$, возвращает результат $f$ (рис.~\ref{fig:push-prompt});
-    \item $pushSubCont\ap k \ap v$ --- исполняет композицию текущего продолжения и $k$ на значении $v$.
-\end{itemize}
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.7\linewidth]{figs/push-prompt}
-    \caption{Пример работы \texttt{withSubCont}.}
-    \label{fig:push-prompt}
-\end{figure}
-
-Операторы ограниченных продолжений легко понять как \vocab{resumable exceptions}, исключения, которые можно поймать, а программу возобновить с того места, где исключение было выброшено (с некоторым значением).
-Необычно то, что классические операторы ограниченных продолжений принимают код, работающий с частичным продолжением в месте ``кидания исключения'', а не в месте ``поимки''.
-То есть блок обработки пишется не с \mintinline{kotlin}|catch|, а с \mintinline{kotlin}|throw|:
-
-\begin{gather*}
-    ч
-    E_1[withSubCont \ap p \ap \{E_2[pushSubCont \ap f]\}] \to E_1[f \ap E_2]
-    \\
-    E_1[catch\{E_2[throw \ap v], f\}] \to E_1[f \ap v \ap (\lambda x\ldotp E_2[x])]
-\end{gather*}
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.8\linewidth]{figs/dc-example}
-    \caption{Пример выражения (результат --- $9$).}
-    \label{fig:dc-example}
-\end{figure}
-
-\begin{task}
-    Поредуцируйте пример рис.~\ref{fig:dc-example}.
-\end{task}
-
-Остальные операторы более-менее выражаются через обсуждённые нами.
-Существует классификаций операторов по признакам --- включает ли захватываемое частичное продолжение ограничение и оставляет ли его за собой~\cite{dyvbig2007monadic}.
-
-% todo in haskell native implementation
-
-% todo
-
-\subsection{Приложения продолжений} \label{subsec:cont-applications}
+%\subsection{Приложения продолжений} \label{subsec:cont-applications}
 
 % todo calculating correct compilers, compiling with continuations W. Appel
 
