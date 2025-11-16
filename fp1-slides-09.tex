@@ -41,16 +41,18 @@
         \begin{itemize}
             \item \mintinline{haskell}|Functor| --- обработать значения в контейнере
             \item \mintinline{haskell}|Foldable| --- аккумулировать значения в контейнере
-            \item \mintinline{haskell}|Traversable| --- обработать значения и аккумулировать эффекты
+            \item \mintinline{haskell}|Traversable| --- обработать значения и аккумулировать структуру
             \item[\todo] Реализуйте \mintinline{haskell}|Functor| через \mintinline{haskell}|Traversable|
             \item[\todo] Реализуйте \mintinline{haskell}|Foldable| через \mintinline{haskell}|Traversable|
             \item[\answer] \pause
             \begin{minted}{haskell}
-                fmap f = getIdentity . traverse (Identity . f)
+                fmapDefault :: Traversable t => (a -> b) -> t a -> t b
+                fmapDefault f = getIdentity . traverse (Identity . f)
             \end{minted}
             \item[\answer] \pause
             \begin{minted}{haskell}
-                foldMap f = getConst . traverse (Const . f)
+                foldMapDefault :: (Traversable t, Monoid m) => (a -> m) -> t a -> m
+                foldMapDefault f = getConst . traverse (Const . f)
             \end{minted}
         \end{itemize}
     \end{frame}
@@ -59,7 +61,7 @@
         \begin{itemize}
             \item[\todo] \mintinline{haskell}|GHCi> sequenceA [("a", 1), ("b", 2)]|
             \item[\todo] Достаньте из реестра всех пользователей по списку имён
-            \item[\todo] Изобретите цикл \mintinline{haskell}|for| и распечатайте в ``консоль'' каждое число два раза
+            \item[\todo] Изобретите цикл \mintinline{haskell}|for| и распечатайте в ``консоль'' каждое число из списка по два раза
             \item[\answer] \pause \mintinline{haskell}|("ab", [1, 2])|
             \item[\answer] \pause
             \begin{minted}{haskell}
@@ -172,7 +174,7 @@
         \end{itemize}
     \end{frame}
 
-    \sectionplan{Parsec}
+    \sectionplan{Parsec \advancedslide}
 
     \begin{frame}[fragile]{Поток токенов}
         \begin{minted}{haskell}
@@ -313,13 +315,13 @@
         \end{itemize}
     \end{frame}
 
-    \sectionplan{Материалы}
-
-    \begin{frame}[fragile]{Серьёзные материалы}
-        \begin{itemize}
-            \item Gibbons, Jeremy, and Bruno C. D. S. Oliveira. "The essence of the iterator pattern." \textit{Journal of functional programming} 19.3-4 (2009): 377-402.
-            \item Gibbons, Jeremy. "Design patterns as higher-order datatype-generic programs." \textit{Proceedings of the 2006 ACM SIGPLAN workshop on Generic programming}. 2006.
-        \end{itemize}
-    \end{frame}
+%    \sectionplan{Материалы}
+%
+%    \begin{frame}[fragile]{Серьёзные материалы}
+%        \begin{itemize}
+%            \item Gibbons, Jeremy, and Bruno C. D. S. Oliveira. "The essence of the iterator pattern." \textit{Journal of functional programming} 19.3-4 (2009): 377-402.
+%            \item Gibbons, Jeremy. "Design patterns as higher-order datatype-generic programs." \textit{Proceedings of the 2006 ACM SIGPLAN workshop on Generic programming}. 2006.
+%        \end{itemize}
+%    \end{frame}
 
 \end{document}
