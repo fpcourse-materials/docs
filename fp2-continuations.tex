@@ -364,6 +364,8 @@
 Этой техникой можно пользоваться и в более сложных случаях, чтобы получать хвостово-рекурсивные реализации~\cite{gibbons2021continuation}\footnote{\href{https://youtu.be/8gnhaE2nmQ0?si=pEJX4jQteYmy7ZZn}{(youtube) Jeremy Gibbons - Continuation-passing style, defunctionalization, and associativity.}}.
 Также, можно фреймы представить в виде эндоморфизмов и в качестве ассоциативной операции использовать композицию функций\footnote{\url{https://wiki.haskell.org/Difference_list}}.
 
+% todo reference to best refactoring https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html
+
 % todo можно ли не пользоваться тем, что единица нейтральная
 
 \subsubsection{\mintinline{haskell}{Monad Cont}} \label{subsubsec:monad-cont}
@@ -514,7 +516,7 @@
     Поредуцируйте пример рис.~\ref{fig:dc-example}.
 \end{task}
 
-\subsubsection{Реализация}
+\subsubsection{Реализация операторов}
 
 Расширим язык\ \ref{subsubsec:first-class-cont} рассмотренными операторами для работы с ограниченными.
 Для простоты вместо свежих меток промптов будем использовать имена, а вместо \texttt{pushSubCont} обычную аппликацию:
@@ -571,15 +573,16 @@
     \end{minted}
 \end{task}
 
-\subsubsection{Классификация} \label{subsubsec:delim-cont-classification}
+\subsubsection{Классификация операторов} \label{subsubsec:delim-cont-classification}
+
 
 % todo
 
-\subsubsection{В \mintinline{kotlin}|Monad Cont|}
+\subsubsection{В \mintinline{kotlin}{Monad Cont}}
 
 Для примера реализуем два классических оператора для работы с ограниченными продолжениями --- \textbf{shift-reset}.
 Воспользуемся продолжениями, собираемыми монадой \mintinline{kotlin}|Cont|.
-\testtt{shift} просто захватывает текущее продолжение и передаёт его в пользовательское вычисление подобно \texttt{cont}:
+\texttt{shift} просто захватывает текущее продолжение и передаёт его в пользовательское вычисление подобно \texttt{cont}:
 \begin{minted}{haskell}
     shift :: ((a -> r) -> Cont r r) -> Cont r a
     shift f = Cont \k -> runCont (f k) id
@@ -598,13 +601,122 @@
     \end{minted}
 \end{task}
 
-\subsection{Приложения продолжений}
-
-\subsubsection{Всё через продолжения}
+\subsection{Приложения продолжений} \label{subsec:cont-applications}
 
 % todo
 
-\subsubsection{The mother of all monads}
+\subsubsection{Всё через продолжения}
+
+\begin{minted}{haskell}
+    runIdentityC :: (forall r . Cont r a) -> a
+    runIdentityC comp = runCont comp id
+
+    exampleIdentity :: Int
+    exampleIdentity = runIdentityC do
+      x <- pure 4
+      y <- pure 5
+      pure (x + y)
+\end{minted}
+
+\begin{minted}{haskell}
+    raise :: Cont (Maybe r) a
+    raise = Cont $ const Nothing
+
+    runExn :: (forall r . Cont (Maybe r) a) -> Maybe a
+    runExn comp = runCont comp Just
+
+    exampleExn :: Int -> Maybe Int
+    exampleExn n = runExn do
+      when (n < 0) raise
+      pure (n + 1)
+\end{minted}
+
+Ошибки монадические и континуэйшеновые % todo
+
+\begin{minted}{haskell}
+    choice :: Cont [r] Bool
+    choice = Cont \k -> k True ++ k False
+
+    runNondet :: (forall r . Cont [r] a) -> [a]
+    runNondet comp = runCont comp (:[])
+
+    exampleNondet :: Int -> [Int]
+    exampleNondet n = runNondet do
+      b <- choice
+      if b then pure n else pure (n - 1)
+\end{minted}
+
+\begin{minted}{haskell}
+    -- s -> (s, a) ~ ((s, a) -> r) -> (s -> r)
+    -- ~ (a -> s -> r) -> (s -> r) ~ Cont (s -> r) a
+
+    get :: Cont (s -> r) s -- (s -> s -> r) -> (s -> r)
+    get = Cont \k s -> k s s
+
+    put :: s -> Cont (s -> r) ()
+    put s' = Cont \k _s -> k () s'
+
+    runStateK :: (forall r . Cont (s -> r) a) -> s -> (a, s)
+    runStateK comp = runCont comp (,)
+
+    exampleState :: Int -> ((), Int)
+    exampleState = runStateK do
+      s <- get
+      put (s + 1)
+\end{minted}
+
+Раньше код был размазан по функциям с связыванию, теперь он в одном месте.
+
+% todo \subsection*{Tardis}
+
+% todo
+
+\subsubsection{The mother of all monads} \label{subsubsec:monadic-reflection}
+
+Конкретный представитель кепчурит идею целого класса.
+И класс может определяться через представителя (representation theorem).
+
+Такой Cont на самом деле трансформер.
+
+\begin{minted}{haskell}
+    newtype State s a = State { runState :: s -> (a, s) }
+
+    class MonadR m where
+      -- m a -> (a -> m r) -> m r
+      reflect :: m a -> forall r . Cont (m r) a
+      -- (forall r . (a -> m r) -> m r) -> m a
+      reify :: (forall r . Cont (m r) a) -> m a
+
+    instance MonadR (State s) where
+      reflect :: State s a -> (forall r . Cont (State s r) a)
+      reflect comp = Cont \k -> State \s ->
+        let (a, s') = runState comp s in
+        runState (k a) s'
+
+      reify :: (forall r . Cont (State s r) a) -> State s a
+      reify comp = State $ runState (runCont comp (\x -> State (x,)))
+\end{minted}
+
+% todo CodensityT
+
+% todo переписать через shift/reset
+
+% todo Monads and composable continuations by Phill Wadler
+
+% todo Representing Monads Filinsky
+
+% todo https://www.unison-lang.org/docs/fundamentals/abilities/for-monadically-inclined/
+
+% todo monads in python with nice syntax http://www.valuedlessons.com/2008/01/monads-in-python-with-nice-syntax.html
+
+% todo monadic reflection & direct style (lib from scala)
+% todo https://github.com/lampepfl/monadic-reflection/blob/main/TUTORIAL.md
+
+% todo reflection without remorse
+
+% todo https://blog.poisson.chat/posts/2019-10-27-continuation-submonads.html
+
+% todo https://www.schoolofhaskell.com/school/to-infinity-and-beyond/pick-of-the-week/the-mother-of-all-monads
 
 % todo
 
@@ -612,202 +724,44 @@
 
 % todo
 
+
 % todo метапрограммирование и построение компиляторов
 
-\subsection{Эффективная реализация продолжений}
-
-% todo in haskell native implementation
-
-% todo
-
-
-%\subsubsection{The mother of all monads} \label{subsubsec:monadic-reflection}
-%
-%\begin{minted}{haskell}
-%    newtype Cont r a = Cont { runCont :: (a -> r) -> r }
-%
-%    instance Functor (Cont r) where
-%      -- fmap :: (a -> b) -> ((a -> r) -> r) -> ((b -> r) -> r)
-%      fmap f (Cont comp) = Cont \k -> comp (k . f)
-%
-%    instance Applicative (Cont r) where
-%      pure x = Cont \k -> k x
-%      (<*>) = ap
-%
-%    instance Monad (Cont r) where
-%      Cont comp >>= k = Cont \k' -> comp \x -> runCont (k x) k'
-%
-%    fibCont :: Int -> Cont r Int
-%    fibCont n = if n <= 2 then pure 1 else do
-%      res1 <- fibCont (n - 1)
-%      res2 <- fibCont (n - 2)
-%      pure (res1 + res2)
-%
-%
-%    runIdentityC :: (forall r . Cont r a) -> a
-%    runIdentityC comp = runCont comp id
-%
-%    exampleIdentity :: Int
-%    exampleIdentity = runIdentityC do
-%      x <- pure 4
-%      y <- pure 5
-%      pure (x + y)
-%
-%
-%    raise :: Cont (Maybe r) a
-%    raise = Cont $ const Nothing
-%
-%    runExn :: (forall r . Cont (Maybe r) a) -> Maybe a
-%    runExn comp = runCont comp Just
-%
-%    exampleExn :: Int -> Maybe Int
-%    exampleExn n = runExn do
-%      when (n < 0) raise
-%      pure (n + 1)
-%
-%
-%    choice :: Cont [r] Bool
-%    choice = Cont \k -> k True ++ k False ++ k True ++ k False
-%
-%    runNondet :: (forall r . Cont [r] a) -> [a]
-%    runNondet comp = runCont comp (:[])
-%
-%    exampleNondet :: Int -> [Int]
-%    exampleNondet n = runNondet do
-%      b <- choice
-%      if b then pure n else pure (n - 1)
-%
-%
-%    -- s -> (s, a) ~ ((s, a) -> r) -> (s -> r)
-%    -- ~ (a -> s -> r) -> (s -> r) ~ Cont (s -> r) a
-%
-%    get :: Cont (s -> r) s -- (s -> s -> r) -> (s -> r)
-%    get = Cont \k s -> k s s
-%
-%    put :: s -> Cont (s -> r) ()
-%    put s' = Cont \k _s -> k () s'
-%
-%    runStateK :: (forall r . Cont (s -> r) a) -> s -> (a, s)
-%    runStateK comp = runCont comp (,)
-%
-%    exampleState :: Int -> ((), Int)
-%    exampleState = runStateK do
-%      s <- get
-%      put (s + 1)
-%
-%
-%    reflect' :: Monad m => m a -> forall r . Cont (m r) a
-%    reflect' comp = Cont (comp >>=) -- k :: a -> m r
-%
-%    reify' :: Monad m => (forall r . Cont (m r) a) -> m a
-%    reify' comp = runCont comp pure
-%
-%    newtype ContT r m a = ContT { runContT :: (a -> m r) -> m r }
-%    newtype CodensityT m a = CodensityT
-%      { runCodensityT :: forall r . (a -> m r) -> m r }
-%      deriving Functor
-%
-%    instance Applicative (CodensityT m) where
-%      pure x = CodensityT \k -> k x
-%      (<*>) = ap
-%
-%    instance Monad (CodensityT m) where
-%      CodensityT comp >>= k = CodensityT \k' ->
-%        comp \x -> runCodensityT (k x) k'
-%
-%    exampleCodensity :: Int -> (Int, Int)
-%    exampleCodensity = runState $ run $ do
-%      s <- getCod
-%      putCod (s + 1)
-%      pure 1
-%      where
-%        run :: CodensityT (State Int) Int -> State Int Int
-%        run cod = (runCodensityT cod) @Int pure
-%
-%    getCod :: CodensityT (State s) s
-%    getCod = CodensityT \k -> State \s -> runState (k s) s
-%
-%    putCod :: s -> CodensityT (State s) ()
-%    putCod s' = CodensityT \k -> State \_s -> runState (k ()) s'
-%
-%
-%    class MonadR m where
-%      -- m a -> (a -> m r) -> m r
-%      reflect :: m a -> forall r . Cont (m r) a
-%      -- (forall r . (a -> m r) -> m r) -> m a
-%      reify :: (forall r . Cont (m r) a) -> m a
-%
-%    newtype State s a = State { runState :: s -> (a, s) } deriving Functor
-%
-%    instance Applicative (State s) where
-%      pure x = State \s -> (x, s)
-%      (<*>) = undefined
-%
-%    instance MonadR (State s) where
-%      reflect :: State s a -> (forall r . Cont (State s r) a)
-%      reflect comp = Cont \k -> State \s ->
-%        let (a, s') = runState comp s in
-%        runState (k a) s'
-%
-%      reify :: (forall r . Cont (State s r) a) -> State s a
-%      reify comp = State $ runState (runCont comp (\x -> State (x,)))
-%\end{minted}
-
-% todo Monads and composable continuations by Phill Wadler
-
-% todo Representing Monads Filinsky
 % todo paper delimited continuations in WebAssembly
 
-% todo связь с континуэйшенами
+% todo SPJ compiling without continuations
 
-% todo mother of all monads
+% todo The Essence of Compiling with Continuations W. Appel
 
-% todo monads in python with nice syntax
+% todo calculating correct compilers
 
-% todo monadic reflection & direct style (lib from scala)
-% todo https://github.com/lampepfl/monadic-reflection/blob/main/TUTORIAL.md
+% todo CEKT
+% todo abstract machines
 
-% todo reflection without remorse
+\subsection{Эффективная реализация продолжений} \label{subsubsec:efficient-cps}
 
-% todo C# expression trees
-% todo F# что-то про монады и forM https://learn.microsoft.com/en-us/dotnet/fsharp/language-reference/computation-expressions
+Существует несколько классических подходов реализации продолжений первого класса на языковом уровне, которые, как правило, используются для построения генераторов или корутин.
 
-% todo https://blog.poisson.chat/posts/2019-10-27-continuation-submonads.htm
+\vocab{Continuous stack} реализация подразумевает, что продолжение представляется в виде аппаратного стека.
+Как только требуется захватить продолжение, стек копируется в кучу (возможно, лениво)\footnote{\href{https://youtu.be/kwS3OeoVCno?si=c4MkSkmLHNeywPrZ}{(youtube) Иван Углянский - Java Project Loom.}}. % todo cite
+То есть этот подход полагается на поддержку со стороны рантайма языка.
 
-% todo https://www.unison-lang.org/docs/fundamentals/abilities/for-monadically-inclined/
+\vocab{Сегментный стек} --- стек вызовов представляется как связный список аллоцированных в куче сегментов, каждый соответствует ограничивающей операции. % todo cite
+Так, не требуется делать копирования, достаточно подмены указателей.
+Однако, в таком случае стек нелокален, что не очень хорошо для работы кешей.
 
-% todo https://www.schoolofhaskell.com/school/to-infinity-and-beyond/pick-of-the-week/the-mother-of-all-monads
+\vocab{Finite state machine (FSM)} реализация подразумевает автоматическую CPS трансформацию пользовательского кода с дефункционализацией.
+Это можно сделать лишь средствами компилятора.
 
-% todo http://www.valuedlessons.com/2008/01/monads-in-python-with-nice-syntax.html
+В нашей реализации CPS производится огромное количество аллокаций замыканий, реифицирующих продолжения.
+Однако, если CPS получается автоматической трансляцией, можно делать эффективнее.
+Изначально продолжения придумывались для описания семантики прыжков, но можно пойти и в обратную сторону, реализовав продолжения эффективно для современных машин через \texttt{goto}.
 
-% todo \subsection*{Tardis}
+Так, состояние функции целиком один раз аллоцируется в куче, а перемещения по телу реализованы как машина состояний --- с помощью меток и прыжков.
+Таким образом, например, реализованы безстековые корутины в Kotlin\footnote{\url{https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md\#state-machines} \label{note:kotlin-state}}, генераторы в C\#\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}\ldots
 
-% todo
-
-%\subsubsection{Эффективная реализация продолжений} \label{subsubsec:efficient-cps}
-%
-%Существует несколько классических подходов реализации продолжений на языковом уровне, которые, как правило, используются для построения генераторов или корутин.
-%
-%\vocab{Стековая (stackful)} реализация подразумевает, что продолжение представляется в виде аппаратного стека.
-%Как только требуется захватить продолжение, стек копируется в кучу (возможно, лениво)\footnote{\href{https://youtu.be/kwS3OeoVCno?si=c4MkSkmLHNeywPrZ}{(youtube) Иван Углянский - Java Project Loom.}}.
-%То есть этот подход полагается на поддержку со стороны рантайма языка.
-%
-%\vocab{Сегментный стек} --- стек вызовов представляется как связный список аллоцированных в куче фреймов. % todo cite
-%Так, не требуется делать копирования, достаточно подмены указателей.
-%Однако, в таком случае стек нелокален, что не очень хорошо для работы кешей.
-%
-%\vocab{Безстековая (stackless)} реализация подразумевает автоматическую CPS трансформацию пользовательского кода.
-%Это можно сделать лишь средствами компилятора.
-%
-%В нашей реализации CPS производится огромное количество аллокаций замыканий, реифицирующих продолжения.
-%Однако, если CPS получается автоматической трансляцией, можно делать эффективнее.
-%Изначально продолжения придумывались для описания семантики прыжков, но можно пойти и в обратную сторону, реализовав продолжения эффективно для современных машин через \texttt{goto}.
-%
-%Так, состояние функции целиком один раз аллоцируется в куче, а перемещения по телу реализованы как машина состояний --- с помощью меток и прыжков.
-%Таким образом, например, реализованы безстековые корутины в Kotlin\footnote{\url{https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md\#state-machines} \label{note:kotlin-state}}, генераторы в C\#\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}\ldots
-%
-%Даже в таком виде CPS остаётся тяжеловесной трансформацией, способной замедлить исполнение кода на порядки.
-%Дело, в частности, в том, что переменные в таком подходе сложно размещать в регистрах (у функций много точек выходов и входов\footref{note:kotlin-state}), приходится постоянно записывать их в RAM --- производить \vocab{spilling}\footnote{\url{https://en.wikipedia.org/wiki/Register_allocation}}.
+Даже в таком виде CPS остаётся тяжеловесной трансформацией, способной замедлить исполнение кода на порядки.
+Дело, в частности, в том, что переменные в таком подходе сложно размещать в регистрах (у функций много точек выходов и входов\footref{note:kotlin-state}), приходится постоянно записывать их в RAM --- производить \vocab{spilling}\footnote{\url{https://en.wikipedia.org/wiki/Register_allocation}}.
 
 % todo объяснение через дефункционализацию
 
@@ -815,18 +769,14 @@
 
 % todo картинки
 
-%\subsection{Приложения продолжений} \label{subsec:cont-applications}
+% todo in haskell native implementation
 
-% todo calculating correct compilers, compiling with continuations W. Appel
+% todo
 
-% todo CEKT
-% todo abstract machines
 
-% todo continuation semantics
+
 
 % todo single-shot/multi-shot
-
-% todo codensity
 
 % todo problems with continuations: typing and resources
 
@@ -834,17 +784,9 @@
 
 % todo control operator, runtime наизнанку
 
-% todo CPS трансформация интерпретаторов
 
-% todo SPJ compiling without continuations
 
-% todo The Essence of Compiling with Continuations
 
-% todo calculating correct compilers
-
-% todo reference to best refactoring https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html
-
-% todo game semantics from Carl's slides
 
 % todo http://www.serpentine.com/blog/2011/02/25/cps-is-great-cps-is-terrible/
 
@@ -860,3 +802,5 @@
 % todo higher-order CPS
 
 % todo сослаться на the lost art of denotational semantics
+
+% todo coloring
