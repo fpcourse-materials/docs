@@ -452,161 +452,167 @@
       pure (show $ y - 4)
 \end{minted}
 
-\subsection{Delimited continuations} \label{subsec:delimited-cont}
-
-В современной практике, как правило, используют продолжения первого класса не до конца программы, а только до определённой точки.
-Их называют \vocab{ограниченными} или \vocab{разграниченными продолжениями}, \vocab{delimited} или \vocab{composable continuations}, \vocab{subcontinuations}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}.
-
-Конструкции для работы с такими продолжениями парные: вводится оператор, ограничивающий текущее продолжение (мб имеющий метку); а также оператор захвата фрагмента текущего продолжения (мб до конкретного ограничителя с определённой меткой).
-Таких операторов придумано много~\cite[приложение А]{hillerstrom2022foundations}, но они более-менее все сводятся друг к другу.
-
-Например, работа с исключениями подразумевает использование двух конструкций: продолжение ограничивается с помощью \mintinline{kotlin}|try-catch|, а \mintinline{kotlin}|throw| выкидывает соответствующее частичное продолжение, не захватывая его (см.\ рис. \ref{fig:exit-exceptions}):
-\[
-    E_1[try\{E_2[throw(v)]\}catch(f)] \to E_1[f(v)]
-\]
-
-Мы же рассмотрим универсальные операторы из~\cite{dyvbig2007monadic}.
-Работа вводит следующий набор синтаксических конструкций (рис.~\ref{fig:prompt-syntax}) для работы с ограниченными продолжениями в дополнение к чистому call-by-value лямбда-исчислению:
-\begin{itemize}
-    \item $newPrompt$\footnote{Исторически в лиспах неограниченные продолжения были ограничены лишь REPL, отсюда название ограничений --- ``prompt''.} --- создаёт свежий идентификатор (метку) ограничения;
-    \item $pushPrompt \ap p \ap e$ --- устанавливает ограничение с меткой $p$ и исполняет выражение $e$;
-    \item $withSubCont\ap p\ap f$ --- захватывает частичное продолжение до ограничения с меткой $p$ и передаёт в функцию $f$, возвращает результат $f$ (рис.~\ref{fig:push-prompt});
-    \item $pushSubCont\ap k \ap v$ --- исполняет композицию текущего продолжения и $k$ на значении $v$.
-\end{itemize}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.75\linewidth]{figs/prompt-syntax}
-    \caption{Синтаксис $\lambda$-исчисления с примитивами для работы с продолжениями.}
-    \label{fig:prompt-syntax}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.7\linewidth]{figs/push-prompt}
-    \caption{Пример работы \texttt{withSubCont}.}
-    \label{fig:push-prompt}
-\end{figure}
-
+%\subsection{Delimited continuations} \label{subsec:delimited-cont}
+%
+%В современной практике, как правило, используют продолжения первого класса не до конца программы, а только до определённой точки.
+%Их называют \vocab{ограниченными} или \vocab{разграниченными продолжениями}, \vocab{delimited} или \vocab{composable continuations}, \vocab{subcontinuations}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}.
+%
+%Конструкции для работы с такими продолжениями парные: вводится оператор, ограничивающий текущее продолжение (мб имеющий метку); а также оператор захвата фрагмента текущего продолжения (мб до конкретного ограничителя с определённой меткой).
+%Таких операторов придумано много~\cite[приложение А]{hillerstrom2022foundations}, но они более-менее все сводятся друг к другу.
+%
+%Например, работа с исключениями подразумевает использование двух конструкций: продолжение ограничивается с помощью \mintinline{kotlin}|try-catch|, а \mintinline{kotlin}|throw| выкидывает соответствующее частичное продолжение, не захватывая его (см.\ рис. \ref{fig:exit-exceptions}):
+%\[
+%    E_1[try\{E_2[throw(v)]\}catch(f)] \to E_1[f(v)]
+%\]
+%
+%Мы же рассмотрим универсальные операторы из~\cite{dyvbig2007monadic}.
+%Работа вводит следующий набор синтаксических конструкций (рис.~\ref{fig:prompt-syntax}) для работы с ограниченными продолжениями в дополнение к чистому call-by-value лямбда-исчислению:
+%\begin{itemize}
+%    \item $newPrompt$\footnote{Исторически в лиспах неограниченные продолжения были ограничены лишь REPL, отсюда название ограничений --- ``prompt''.} --- создаёт свежий идентификатор (метку) ограничения;
+%    \item $pushPrompt \ap p \ap e$ --- устанавливает ограничение с меткой $p$ и исполняет выражение $e$;
+%    \item $withSubCont\ap p\ap f$ --- захватывает частичное продолжение до ограничения с меткой $p$ и передаёт в функцию $f$, возвращает результат $f$ (рис.~\ref{fig:push-prompt});
+%    \item $pushSubCont\ap k \ap v$ --- исполняет композицию текущего продолжения и $k$ на значении $v$.
+%\end{itemize}
+%
 %\begin{figure}
 %    \centering
-%    \includegraphics[width=0.8\textwidth]{figs/dc-operational}
-%    \caption{Операционная семантика.}
-%    \label{fig:dc-operational}
+%    \includegraphics[width=0.75\linewidth]{figs/prompt-syntax}
+%    \caption{Синтаксис $\lambda$-исчисления с примитивами для работы с продолжениями.}
+%    \label{fig:prompt-syntax}
 %\end{figure}
-
-Операторы ограниченных продолжений легко понять как \vocab{resumable exceptions}, исключения, которые можно поймать, а программу возобновить с того места, где исключение было выброшено (с некоторым значением).
-Необычно то, что классические операторы ограниченных продолжений принимают код, работающий с частичным продолжением в месте ``кидания исключения'', а не в месте ``поимки''.
-То есть блок обработки пишется не с \mintinline{kotlin}|catch|, а с \mintinline{kotlin}|throw|:
-
-\begin{gather*}
-    E_1[withSubCont \ap p \ap \{E_2[pushSubCont \ap f]\}] \to E_1[f \ap E_2]
-    \\
-    E_1[try\{E_2[throw \ap v]\}rcatch(f)] \to E_1[f \ap v \ap (\lambda x\ldotp E_2[x])]
-\end{gather*}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.8\linewidth]{figs/dc-example}
-    \caption{Пример выражения (результат --- $9$).}
-    \label{fig:dc-example}
-\end{figure}
-
-\begin{task}
-    Поредуцируйте пример рис.~\ref{fig:dc-example}.
-\end{task}
-
-\subsubsection{Реализация операторов}
-
-Расширим язык\ \ref{subsubsec:first-class-cont} рассмотренными операторами для работы с ограниченными.
-Для простоты вместо свежих меток промптов будем использовать имена, а вместо \texttt{pushSubCont} обычную аппликацию:
-\begin{minted}{haskell}
-    data Expr = ...| PushPrompt String Expr | WithSubCont String Expr
-    data Frame = ... | PushPromptFrame String | WithSubContFrame String
-\end{minted}
-
-Поиск редексов расширяется очевидным образом:
-\begin{minted}[escapeinside=##]{haskell}
-    evalK :: (?env :: Env) => Expr -> K -> Value
-    evalK e k = case e of
-      -- ...
-      PushPrompt promptName body -> evalK body (PushPromptFrame promptName : k)
-      WithSubCont promptName f -> evalK f (WithSubContFrame promptName : k)
-\end{minted}
-
-Вся задача \texttt{PushPrompt} --- это застрять в продолжении в виде \texttt{PushPromptFrame}, но когда до него доходит исполнение, он просто игнорируется:
-\begin{minted}[escapeinside=##]{haskell}
-    appK :: (?env :: Env) => K -> Value -> Value
-    appK k result = case k of
-      -- ...
-      PushPromptFrame _ : k' -> k' `appK` result
-\end{minted}
-
-Чтобы захватить фрагмент продолжения, нам нужна операция, которая найдёт первый промпт с соответствующим именем в продолжении и вернёт \vocab{subcontinuation} --- до этого промпта и \vocab{metacontinuation} --- после:
-\begin{minted}[escapeinside=##]{haskell}
-    splitByPrompt :: K -> String -> (K, K)
-    splitByPrompt k targetPromptName = go [] k
-      where
-        go _ [] =  error $ "Prompt " ++ targetPromptName ++ " not found"
-        go subcont (PushPromptFrame promptName : metacont)
-          | promptName == targetPromptName = (subcont, metacont)
-        go subcont (frame : metacont) = go (subcont ++ [frame]) metacont
-\end{minted}
-
-Теперь \texttt{WithSubCont} должен просто применить пользовательскую функцию к subcontinuation, но при этом не забыть дальше исполнить metacontinuation:
-\begin{minted}[escapeinside=##]{haskell}
-    appK :: (?env :: Env) => K -> Value -> Value
-    appK k result = case k of
-      -- ...
-      WithSubContFrame promptName : k' ->
-        let (subcont, metacont) = k' `splitByPrompt` promptName in
-        (RApp result : metacont) `appK` K ?env subcont
-\end{minted}
-
-\begin{task}
-    Поредуцируйте следующий пример:
-    \begin{minted}[escapeinside=##]{haskell}
-        exampleDelimited = let ?env = Map.empty in flip evalK [] $
-          c 10 -. PushPrompt "p"
-            (c 5 -. WithSubCont "p"
-              (lam "k" $ v "k" @ c 1 -. v "k" @ c 3))
-    \end{minted}
-\end{task}
-
-\subsubsection{Классификация операторов} \label{subsubsec:delim-cont-classification}
-
-
-% todo
-
-\subsubsection{В \mintinline{kotlin}{Monad Cont}}
-
-Для примера реализуем два классических оператора для работы с ограниченными продолжениями --- \textbf{shift-reset}.
-Воспользуемся продолжениями, собираемыми монадой \mintinline{kotlin}|Cont|.
-\texttt{shift} просто захватывает текущее продолжение и передаёт его в пользовательское вычисление подобно \texttt{cont}:
-\begin{minted}{haskell}
-    shift :: ((a -> r) -> Cont r r) -> Cont r a
-    shift f = Cont \k -> runCont (f k) id
-\end{minted}
-\texttt{reset} же в качестве продолжения вычислению-аргументу передаёт \texttt{id}, тем самым это вычисление не имеет доступа к продолжению после \texttt{reset} (в то время как продолжение самого Haskell запоминает, что после \texttt{comp} нужно исполнить \texttt{k}):
-\begin{minted}{haskell}
-    reset :: Cont a a -> Cont r a
-    reset comp = Cont \k -> k (runCont comp id)
-\end{minted}
-
-\begin{task}
-    Каким будет результат исполнения следующей функции:
-    \begin{minted}{haskell}
-        exampleShiftReset = flip runCont id $
-          (1 +) <$> reset ((2 +) <$> shift \k -> pure (k 3 + k 5))
-    \end{minted}
-\end{task}
+%
+%\begin{figure}
+%    \centering
+%    \includegraphics[width=0.7\linewidth]{figs/push-prompt}
+%    \caption{Пример работы \texttt{withSubCont}.}
+%    \label{fig:push-prompt}
+%\end{figure}
+%
+%%\begin{figure}
+%%    \centering
+%%    \includegraphics[width=0.8\textwidth]{figs/dc-operational}
+%%    \caption{Операционная семантика.}
+%%    \label{fig:dc-operational}
+%%\end{figure}
+%
+%Операторы ограниченных продолжений легко понять как \vocab{resumable exceptions}, исключения, которые можно поймать, а программу возобновить с того места, где исключение было выброшено (с некоторым значением).
+%Необычно то, что классические операторы ограниченных продолжений принимают код, работающий с частичным продолжением в месте ``кидания исключения'', а не в месте ``поимки''.
+%То есть блок обработки пишется не с \mintinline{kotlin}|catch|, а с \mintinline{kotlin}|throw|:
+%
+%\begin{gather*}
+%    E_1[withSubCont \ap p \ap \{E_2[pushSubCont \ap f]\}] \to E_1[f \ap E_2]
+%    \\
+%    E_1[try\{E_2[throw \ap v]\}rcatch(f)] \to E_1[f \ap v \ap (\lambda x\ldotp E_2[x])]
+%\end{gather*}
+%
+%\begin{figure}
+%    \centering
+%    \includegraphics[width=0.8\linewidth]{figs/dc-example}
+%    \caption{Пример выражения (результат --- $9$).}
+%    \label{fig:dc-example}
+%\end{figure}
+%
+%\begin{task}
+%    Поредуцируйте пример рис.~\ref{fig:dc-example}.
+%\end{task}
+%
+%\subsubsection{Реализация операторов}
+%
+%Расширим язык\ \ref{subsubsec:first-class-cont} рассмотренными операторами для работы с ограниченными.
+%Для простоты вместо свежих меток промптов будем использовать имена, а вместо \texttt{pushSubCont} обычную аппликацию:
+%\begin{minted}{haskell}
+%    data Expr = ...| PushPrompt String Expr | WithSubCont String Expr
+%    data Frame = ... | PushPromptFrame String | WithSubContFrame String
+%\end{minted}
+%
+%Поиск редексов расширяется очевидным образом:
+%\begin{minted}[escapeinside=##]{haskell}
+%    evalK :: (?env :: Env) => Expr -> K -> Value
+%    evalK e k = case e of
+%      -- ...
+%      PushPrompt promptName body -> evalK body (PushPromptFrame promptName : k)
+%      WithSubCont promptName f -> evalK f (WithSubContFrame promptName : k)
+%\end{minted}
+%
+%Вся задача \texttt{PushPrompt} --- это застрять в продолжении в виде \texttt{PushPromptFrame}, но когда до него доходит исполнение, он просто игнорируется:
+%\begin{minted}[escapeinside=##]{haskell}
+%    appK :: (?env :: Env) => K -> Value -> Value
+%    appK k result = case k of
+%      -- ...
+%      PushPromptFrame _ : k' -> k' `appK` result
+%\end{minted}
+%
+%Чтобы захватить фрагмент продолжения, нам нужна операция, которая найдёт первый промпт с соответствующим именем в продолжении и вернёт \vocab{subcontinuation} --- до этого промпта и \vocab{metacontinuation} --- после:
+%\begin{minted}[escapeinside=##]{haskell}
+%    splitByPrompt :: K -> String -> (K, K)
+%    splitByPrompt k targetPromptName = go [] k
+%      where
+%        go _ [] =  error $ "Prompt " ++ targetPromptName ++ " not found"
+%        go subcont (PushPromptFrame promptName : metacont)
+%          | promptName == targetPromptName = (subcont, metacont)
+%        go subcont (frame : metacont) = go (subcont ++ [frame]) metacont
+%\end{minted}
+%
+%Теперь \texttt{WithSubCont} должен просто применить пользовательскую функцию к subcontinuation, но при этом не забыть дальше исполнить metacontinuation:
+%\begin{minted}[escapeinside=##]{haskell}
+%    appK :: (?env :: Env) => K -> Value -> Value
+%    appK k result = case k of
+%      -- ...
+%      WithSubContFrame promptName : k' ->
+%        let (subcont, metacont) = k' `splitByPrompt` promptName in
+%        (RApp result : metacont) `appK` K ?env subcont
+%\end{minted}
+%
+%\begin{task}
+%    Поредуцируйте следующий пример:
+%    \begin{minted}[escapeinside=##]{haskell}
+%        exampleDelimited = let ?env = Map.empty in flip evalK [] $
+%          c 10 -. PushPrompt "p"
+%            (c 5 -. WithSubCont "p"
+%              (lam "k" $ v "k" @ c 1 -. v "k" @ c 3))
+%    \end{minted}
+%\end{task}
+%
+%\subsubsection{Классификация операторов} \label{subsubsec:delim-cont-classification}
+%
+%
+%% todo
+%
+%\subsubsection{В \mintinline{kotlin}{Monad Cont}}
+%
+%Для примера реализуем два классических оператора для работы с ограниченными продолжениями --- \textbf{shift-reset}.
+%Воспользуемся продолжениями, собираемыми монадой \mintinline{kotlin}|Cont|.
+%\texttt{shift} просто захватывает текущее продолжение и передаёт его в пользовательское вычисление подобно \texttt{cont}:
+%\begin{minted}{haskell}
+%    shift :: ((a -> r) -> Cont r r) -> Cont r a
+%    shift f = Cont \k -> runCont (f k) id
+%\end{minted}
+%\texttt{reset} же в качестве продолжения вычислению-аргументу передаёт \texttt{id}, тем самым это вычисление не имеет доступа к продолжению после \texttt{reset} (в то время как продолжение самого Haskell запоминает, что после \texttt{comp} нужно исполнить \texttt{k}):
+%\begin{minted}{haskell}
+%    reset :: Cont a a -> Cont r a
+%    reset comp = Cont \k -> k (runCont comp id)
+%\end{minted}
+%
+%\begin{task}
+%    Каким будет результат исполнения следующей функции:
+%    \begin{minted}{haskell}
+%        exampleShiftReset = flip runCont id $
+%          (1 +) <$> reset ((2 +) <$> shift \k -> pure (k 3 + k 5))
+%    \end{minted}
+%\end{task}
 
 \subsection{Приложения продолжений} \label{subsec:cont-applications}
 
-% todo
+Продолжения полезны для понимания смысла программ, которые мы пишем каждый день (см.\ \ref{foot:the-lost-art-of-denotations}).
+Кроме того, как мы увидим в этой главе, продолжения первого класса можно использовать как средство построения могущественных встроенных языков.
 
 \subsubsection{Всё через продолжения}
 
+Реализуем ряд полезных встроенных языков с помощью продолжений первого класса.
+Чтобы получить доступ к продолжениям, воспользуемся shallow embedded языком \mintinline{haskell}{Cont}\footnote{\url{https://blog.poisson.chat/posts/2019-10-26-reasonable-continuations.html}}.
+Таким образом, будем работать с башней языков Haskell, \mintinline{haskell}{Cont}, X, где X --- рассматриваемый встроенный язык.
+
+Начнём с тривиального встроенного императивного языка:
 \begin{minted}{haskell}
     runIdentityC :: (forall r . Cont r a) -> a
     runIdentityC comp = runCont comp id
@@ -618,21 +624,31 @@
       pure (x + y)
 \end{minted}
 
+Реализуем язык с исключениями.
+Для этого модифицируем первый типовый параметр \mintinline{haskell}{Cont}, \vocab{answer (response) type}\footnote{\url{https://wiki.haskell.org/Cont_computations_as_question-answering_boxes}}.
+Функция \texttt{abort} игнорирует продолжение программы до \texttt{runExn}, которая завершает продолжение оборачиванием успешного результата в \mintinline{haskell}{Just}:
 \begin{minted}{haskell}
-    raise :: Cont (Maybe r) a
-    raise = Cont $ const Nothing
+    abort :: Cont (Maybe r) a
+    abort = Cont $ const Nothing
 
     runExn :: (forall r . Cont (Maybe r) a) -> Maybe a
     runExn comp = runCont comp Just
 
     exampleExn :: Int -> Maybe Int
     exampleExn n = runExn do
-      when (n < 0) raise
+      when (n < 0) abort
       pure (n + 1)
 \end{minted}
+Обратите внимание, что семантика операции обрыва вычисления полностью сосредоточена в функции \texttt{abort}, в то время как в \mintinline{haskell}{Monad Maybe} соответствующая функция бы отвечала лишь за конструирование элемента домена, а уже монадическое связывание~--- за работу с продолжениями.
+Имея доступ к first-class continuations, нам уже не нужно реализовывать монадическое связывание вручную.
+Говорят, что для произвольного \texttt{m}, \mintinline{haskell}{Cont (m r) a} --- ``бесплатная'' реализация монады\footnote{\url{https://hackage.haskell.org/package/kan-extensions-5.2/docs/Control-Monad-Codensity.html}}.
 
-Ошибки монадические и континуэйшеновые % todo
+Реализация работы с ошибками через возвращение специального результата (\mintinline{haskell}{Either} в Haskell, \mintinline{rust}{Result} в Rust, \mintinline{go}{nil} в Go\ldots) имеет монадическую семантику (условные ветвления на каждом выбрасывают только часть продолжения), в то время как полноценный механизм исключений имеет доступ ко всему ограниченному продолжению до соответствующего блока \mintinline{kotlin}{try-catch}, что напоминает нашу текущую реализацию.
+С точки зрения количества синтаксического шума на уровне исходного кода вариант с исключениями явно предпочтительнее, а вопрос типизации исключений мы рассмотрим далее (см.\ \ref{sec:effect-systems}).
 
+Теперь попробуем вызвать продолжение несколько раз.
+Получим язык с недетерминизмом (или backtracking).
+Так, \texttt{choice} дважды продолжает остаток программы и аккумулирует все полученные результаты в списке:
 \begin{minted}{haskell}
     choice :: Cont [r] Bool
     choice = Cont \k -> k True ++ k False
@@ -646,6 +662,7 @@
       if b then pure n else pure (n - 1)
 \end{minted}
 
+Удивительно, но имея только продолжения первого класса можно реализовать даже язык с изменяемой ячейкой памяти:
 \begin{minted}{haskell}
     -- s -> (s, a) ~ ((s, a) -> r) -> (s -> r)
     -- ~ (a -> s -> r) -> (s -> r) ~ Cont (s -> r) a
@@ -656,20 +673,27 @@
     put :: s -> Cont (s -> r) ()
     put s' = Cont \k _s -> k () s'
 
-    runStateK :: (forall r . Cont (s -> r) a) -> s -> (a, s)
-    runStateK comp = runCont comp (,)
+    runStateС :: (forall r . Cont (s -> r) a) -> s -> (a, s)
+    runStateС comp = runCont comp (,)
 
     exampleState :: Int -> ((), Int)
-    exampleState = runStateK do
+    exampleState = runStateС do
       s <- get
       put (s + 1)
 \end{minted}
+Идея довольно простая: захват продолжения оставляет после себя функцию, в которую предыдущий вызов продолжения подкладывает текущее состояние.
+И действительно, изменяемое состояние это просто фрагмент продолжения (например, аппаратного стека), к которому мы имеем непосредственный доступ на чтение и изменение.
+Здесь же мы разместили в начале продолжения аппликацию, к которой, захватывая продолжение, прыгаем, чтобы получить аргумент и обновить её на новую.
 
-Раньше код был размазан по функциям с связыванию, теперь он в одном месте.
+\begin{task}
+    Поредуцируйте пример выше, чтобы понять, как это работает.
+\end{task}
 
 % todo \subsection*{Tardis}
 
-% todo
+Интуитивно могущество продолжений можно объяснить следующим образом:
+
+% todo control operator, runtime наизнанку
 
 \subsubsection{The mother of all monads} \label{subsubsec:monadic-reflection}
 
@@ -738,30 +762,30 @@
 % todo CEKT
 % todo abstract machines
 
-\subsection{Эффективная реализация продолжений} \label{subsubsec:efficient-cps}
-
-Существует несколько классических подходов реализации продолжений первого класса на языковом уровне, которые, как правило, используются для построения генераторов или корутин.
-
-\vocab{Continuous stack} реализация подразумевает, что продолжение представляется в виде аппаратного стека.
-Как только требуется захватить продолжение, стек копируется в кучу (возможно, лениво)\footnote{\href{https://youtu.be/kwS3OeoVCno?si=c4MkSkmLHNeywPrZ}{(youtube) Иван Углянский - Java Project Loom.}}. % todo cite
-То есть этот подход полагается на поддержку со стороны рантайма языка.
-
-\vocab{Сегментный стек} --- стек вызовов представляется как связный список аллоцированных в куче сегментов, каждый соответствует ограничивающей операции. % todo cite
-Так, не требуется делать копирования, достаточно подмены указателей.
-Однако, в таком случае стек нелокален, что не очень хорошо для работы кешей.
-
-\vocab{Finite state machine (FSM)} реализация подразумевает автоматическую CPS трансформацию пользовательского кода с дефункционализацией.
-Это можно сделать лишь средствами компилятора.
-
-В нашей реализации CPS производится огромное количество аллокаций замыканий, реифицирующих продолжения.
-Однако, если CPS получается автоматической трансляцией, можно делать эффективнее.
-Изначально продолжения придумывались для описания семантики прыжков, но можно пойти и в обратную сторону, реализовав продолжения эффективно для современных машин через \texttt{goto}.
-
-Так, состояние функции целиком один раз аллоцируется в куче, а перемещения по телу реализованы как машина состояний --- с помощью меток и прыжков.
-Таким образом, например, реализованы безстековые корутины в Kotlin\footnote{\url{https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md\#state-machines} \label{note:kotlin-state}}, генераторы в C\#\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}\ldots
-
-Даже в таком виде CPS остаётся тяжеловесной трансформацией, способной замедлить исполнение кода на порядки.
-Дело, в частности, в том, что переменные в таком подходе сложно размещать в регистрах (у функций много точек выходов и входов\footref{note:kotlin-state}), приходится постоянно записывать их в RAM --- производить \vocab{spilling}\footnote{\url{https://en.wikipedia.org/wiki/Register_allocation}}.
+%\subsection{Эффективная реализация продолжений} \label{subsubsec:efficient-cps}
+%
+%Существует несколько классических подходов реализации продолжений первого класса на языковом уровне, которые, как правило, используются для построения генераторов или корутин.
+%
+%\vocab{Continuous stack} реализация подразумевает, что продолжение представляется в виде аппаратного стека.
+%Как только требуется захватить продолжение, стек копируется в кучу (возможно, лениво)\footnote{\href{https://youtu.be/kwS3OeoVCno?si=c4MkSkmLHNeywPrZ}{(youtube) Иван Углянский - Java Project Loom.}}. % todo cite
+%То есть этот подход полагается на поддержку со стороны рантайма языка.
+%
+%\vocab{Сегментный стек} --- стек вызовов представляется как связный список аллоцированных в куче сегментов, каждый соответствует ограничивающей операции. % todo cite
+%Так, не требуется делать копирования, достаточно подмены указателей.
+%Однако, в таком случае стек нелокален, что не очень хорошо для работы кешей.
+%
+%\vocab{Finite state machine (FSM)} реализация подразумевает автоматическую CPS трансформацию пользовательского кода с дефункционализацией.
+%Это можно сделать лишь средствами компилятора.
+%
+%В нашей реализации CPS производится огромное количество аллокаций замыканий, реифицирующих продолжения.
+%Однако, если CPS получается автоматической трансляцией, можно делать эффективнее.
+%Изначально продолжения придумывались для описания семантики прыжков, но можно пойти и в обратную сторону, реализовав продолжения эффективно для современных машин через \texttt{goto}.
+%
+%Так, состояние функции целиком один раз аллоцируется в куче, а перемещения по телу реализованы как машина состояний --- с помощью меток и прыжков.
+%Таким образом, например, реализованы безстековые корутины в Kotlin\footnote{\url{https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md\#state-machines} \label{note:kotlin-state}}, генераторы в C\#\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}\ldots
+%
+%Даже в таком виде CPS остаётся тяжеловесной трансформацией, способной замедлить исполнение кода на порядки.
+%Дело, в частности, в том, что переменные в таком подходе сложно размещать в регистрах (у функций много точек выходов и входов\footref{note:kotlin-state}), приходится постоянно записывать их в RAM --- производить \vocab{spilling}\footnote{\url{https://en.wikipedia.org/wiki/Register_allocation}}.
 
 % todo объяснение через дефункционализацию
 
@@ -782,8 +806,6 @@
 
 % todo implementing while & break
 
-% todo control operator, runtime наизнанку
-
 
 
 
@@ -796,8 +818,6 @@
 % todo коиндуктивные домены
 
 % todo rust continuations
-
-% todo runtime кишками наизнанку
 
 % todo higher-order CPS
 
