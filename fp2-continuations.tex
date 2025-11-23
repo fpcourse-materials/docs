@@ -170,6 +170,7 @@
       LDiff r : k' -> evalK r (RDiff result : k') -- идем вычислять вправо
       RDiff l' : k' -> k' `appK` (l' - result)    -- продолжаем на результате
 \end{minted}
+Тут мы снова спускаемся по выражению в поисках примитивного редекса (тут~--- константы), попутно запоминая, что нужно будет сделать после.
 
 %\begin{figure}
 %    \centering
@@ -286,6 +287,12 @@
 
 Таким образом, мы получили язык, который позволяет пользователю в произвольном месте программы получить текущее продолжение в виде функции.
 
+Возможность получить продолжение первого класса почти не предоставляется промышленными языками, так как это довольно опасный инструмент.
+Действительно, если пользователь не вызовет продолжение, может не произойти закрытия ресурсов.
+Если вызовет несколько раз, снова может произойти как некорректная работа с ресурсами, так и порча изменяемой памяти.
+Подобные поведения можно исключать специальной обработкой таких ситуаций~\cite{muhcu2025multiple}, проверками времени компиляции (например, с помощью линейных типов) или времени исполнения.
+Сейчас с активными исследованиями о внедрении хендлеров эффектов (см.\ далее\ \ref{sec:effect-handlers}) продолжения первого класса могут получить новый шанс.
+
 \subsection{Продолжения своими руками} \label{subsec:functional-cps}
 
 Рассмотрим, как выглядит CPS в обычном коде, а не в контексте deep embedding.
@@ -348,7 +355,25 @@
 
 Мы снова получили представление продолжения в виде стека фреймов.
 А значит, интерпретатор \texttt{evalK} полученный нами ранее (\ref{subsubsec:continuation-semantics}) является CPS версией обычного интерпретатора, только с дефункционализированными продолжениями (они удобны для отладки~--- их можно распечатать, в отличие от функций Haskell).
-Если расширить тот наш язык и написать на нём факториал, а потом сделать fusion (рефункционализацию дерева программы), мы получим текущую реализацию факториала. % todo
+Если расширить тот наш язык и написать на нём факториал, а потом сделать fusion или рефункционализацию (\ref{subsubsec:deforestation-fusion}) дерева программы и дерева продолжения, мы получим текущую реализацию факториала.
+И в целом между различными стилями реализаций семантик можно построить соответствие (см.\ рис.\ \ref{fig:semantics-diagram}).
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.6\textwidth]{figs/semantics-diagram}
+    \caption{Связь между семантиками в различных стилях~\cite{danvy2008defunctionalized}.}
+    \label{fig:semantics-diagram}
+\end{figure}
+
+Этой техникой можно пользоваться и в более сложных случаях, чтобы легко получать хвостово-рекурсивные (итеративные) реализации\footnote{\url{https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html}}~\cite{gibbons2021continuation}\footnote{\href{https://youtu.be/8gnhaE2nmQ0?si=pEJX4jQteYmy7ZZn}{(youtube) Jeremy Gibbons - Continuation-passing style, defunctionalization, and associativity.}}.
+В целом CPS и дефункционализация~--- это богатый источник различных рефакторингов (см.\ рис.\ \ref{fig:cps-refactorings}).
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{figs/cps-defun-refactorings}
+    \caption{Трансформации кода, основанные на CPS и де(ре)функционализации~\cite{danvy2006analytical}.}
+    \label{fig:cps-refactorings}
+\end{figure}
 
 Теперь заметим, что операция умножения ассоциативна, а значит, можно \texttt{snoc} заменить на умножение, а продолжение представить одним числом.
 Получим привычную реализацию факториала с аккумулятором:
@@ -361,10 +386,7 @@
     facAcc 3 1 ?$\step$? facAcc 2 (1 * 3) ?$\step$? facAcc 1 ((1 * 3) * 2) ?$\step$? (1 * 3) * 2 ?$\step$? 6
 \end{minted}
 
-Этой техникой можно пользоваться и в более сложных случаях, чтобы получать хвостово-рекурсивные реализации~\cite{gibbons2021continuation}\footnote{\href{https://youtu.be/8gnhaE2nmQ0?si=pEJX4jQteYmy7ZZn}{(youtube) Jeremy Gibbons - Continuation-passing style, defunctionalization, and associativity.}}.
-Также, можно фреймы представить в виде эндоморфизмов и в качестве ассоциативной операции использовать композицию функций\footnote{\url{https://wiki.haskell.org/Difference_list}}.
-
-% todo reference to best refactoring https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html
+Также, можно фреймы представить в виде эндоморфизмов и в качестве ассоциативной операции использовать композицию функций~\cite{ploeg2014reflection}\footnote{\url{https://wiki.haskell.org/Difference_list}}.
 
 % todo можно ли не пользоваться тем, что единица нейтральная
 
@@ -606,7 +628,7 @@
 Продолжения полезны для понимания смысла программ, которые мы пишем каждый день (см.\ \ref{foot:the-lost-art-of-denotations}).
 Кроме того, как мы увидим в этой главе, продолжения первого класса можно использовать как средство построения могущественных встроенных языков.
 
-\subsubsection{Всё через продолжения}
+\subsubsection{Всё через продолжения} \label{subsubsec:god-cont}
 
 Реализуем ряд полезных встроенных языков с помощью продолжений первого класса.
 Чтобы получить доступ к продолжениям, воспользуемся shallow embedded языком \mintinline{haskell}{Cont}\footnote{\url{https://blog.poisson.chat/posts/2019-10-26-reasonable-continuations.html}}.
@@ -691,11 +713,17 @@
 
 % todo \subsection*{Tardis}
 
-Интуитивно могущество продолжений можно объяснить следующим образом:
-
-% todo control operator, runtime наизнанку
+Интуитивно могущество продолжений можно попробовать объяснить следующим образом: поддерживать продолжение~--- это основная обязанность системы исполнения языка; когда продолжения передаются пользователю, его код как бы вовлекается в деятельность runtime'а и становится его частью.
 
 \subsubsection{The mother of all monads} \label{subsubsec:monadic-reflection}
+
+В предыдущем параграфе (\ref{subsubsec:god-cont}) мы реализовали возможности классических монад в языке с продолжениями.
+Сработает ли это для произвольной монады?
+Оказывается, что да\footnote{\url{http://www.schoolofhaskell.com/school/to-infinity-and-beyond/pick-of-the-week/the-mother-of-all-monads}}\footnote{\url{https://blog.poisson.chat/posts/2019-10-26-reasonable-continuations.html}}\footnote{\url{https://blog.poisson.chat/posts/2019-10-27-continuation-submonads.html}}~\cite{filinski1994representing}.
+
+
+Универсально ли это для произвольной монады?
+
 
 Конкретный представитель кепчурит идею целого класса.
 И класс может определяться через представителя (representation theorem).
@@ -744,7 +772,7 @@
 
 % todo
 
-\subsubsection{Генераторы и корутины}
+%\subsubsection{Генераторы и корутины}
 
 % todo
 
@@ -798,16 +826,11 @@
 % todo
 
 
-
-
 % todo single-shot/multi-shot
 
 % todo problems with continuations: typing and resources
 
 % todo implementing while & break
-
-
-
 
 
 % todo http://www.serpentine.com/blog/2011/02/25/cps-is-great-cps-is-terrible/
