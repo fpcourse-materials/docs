@@ -11,11 +11,10 @@
 \input{preamble-slides}
 
 \title[10. Монады]{Практика 10. Монады}
-\date{осень 2024}
+\date{осень 2025}
 
 \begin{document}
 
-    \setcounter{framenumber}{-1}
     \mymaketitle
 
     \begin{frame}[fragile]{В предыдущих сериях}
@@ -109,7 +108,7 @@
             \end{minted}
         \end{itemize}
     \end{frame}
-    
+
     \begin{frame}[fragile]{``Консоль'' и \mintinline{haskell}|do|-нотация}
         \begin{itemize}
             \item[\todo] Два числа с ``консоли'', поделите одно на другое нацело и распечатайте результат, если остаток не нулевой, распечатайте его тоже
@@ -162,9 +161,7 @@
 
     \sectionplan{Монады в дикой природе \popslide}
 
-    \subsection{Обработка ошибок}
-
-    \begin{frame}[fragile]{\subsecname}
+    \begin{frame}[fragile]{Обработка ошибок}
         \vspace{-0.5em}
         Открываем документацию \texttt{java.util.Optional<T>} и видим\footnote{Из типов убраны wildcards для простоты.}:
         \begin{itemize}
@@ -194,7 +191,7 @@
                     auth.check(uid).flatMap(_ ->
                     db1.lookup(uid).flatMap(res1 ->
                     db2.lookup(uid).flatMap(res2 ->
-                    Optional.of(res1 + res2)))));
+                    Optional.of(res1 + res2))));
                 }
             \end{minted}
         \end{block}
@@ -210,9 +207,7 @@
         \end{block}
     \end{frame}
 
-    \subsection{Работа с последовательностями}
-
-    \begin{frame}[fragile]{\subsecname}
+    \begin{frame}[fragile]{Работа с последовательностями}
         \vspace{-0.5em}
         Открываем документацию \texttt{java.util.stream.Stream<T>} и видим:
         \begin{itemize}
@@ -227,16 +222,14 @@
         \end{itemize}
     \end{frame}
 
-    \subsection{Асинхронное программирование}
-
-    \begin{frame}[fragile]{\subsecname}
+    \begin{frame}[fragile]{Асинхронное программирование}
         \vspace{-0.5em}
         \begin{itemize}
             \item Оператор ``точка с запятой'' --- дождаться выполнения предыдущей инструкции и перейти к следующей
             \item ``Дождаться'' --- обычно заблокировать нативный поток --- мб очень дорого
             \item Нужно чтобы ``точка с запятой'' запоминала, что сделать по готовности результата вместо блокирования потока исполнения
             \item ``Перегружаем'' оператор ``точка с запятой''!
-            \item[\then] Заводим объект: коробочка, в которой потом появится значение\footnote{Такие объекты называют Future, Promise или Deferred (или ещё десяток минорных вариаций).}
+            \item[\then] Заводим объект: коробочка, в которой потом появится значение\footnote{Такие объекты называют Future, Promise или Deferred\ldots}
             \item[\then] Заводим операцию для него: запомни, что сделать по готовности результата
         \end{itemize}
         \vspace{-1.7em}
@@ -268,6 +261,8 @@
     \end{frame}
 
     \sectionplan{Материалы}
+
+    \appendix
 
     \begin{frame}[fragile]{Что посмотреть в транспорте}
         \begin{itemize}
