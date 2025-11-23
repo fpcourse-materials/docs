@@ -601,6 +601,8 @@
 %% todo
 %
 %\subsubsection{В \mintinline{kotlin}{Monad Cont}}
+
+% todo Monads and composable continuations by Phill Wadler
 %
 %Для примера реализуем два классических оператора для работы с ограниченными продолжениями --- \textbf{shift-reset}.
 %Воспользуемся продолжениями, собираемыми монадой \mintinline{kotlin}|Cont|.
@@ -719,27 +721,27 @@
 
 В предыдущем параграфе (\ref{subsubsec:god-cont}) мы реализовали возможности классических монад в языке с продолжениями.
 Сработает ли это для произвольной монады?
-Оказывается, что да\footnote{\url{http://www.schoolofhaskell.com/school/to-infinity-and-beyond/pick-of-the-week/the-mother-of-all-monads}}\footnote{\url{https://blog.poisson.chat/posts/2019-10-26-reasonable-continuations.html}}\footnote{\url{https://blog.poisson.chat/posts/2019-10-27-continuation-submonads.html}}~\cite{filinski1994representing}.
+Оказывается, что да\footnote{\url{http://www.schoolofhaskell.com/school/to-infinity-and-beyond/pick-of-the-week/the-mother-of-all-monads}}\footnote{\url{https://blog.poisson.chat/posts/2019-10-26-reasonable-continuations.html}}~\cite{filinski1994representing}.
 
+Вспомним, что монада --- это конструктор типа \texttt{m}, которым мы представляем денотацию вычисления.
+Операции \texttt{pure} и \texttt{>>=} позволяют создавать и композировать денотации.
+Таким образом, мы имеем вычисления, представленные в виде first-class данных.
 
-Универсально ли это для произвольной монады?
-
-
-Конкретный представитель кепчурит идею целого класса.
-И класс может определяться через представителя (representation theorem).
-
-Такой Cont на самом деле трансформер.
-
+Если наш язык предоставляет продолжения первого класса (для примера возьмём \mintinline{haskell}{Cont (m r)} как такой язык), мы можем определить две операции: \texttt{reflect}~--- исполнить монадическое вычисление в языке с продолжениями и получить результат \texttt{a}; \texttt{reify}~--- по вычислению в языке с продолжениями получить денотацию\footnote{Для энергичного языка \texttt{reify} должна принимать thunk \texttt{(() -> a) -> m a}.}.
+В Haskell можно это выразить как перегрузку этой пары функций для различных монад:
 \begin{minted}{haskell}
-    newtype State s a = State { runState :: s -> (a, s) }
-
-    class MonadR m where
+    class MonadicReflection m where
       -- m a -> (a -> m r) -> m r
       reflect :: m a -> forall r . Cont (m r) a
       -- (forall r . (a -> m r) -> m r) -> m a
       reify :: (forall r . Cont (m r) a) -> m a
+\end{minted}
 
-    instance MonadR (State s) where
+Например, для домена \mintinline{haskell}{State} реализация будет выглядеть следующим образом:
+\begin{minted}{haskell}
+    newtype State s a = State { runState :: s -> (a, s) }
+
+    instance MonadicReflection (State s) where
       reflect :: State s a -> (forall r . Cont (State s r) a)
       reflect comp = Cont \k -> State \s ->
         let (a, s') = runState comp s in
@@ -747,30 +749,21 @@
 
       reify :: (forall r . Cont (State s r) a) -> State s a
       reify comp = State $ runState (runCont comp (\x -> State (x,)))
-\end{minted}
 
-% todo CodensityT
+    exampleStateReflection :: Int -> (Int, Int)
+    exampleStateReflection = runState $ reify do
+      x <- reflect get
+      reflect $ put (x + 1)
+      pure x
+\end{minted}
 
 % todo переписать через shift/reset
 
-% todo Monads and composable continuations by Phill Wadler
+В принципе монады можно задавать через их вложение в монаду \mintinline{haskell}{Cont}\footnote{\url{https://blog.poisson.chat/posts/2019-10-27-continuation-submonads.html}}.
 
-% todo Representing Monads Filinsky
-
-% todo https://www.unison-lang.org/docs/fundamentals/abilities/for-monadically-inclined/
-
-% todo monads in python with nice syntax http://www.valuedlessons.com/2008/01/monads-in-python-with-nice-syntax.html
-
-% todo monadic reflection & direct style (lib from scala)
-% todo https://github.com/lampepfl/monadic-reflection/blob/main/TUTORIAL.md
-
-% todo reflection without remorse
-
-% todo https://blog.poisson.chat/posts/2019-10-27-continuation-submonads.html
-
-% todo https://www.schoolofhaskell.com/school/to-infinity-and-beyond/pick-of-the-week/the-mother-of-all-monads
-
-% todo
+Таким образом, если язык поддерживает продолжения первого класса, можно в direct-стиле\footnote{\url{https://www.unison-lang.org/docs/fundamentals/abilities/for-monadically-inclined/}} реализовать функциональность произвольной монады, без \mintinline{haskell}{do}-нотации, аппликативных цепочек и прочего синтаксического шума\footnote{\url{http://www.valuedlessons.com/2008/01/monads-in-python-with-nice-syntax.html}}\footnote{\url{https://github.com/lampepfl/monadic-reflection/blob/main/TUTORIAL.md}}.
+Позже мы увидим, что этот подход, в отличие от монад, нативно поддерживает композицию (\ref{sec:effect-handlers}), а также не накладывает ограничений на типизацию (\ref{sec:effect-systems}).
+Отсюда возникает вопрос: а нужны ли нам теперь в программировании монады?
 
 %\subsubsection{Генераторы и корутины}
 
