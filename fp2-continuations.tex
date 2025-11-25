@@ -1,3 +1,4 @@
+%! suppress = EscapeHashOutsideCommand
 %! suppress = MissingLabel
 
 Продолжения с начала 60х не один раз возникали в литературе в различных формах и разнообразных приложениях~\cite{reynolds1993discoveries, landin1997histories}, пока в 70х Wadsworth не придумал общий термин и единую концепцию --- \vocab{continuation}\footnote{\url{https://en.wikipedia.org/wiki/Continuation}} --- ``the meaning of the rest of the program''.
@@ -121,6 +122,7 @@
 
 Можно заметить, что \texttt{split} и \texttt{plugIn} однозначно определяется по синтаксису продолжений и виду главных редукций, а \texttt{transition} и \texttt{eval} одинаковы для произвольного языка.
 Поэтому семантику редукционных контекстов обычно задают как синтаксис продолжений, перечень главных редукций и единственное правило вывода --- шаг в контексте:\footnote{$\ominus$ тут обозначает синтаксический минус (ноду в дереве).}
+%! suppress = EscapeAmpersand
 \[
     \begin{array}{lrl}
         \text{Values}             & v & \Coloneqq \mathbb{Z}                                       \\
@@ -289,7 +291,7 @@
 
 Возможность получить продолжение первого класса почти не предоставляется промышленными языками, так как это довольно опасный инструмент.
 Действительно, если пользователь не вызовет продолжение, может не произойти закрытия ресурсов.
-Если вызовет несколько раз, снова может произойти как некорректная работа с ресурсами, так и порча изменяемой памяти.
+Если вызовет несколько раз, снова может произойти как некорректная работа с ресурсами, так и порча изменяемой памяти (продолжения, которые можно безопасно вызывать много раз называют \vocab{multi-shot}).
 Подобные поведения можно исключать специальной обработкой таких ситуаций~\cite{muhcu2025multiple}, проверками времени компиляции (например, с помощью линейных типов) или времени исполнения.
 Сейчас с активными исследованиями о внедрении хендлеров эффектов (см.\ далее\ \ref{sec:effect-handlers}) продолжения первого класса могут получить новый шанс.
 
@@ -595,13 +597,11 @@
     \end{minted}
 \end{task}
 
-\subsubsection{Классификация операторов} \label{subsubsec:delim-cont-classification}
-
-% todo
+Многие классические операторы, например, \texttt{shift/reset}, \texttt{prompt/control} и т.д., можно получить, оставив фрейм промпта в subcontinuation или в metacontinuation в реализации \texttt{splitByPrompt}~\cite{dyvbig2007monadic}.
 
 \subsubsection{В \mintinline{kotlin}{Monad Cont}}
 
- todo Monads and composable continuations by Phill Wadler
+% todo Monads and composable continuations by Phill Wadler
 
 Для примера реализуем два классических оператора для работы с ограниченными продолжениями --- \textbf{shift-reset}.
 Воспользуемся продолжениями, собираемыми монадой \mintinline{kotlin}|Cont|.
@@ -667,7 +667,8 @@
 Говорят, что для произвольного \texttt{m}, \mintinline{haskell}{Cont (m r) a} --- ``бесплатная'' реализация монады\footnote{\url{https://hackage.haskell.org/package/kan-extensions-5.2/docs/Control-Monad-Codensity.html}}.
 
 Реализация работы с ошибками через возвращение специального результата (\mintinline{haskell}{Either} в Haskell, \mintinline{rust}{Result} в Rust, \mintinline{go}{nil} в Go\ldots) имеет монадическую семантику (условные ветвления на каждом выбрасывают только часть продолжения), в то время как полноценный механизм исключений имеет доступ ко всему ограниченному продолжению до соответствующего блока \mintinline{kotlin}{try-catch}, что напоминает нашу текущую реализацию.
-С точки зрения количества синтаксического шума на уровне исходного кода вариант с исключениями явно предпочтительнее, а вопрос типизации исключений мы рассмотрим далее (см.\ \ref{sec:effect-systems}).
+С точки зрения количества синтаксического шума на уровне исходного кода, вариант с исключениями явно предпочтительнее, а вопрос типизации исключений мы рассмотрим далее (см.\ \ref{sec:effect-systems}).
+С точки зрения производительности всё не так очевидно\footnote{\url{https://www.serpentine.com/2011/02/25/cps-is-great-cps-is-terrible/}}\footnote{\url{https://stackoverflow.com/questions/13835817/are-exceptions-in-c-really-slow}}, однако stack unwinding средствами рантайма как будто имеет большее пространство для оптимизаций.
 
 Теперь попробуем вызвать продолжение несколько раз.
 Получим язык с недетерминизмом (или backtracking).
@@ -711,8 +712,6 @@
 \begin{task}
     Поредуцируйте пример выше, чтобы понять, как это работает.
 \end{task}
-
-% todo \subsection*{Tardis}
 
 Интуитивно могущество продолжений можно попробовать объяснить следующим образом: поддерживать продолжение~--- это основная обязанность системы исполнения языка; когда продолжения передаются пользователю, его код как бы вовлекается в деятельность runtime'а и становится его частью.
 
@@ -768,6 +767,9 @@
 
 % todo
 
+% todo связь с Box f
+% todo коиндуктивные домены
+
 
 % todo метапрограммирование и построение компиляторов
 
@@ -807,6 +809,8 @@
 %Даже в таком виде CPS остаётся тяжеловесной трансформацией, способной замедлить исполнение кода на порядки.
 %Дело, в частности, в том, что переменные в таком подходе сложно размещать в регистрах (у функций много точек выходов и входов\footref{note:kotlin-state}), приходится постоянно записывать их в RAM --- производить \vocab{spilling}\footnote{\url{https://en.wikipedia.org/wiki/Register_allocation}}.
 
+% todo coloring
+
 % todo объяснение через дефункционализацию
 
 % todo плюсы минусы подводные камни каждого из них
@@ -815,27 +819,7 @@
 
 % todo in haskell native implementation
 
-% todo
-
-
-% todo single-shot/multi-shot
-
-% todo problems with continuations: typing and resources
-
-% todo implementing while & break
-
-
-% todo http://www.serpentine.com/blog/2011/02/25/cps-is-great-cps-is-terrible/
-
-% todo https://www.joachim-breitner.de/blog/778-Don%E2%80%99t_think,_just_defunctionalize
-
-% todo связь с Box f
-% todo коиндуктивные домены
-
 % todo rust continuations
 
+
 % todo higher-order CPS
-
-% todo сослаться на the lost art of denotational semantics
-
-% todo coloring
