@@ -1,3 +1,81 @@
+%! suppress = MissingLabel
+
+Язык может давать возможность описывать чистые вычисления, предоставляя новый предметно-ориентированный словарный запас.
+Однако реальные программы не получится описывать только чистыми вычислениями.
+Поэтому нужно иметь возможность создавать языки для описания effectful вычислений.
+Об эффектах мы начинаем говорить в этой главе.
+
+\subsection{Понятие эффекта}
+
+Начнём разговор про эффекты апофатично, с того, чем они не являются.
+\vocab{Чистое вычисления} --- единственный его наблюдаемый результат --- его значение.
+\vocab{Чистая функция} --- результат зависит только от значения аргументов и её аппликация --- чистое вычисление.
+
+Программирование чистыми функциями считается хорошей практикой, так как этот стиль обладает большим количеством хороших свойств.
+Так, композиция чистых функций --- чистая функция; всё, что нужно для понимания кода, явно написано в этом коде; системы типов хорошо работают, предоставляя чистоту абстракции, документацию и частичную спецификацию.
+
+Однако, всё чистым кодом записать не получится, несмотря на все эти свойства и то, что даже ввод-вывод так можно описать~\cite{jones2001tackling}.
+% todo
+\begin{minted}{haskell}
+    getList :: Int -> World -> (World, [Int])
+    getList n w | n == 0 = (w, [])
+                | otherwise =
+      let (w', x) = getInt w in
+      fmap (x :) (getList (n - 1) w')
+\end{minted}
+
+Нужно делегировать весь этот bookkeeping сторонней сущности, чтобы она занималась этим за нас, то есть замести неинтересное под ковёр. % todo
+
+\begin{minted}{haskell}
+        getList :: Int -> IO [Int]
+        getList n | n == 0 = pure []
+                  | otherwise = do
+          x <- getInt
+          fmap (x :) (getList (n - 1))
+\end{minted}
+
+Такой сущностью является интерпретатор языка.
+А сам эффект является взаимодействием с контекстом исполнения.
+А поскольку мы делаем shallow-embedded встроенные языки для переиспользования максимума мета-языка, нужны высокоуровневые конструкции для конструирования сложных денотаций.
+
+% todo
+
+TODO недетерминизм и matter of perspective\footnote{\url{https://okmij.org/ftp/Computation/having-effect.html}} % todo
+
+% todo semantic domains have monad structure
+
+\subsection{Монады для моделирования эффектов}
+
+\vocab{Монада} --- это тройка $(m, \eta : a \to m a, \mu : m (m a) \to m a)$.
+% todo diagrams
+
+Монады для структурирования семантики~\cite{moggi1988computational}, монады как обобщение list comprehension~\cite{wadler1990comprehending}, monads to structure functional programs~\cite{wadler1992essence} % todo
+
+<<Computations of type $\alpha$ correspond to values of type $f\ap\alpha$>>, Moggi's principle. % todo
+
+\subsection{Трансформеры монад и модульные интерпретаторы}
+
+% todo remind of tagless final
+
+% todo lift - monad morphism
+
+% todo ContT, lift = (>>=)
+
+TODO\cite{liang1995monad} % todo
+
+\subsection{Представления монад}
+
+\subsection{Свободные монады}
+
+% todo Stackless Scala with free monads
+
+% todo free monads, freer monads
+
+% todo iteratee O. Kiselyov. Iteratees. In Proc. of the 11th International Symposium on Functional and Logic Programming, pages 166–181, 2012.
+
+% todo Monads and algebras
+
+% todo codensity, reflection without remorse
 
 
 

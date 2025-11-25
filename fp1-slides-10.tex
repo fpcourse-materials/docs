@@ -29,6 +29,69 @@
         \tableofcontents
     \end{frame}
 
+    \sectionplan{Чистые вычисления}
+
+    \begin{frame}[fragile]{Чистые (pure) вычисления}
+        Хорошие свойства функций: \pause
+        \begin{block}{Идемпотентность}
+            Многократный вызов функции эквивалентен однократному.
+        \end{block} \pause
+        \begin{block}{Ссылочная прозрачность (referential transparency)}
+            Вызов функции можно заменить на её результат без изменения семантики программы.
+        \end{block} \pause
+        \begin{block}{Чистота}
+            Функция не производит побочных эффектов (можем пронаблюдать только результат) и её результат зависит только от аргументов.
+        \end{block} \pause
+        \vspace{0.5em}
+        \begin{block}{Чистый язык}
+            Позволяет использовать только чистые функции.
+        \end{block}
+    \end{frame}
+
+    \begin{frame}[fragile]{Зачем функции быть чистой?}
+        \begin{itemize}
+            \item \pause Для простоты рассуждений (reasoning) о программе
+            \begin{itemize}
+                \item Функции всегда ведут себя одинаково
+                \item Можно упрощать выражения без потери смысла
+                \item Об их поведении можно формулировать алгебраические законы
+                \begin{itemize}
+                    \item А зная законы, можно механически и без опасений рефакторить код
+                    \item Можно проводить более высокоуровневые рассуждения вместо исполнения кода в голове
+                \end{itemize}
+            \end{itemize}
+            \item \pause Для композируемости $f \circ g$
+            \begin{itemize}
+                \item Композиция чистых функций --- чистая функция
+                \item Сколь угодно сложные и глубокие композиции остаются предсказуемыми
+                \item Нет неявных зависимостей, поверхность абстракции наглядно видна
+            \end{itemize}
+            \item \pause Для тестируемости
+            \begin{itemize}
+                \item \pause Требуется только варьировать входные параметры и смотреть результат (а не готовить и считывать конфигурацию всего мира вокруг)
+            \end{itemize}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Почему не обойтись чистыми функциями?}
+        \pause
+        Всё придётся делать самому:
+        \begin{minted}{haskell}
+            parsePolish :: [Token] -> Maybe ([Token], Expr)
+            parsePolish ts = case parseBinOp ts of
+              Nothing -> parseConst ts
+              Just (ts', op) -> case parsePolish ts' of
+                Nothing -> Nothing
+                Just (ts'', left) -> case parsePolish ts'' of
+                  Nothing -> Nothing
+                  Just (rest, right) -> Just (rest, BinOp op left right)
+        \end{minted}
+
+        \pause
+        \vspace{1em}
+        Для работы со сложностью нужно ``заметать под ковёр'' неинтересные детали.
+    \end{frame}
+
     \sectionplan{Работа с монадами}
 
     \begin{frame}[fragile]{Монады}
@@ -147,10 +210,10 @@
                 \end{block}
             \end{column}
         \end{columns}
-        \vspace{0.5em}
-        \begin{itemize}
-            \item Не нужно использовать \mintinline{haskell}|do|-нотацию без причины\\ {\color{blue} \url{https://wiki.haskell.org/Do_notation_considered_harmful}}
-        \end{itemize}
+%        \vspace{0.5em}
+%        \begin{itemize}
+%            \item Не нужно использовать \mintinline{haskell}|do|-нотацию без причины\\ {\color{blue} \url{https://wiki.haskell.org/Do_notation_considered_harmful}}
+%        \end{itemize}
     \end{frame}
 
     \begin{frame}[fragile]{Иначе говоря,}
