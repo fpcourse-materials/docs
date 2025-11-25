@@ -297,6 +297,8 @@
 
 \subsection{Продолжения своими руками} \label{subsec:functional-cps}
 
+% todo higher-order CPS
+
 Рассмотрим, как выглядит CPS в обычном коде, а не в контексте deep embedding.
 Для этого мы, во-первых, перейдём к shallow embedding и будем сразу строить элементы целевого домена.
 А во-вторых, рефункционализируем продолжения \mintinline{haskell}{K} и обобщим: вместо \mintinline{haskell}{K -> Int} будем использовать \mintinline{haskell}{forall r . (a -> r) -> r}, где \texttt{a -> r}~--- функциональное представление продолжения.
@@ -820,6 +822,3 @@
 % todo in haskell native implementation
 
 % todo rust continuations
-
-
-% todo higher-order CPS
