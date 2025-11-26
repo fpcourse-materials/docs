@@ -204,7 +204,7 @@
 
 В примерах выше конструкции языка управляют продолжениями неявно (см.\ рис.\ \ref{fig:exit-exceptions}).
 Однако, иногда вводят операторы, позволяющие явно оперировать продолжениями.
-С их помощью можно реализовать как возможности манипуляции потоком управления вроде генераторов и корутин\footnote{\url{https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style\#Example:_coroutines}}\footnote{\url{https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.coroutines/suspend-coroutine.html}}, так и все остальные эффекты вроде состояния (см.\ далее\ \ref{sec:effect-handlers}).
+С их помощью можно реализовать как возможности манипуляции потоком управления вроде генераторов и корутин\footnote{\url{https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style\#Example:_coroutines}}\footnote{\url{https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.coroutines/suspend-coroutine.html}}, так и все остальные эффекты вроде состояния (см.\ далее\ \ref{sec:effects}).
 
 \vocab{Продолжения первого класса (first-class continuations)} --- продолжения, которые представимы в программе в виде значений.
 Учитывая, что продолжение имеет вакантное место ещё не вычисленного подвыражения, продолжения первого класса представляют функциями первого класса.
@@ -293,7 +293,7 @@
 Действительно, если пользователь не вызовет продолжение, может не произойти закрытия ресурсов.
 Если вызовет несколько раз, снова может произойти как некорректная работа с ресурсами, так и порча изменяемой памяти (продолжения, которые можно безопасно вызывать много раз называют \vocab{multi-shot}).
 Подобные поведения можно исключать специальной обработкой таких ситуаций~\cite{muhcu2025multiple}, проверками времени компиляции (например, с помощью линейных типов) или времени исполнения.
-Сейчас с активными исследованиями о внедрении хендлеров эффектов (см.\ далее\ \ref{sec:effect-handlers}) продолжения первого класса могут получить новый шанс.
+Сейчас с активными исследованиями о внедрении хендлеров эффектов (см.\ далее\ \ref{sec:effects}) продолжения первого класса могут получить новый шанс.
 
 \subsection{Продолжения своими руками} \label{subsec:functional-cps}
 
@@ -762,7 +762,7 @@
 В принципе монады можно задавать через их вложение в монаду \mintinline{haskell}{Cont}\footnote{\url{https://blog.poisson.chat/posts/2019-10-27-continuation-submonads.html}}.
 
 Таким образом, если язык поддерживает продолжения первого класса, можно в direct-стиле\footnote{\url{https://www.unison-lang.org/docs/fundamentals/abilities/for-monadically-inclined/}} реализовать функциональность произвольной монады, без \mintinline{haskell}{do}-нотации, аппликативных цепочек и прочего синтаксического шума\footnote{\url{http://www.valuedlessons.com/2008/01/monads-in-python-with-nice-syntax.html}}\footnote{\url{https://github.com/lampepfl/monadic-reflection/blob/main/TUTORIAL.md}}.
-Позже мы увидим, что этот подход, в отличие от монад, нативно поддерживает композицию (\ref{sec:effect-handlers}), а также не накладывает ограничений на типизацию (\ref{sec:effect-systems}).
+Позже мы увидим, что этот подход, в отличие от монад, нативно поддерживает композицию (\ref{sec:effects}), а также не накладывает ограничений на типизацию (\ref{sec:effect-systems}).
 Отсюда возникает вопрос: а нужны ли нам теперь в программировании монады?
 
 \subsubsection{Генераторы и корутины}
