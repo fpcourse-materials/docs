@@ -767,47 +767,52 @@
 
 \subsubsection{Генераторы и корутины}
 
+Генераторы и корутины обычно определяют как вычисление, которое может быть остановлено и возобновлено снова в том же состоянии~\cite{moura2009revisiting}.
+Корутины же обобщают генераторы и, как правило, используются как примитив асинхронного программирования в виде \texttt{async/await} или других языковых конструкций~\cite{elizarov2021kotlin}.
+
+Для примера реализуем генераторы.
+В качестве результата генератора будем использовать ленивый список, итератор, закодированный в виде развёртки (см.\ \ref{subsec:all-unfolds}):
 \begin{minted}{haskell}
-    data Box f where
-      Box :: forall s f . s -> (s -> f s) -> Box f
-
+    data Box f = forall s . Box s (s -> f s)
     data ListF a rec = Nil | Cons a rec
-      deriving (Show)
+    type Iterator a = Box (ListF a)
 
-    box2list :: Box (ListF a) -> [a]
+    box2list :: Iterator a -> [a]
     box2list (Box s next) = case next s of
       Nil -> []
       Cons x s' -> x : box2list (Box s' next)
+\end{minted}
 
-    runGen :: Cont Res () -> Box (ListF Int)
-    runGen comp = Box ini step
-      where
-        ini () = runCont comp \() -> Stop
-        step k = case k () of
+Скрытым состоянием итератора будет ещё невыполненное продолжение.
+Доступ к продолжению будем получать в монаде \mintinline{haskell}{Cont}, где в качестве response type возьмём \mintinline{haskell}{GenState}.
+Так, операция \texttt{yield} останавливает вычисление и сохраняет продолжение в конструкторе \mintinline{haskell}{Yield}, а \texttt{makeGen} заканчивает данный генератор порождением конструктора \mintinline{haskell}{Stop}:
+\begin{minted}{haskell}
+    data GenState a = Stop | Yield a (() -> GenState a)
+
+    makeGen :: Cont (GenState a) () -> Iterator a
+    makeGen comp = Box
+      (\() -> runCont comp (\() -> Stop))
+      (\k -> case k () of
           Stop -> Nil
-          Res x k -> Cons x k
+          Yield x k' -> Cons x k'
+      )
 
-    data Res = Stop | Res Int (() -> Res)
+    yield :: a -> Cont (GenState a) ()
+    yield x = cont (Yield x)
+\end{minted}
 
-    yield :: Int -> Cont Res ()
-    yield x = cont $ Res x
-
+Теперь мы можем писать код, последовательно порождающий множество результатов:
+\begin{minted}{haskell}
     exampleGen :: [Int]
-    exampleGen = box2list $ runGen do
+    exampleGen = it2list $ makeGen do
       yield 1
       yield 2
       yield 3
 \end{minted}
 
-Корутины: stackfull/stackless (code coloring), first-class and not, symmetric/asymmetric.
-
-Континуэйшены и full coroutines выражаются друг через друга.
-
-% todo coloring
-
-% todo
-
-% todo связь с Box f
+\begin{task}
+    Приведите вычисление \mintinline{haskell}{runCont exampleGen (\() -> Stop))} к нормальной форме.
+\end{task}
 
 
 % todo метапрограммирование и построение компиляторов
