@@ -9,7 +9,7 @@
 
 Начнём разговор про эффекты апофатично, с того, чем они не являются.
 \vocab{Чистое вычисления} --- единственный его наблюдаемый результат --- его значение.
-\vocab{Чистая функция} --- результат зависит только от значения аргументов и её аппликация --- чистое вычисление.
+\vocab{Чистая функция} --- результат зависит только от значения аргументов и её аппликация --- чистое вычисление. % todo аргументы
 
 % todo obsidian What is a purely functional language?
 
@@ -53,7 +53,90 @@
 
 \subsection{Хендлеры эффектов}
 
+\begin{minted}{haskell}
+    data Request res = Val res | Ask (Int -> Request res)
 
+    newtype Eff res = Eff { runEff :: forall res' . (res -> Request res') -> Request res' }
+      deriving Functor
+
+    instance Applicative Eff where
+      pure x = Eff \k -> k x
+      (<*>) = ap
+
+    instance Monad Eff where
+      comp >>= k = Eff \k' -> runEff comp \x -> runEff (k x) k'
+
+    ask :: Eff Int
+    ask = Eff \k -> Ask k
+
+    run :: Eff res -> Request res
+    run comp = runEff comp Val
+
+    runReader :: Eff res -> Int -> res
+    runReader comp env = loop (run comp)
+      where
+        loop = \case
+          Val res -> res
+          Ask k -> loop (k env)
+
+    exampleReader :: Int -> Int
+    exampleReader = runReader do
+      x <- ask
+      y <- ask
+      pure (x + y)
+\end{minted}
+
+\begin{minted}{haskell}
+data (e |> es) a = L (e a) | R (es a)
+  deriving Functor
+
+-- Codensity (Request es)
+newtype Eff es res = Eff { runEff :: forall res'. (res -> Request es res') -> Request es res' }
+  deriving Functor
+
+instance Applicative (Eff es) where
+  pure x = Eff \k -> k x
+  (<*>) = ap
+
+instance Monad (Eff es) where
+  Eff comp >>= k = Eff \k' -> comp \x -> runEff (k x) k'
+
+data Request es res = Val res | Msg (es (Request es res))
+
+send
+  :: (forall res'. (res -> Request es res') -> es (Request es res'))
+  -> Eff es res
+send f = Eff \k -> Msg (f k)
+
+run :: Eff es res -> Request es res
+run (Eff f) = f Val
+
+
+newtype Reader e k = Ask (e -> k)
+  deriving Functor
+
+ask :: Eff (Reader e |> es) e
+ask = send \k -> L $ Ask k
+
+runReader
+  :: forall es env res . Functor es
+  => Eff (Reader env |> es) res
+  -> env -> Eff es res
+runReader comp env = loop (run comp)
+  where
+    loop :: Request (Reader env |> es) res -> Eff es res
+    loop = \case
+      Val res -> pure res
+      Msg (L (Ask k)) -> loop (k env)
+      Msg (R unknownReq) -> do
+        response <- resend unknownReq
+        loop response
+
+    resend
+      :: es (Request (Reader env |> es) res)
+      -> Eff es (Request (Reader env |> es) res)
+    resend unknownReq = send \k -> fmap k unknownReq
+\end{minted}
 
 % todo
 
@@ -61,16 +144,17 @@
 
 % todo
 
+\subsection{Алгебраичность эффектов}
 
-
-
-
+% todo
 
 
 
 
 
 %TODO недетерминизм и matter of perspective\footnote{\url{https://okmij.org/ftp/Computation/having-effect.html}} % todo
+
+% todo https://okmij.org/ftp/Computation/having-effect.html
 %
 % todo diagrams
 
