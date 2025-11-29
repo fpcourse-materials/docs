@@ -480,7 +480,7 @@
 
 \subsection{Delimited continuations} \label{subsec:delimited-cont}
 
-В современной практике, как правило, используют продолжения первого класса не до конца программы, а только до определённой точки.
+В современной практике, как правило, используют продолжения не до конца программы, а только до определённой точки.
 Их называют \vocab{ограниченными} или \vocab{разграниченными продолжениями}, \vocab{delimited} или \vocab{composable continuations}, \vocab{subcontinuations}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}.
 
 Конструкции для работы с такими продолжениями парные: вводится оператор, ограничивающий текущее продолжение (мб имеющий метку); а также оператор захвата фрагмента текущего продолжения (мб до конкретного ограничителя с определённой меткой).
@@ -488,7 +488,7 @@
 
 Например, работа с исключениями подразумевает использование двух конструкций: продолжение ограничивается с помощью \mintinline{kotlin}|try-catch|, а \mintinline{kotlin}|throw| выкидывает соответствующее частичное продолжение, не захватывая его (см.\ рис. \ref{fig:exit-exceptions}):
 \[
-    E_1[try\{E_2[throw(v)]\}catch(f)] \to E_1[f(v)]
+    E_1[try\{E_2[throw(v)]\}catch(x) \{t\}] \to E_1[\subst{t}{x}{v}]
 \]
 
 Мы же рассмотрим универсальные операторы из~\cite{dyvbig2007monadic}.
@@ -526,9 +526,9 @@
 То есть блок обработки пишется не с \mintinline{kotlin}|catch|, а с \mintinline{kotlin}|throw|:
 
 \begin{gather*}
-    E_1[withSubCont \ap p \ap \{E_2[pushSubCont \ap f]\}] \to E_1[f \ap E_2]
+    E_1[pushPrompt \ap p \ap \{E_2[withSubCont \ap p \ap f]\}] \to E_1[f \ap E_2]
     \\
-    E_1[try\{E_2[throw \ap v]\}rcatch(f)] \to E_1[f \ap v \ap (\lambda x\ldotp E_2[x])]
+    E_1[try\{E_2[throw \ap v]\} catch(x, k) \{t\}] \to E_1[\subst{\subst{t}{k}{\lambda y\ldotp E_2[y]}}{x}{v}]
 \end{gather*}
 
 \begin{figure}
@@ -798,7 +798,7 @@
       )
 
     yield :: a -> Cont (GenState a) ()
-    yield x = cont (Yield x)
+    yield x = cont \k -> Yield x k
 \end{minted}
 
 Теперь мы можем писать код, последовательно порождающий множество результатов:
@@ -828,19 +828,22 @@
 % todo CEKT
 % todo abstract machines
 
-\subsection{Эффективная реализация продолжений} \label{subsec:efficient-cps}
+\subsection{Эффективная работа с продолжениями} \label{subsec:efficient-cps}
 
-Существует несколько классических подходов к реализации продолжений первого класса на языковом уровне, которые, как правило, используются для построения генераторов или корутин.
+На практике для реализации генераторов и корутин требуется останавливать и продолжать программу, иначе говоря, захватывать продолжения.
+Это нужно делать максимально эффективно.
 
-\subsubsection{Continuous stack}
+% todo https://dl.acm.org/doi/10.1145/3385412.3385994
+
+\subsubsection{Contiguous stack}
 
 Продолжение представляется в виде аппаратного стека.
 Как только требуется захватить продолжение, стек копируется в кучу (возможно, лениво)\footnote{\href{https://youtu.be/kwS3OeoVCno?si=c4MkSkmLHNeywPrZ}{(youtube) Иван Углянский - Java Project Loom.}}. % todo cite
-То есть этот подход полагается на поддержку со стороны рантайма языка.
+То есть этот подход полностью полагается на поддержку со стороны рантайма языка.
 
-\subsubsection{Сегментный стек}
+\subsubsection{Сегментный стек} % todo cite
 
-Стек вызовов представляется как связный список аллоцированных в куче сегментов, каждый соответствует ограничивающей операции. % todo cite
+Стек вызовов представляется как связный список аллоцированных в куче сегментов, каждый соответствует ограничивающей операции.
 Так, не требуется делать копирования, достаточно подмены указателей.
 Однако, в таком случае стек нелокален, что не очень хорошо для работы кешей.
 
