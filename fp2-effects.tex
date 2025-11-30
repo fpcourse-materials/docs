@@ -1,13 +1,15 @@
 %! suppress = MissingLabel
 
+Ранее мы признали работу со сложностью главной задачей программиста, а построение встроенных языков~--- основным инструментом этой работы (\ref{subsec:interpreters-rules}).
+В этой главе же мы рассмотрим понятие эффекта.
+Оно тесно связано со встроенными языками и даст нам понимание, когда и для чего именно их конструировать.
 
+Для реализации встроенных языков мы предпочли shallow embedding в форме tagless final (\ref{subsec:tagless-final}), который максимально переиспользует возможности мета-языка и позволяет давать различные интерпретации одной программе.
+Далее мы исследовали процесс вычисления и извлекли понятие продолжения (\ref{sec:continuations}).
+Оказалось, что tagless final языки, которые мы строили вокруг монад, можно выразить через продолжения удобнее и проще (\ref{subsubsec:god-cont},\ \ref{subsubsec:monadic-reflection}).
+В этой главе мы поймём, как это поможет решить expression problem (\ref{subsec:expression-problem}) до конца.
 
-По-другому посмотрим на интерпретаторы встроенных языков, доведём их до абсолюта.
-Чтобы менеджить сложность.
-
-% todo
-
-\subsection{Понятие эффекта}
+\subsection{Понятие эффекта} \label{subsec:about-effects}
 
 Начнём разговор про эффекты апофатично, с того, чем они не являются.
 \vocab{Чистое вычисления} --- единственный его наблюдаемый результат --- его значение.
@@ -53,112 +55,144 @@
 На практике этим контекстом является интерпретатор встроенного языке, а операции с эффектом~--- его конструкции.
 Поэтому мы снова возвращаемся к задаче построения модульных интерпретаторов.
 
-%\subsection{Хендлеры эффектов}
-%
-%\begin{minted}{haskell}
-%    data Request res = Val res | Ask (Int -> Request res)
-%
-%    newtype Eff res = Eff { runEff :: forall res' . (res -> Request res') -> Request res' }
-%      deriving Functor
-%
-%    instance Applicative Eff where
-%      pure x = Eff \k -> k x
-%      (<*>) = ap
-%
-%    instance Monad Eff where
-%      comp >>= k = Eff \k' -> runEff comp \x -> runEff (k x) k'
-%
-%    ask :: Eff Int
-%    ask = Eff \k -> Ask k
-%
-%    run :: Eff res -> Request res
-%    run comp = runEff comp Val
-%
-%    runReader :: Eff res -> Int -> res
-%    runReader comp env = loop (run comp)
-%      where
-%        loop = \case
-%          Val res -> res
-%          Ask k -> loop (k env)
-%
-%    exampleReader :: Int -> Int
-%    exampleReader = runReader do
-%      x <- ask
-%      y <- ask
-%      pure (x + y)
-%\end{minted}
-%
-%\begin{minted}{haskell}
-%data (e |> es) a = L (e a) | R (es a)
-%  deriving Functor
-%
-%-- Codensity (Request es)
-%newtype Eff es res = Eff { runEff :: forall res'. (res -> Request es res') -> Request es res' }
-%  deriving Functor
-%
-%instance Applicative (Eff es) where
-%  pure x = Eff \k -> k x
-%  (<*>) = ap
-%
-%instance Monad (Eff es) where
-%  Eff comp >>= k = Eff \k' -> comp \x -> runEff (k x) k'
-%
-%data Request es res = Val res | Msg (es (Request es res))
-%
-%send
-%  :: (forall res'. (res -> Request es res') -> es (Request es res'))
-%  -> Eff es res
-%send f = Eff \k -> Msg (f k)
-%
-%run :: Eff es res -> Request es res
-%run (Eff f) = f Val
-%
-%
-%newtype Reader e k = Ask (e -> k)
-%  deriving Functor
-%
-%ask :: Eff (Reader e |> es) e
-%ask = send \k -> L $ Ask k
-%
-%runReader
-%  :: forall es env res . Functor es
-%  => Eff (Reader env |> es) res
-%  -> env -> Eff es res
-%runReader comp env = loop (run comp)
-%  where
-%    loop :: Request (Reader env |> es) res -> Eff es res
-%    loop = \case
-%      Val res -> pure res
-%      Msg (L (Ask k)) -> loop (k env)
-%      Msg (R unknownReq) -> do
-%        response <- resend unknownReq
-%        loop response
-%
-%    resend
-%      :: es (Request (Reader env |> es) res)
-%      -> Eff es (Request (Reader env |> es) res)
-%    resend unknownReq = send \k -> fmap k unknownReq
-%\end{minted}
-%
-%% todo
-%
-%\subsection{Трансформеры монад}
-%
-%% todo
-%
-%\subsection{Алгебраичность эффектов}
-%
-%% todo
+%TODO недетерминизм и matter of perspective\footnote{\url{https://okmij.org/ftp/Computation/having-effect.html}}
+
+% todo context polymorphism
+
+% todo
+
+\subsection{Хендлеры эффектов}
+
+% todo историческая справка
+
+\subsubsection{Client-server communication}
+
+% todo \cite{Extensible effects}
+
+\begin{minted}{haskell}
+    data Request res = Val res | Ask (Int -> Request res)
+
+    newtype Eff res = Eff { runEff :: forall res' . (res -> Request res') -> Request res' }
+      deriving Functor
+
+    instance Applicative Eff where
+      pure x = Eff \k -> k x
+      (<*>) = ap
+
+    instance Monad Eff where
+      comp >>= k = Eff \k' -> runEff comp \x -> runEff (k x) k'
+
+    ask :: Eff Int
+    ask = Eff \k -> Ask k
+
+    run :: Eff res -> Request res
+    run comp = runEff comp Val
+
+    runReader :: Eff res -> Int -> res
+    runReader comp env = loop (run comp)
+      where
+        loop = \case
+          Val res -> res
+          Ask k -> loop (k env)
+
+    exampleReader :: Int -> Int
+    exampleReader = runReader do
+      x <- ask
+      y <- ask
+      pure (x + y)
+\end{minted}
+
+\begin{minted}{haskell}
+data (e |> es) a = L (e a) | R (es a)
+  deriving Functor
+
+-- Codensity (Request es)
+newtype Eff es res = Eff { runEff :: forall res'. (res -> Request es res') -> Request es res' }
+  deriving Functor
+
+instance Applicative (Eff es) where
+  pure x = Eff \k -> k x
+  (<*>) = ap
+
+instance Monad (Eff es) where
+  Eff comp >>= k = Eff \k' -> comp \x -> runEff (k x) k'
+
+data Request es res = Val res | Msg (es (Request es res))
+
+send
+  :: (forall res'. (res -> Request es res') -> es (Request es res'))
+  -> Eff es res
+send f = Eff \k -> Msg (f k)
+
+run :: Eff es res -> Request es res
+run (Eff f) = f Val
 
 
+newtype Reader e k = Ask (e -> k)
+  deriving Functor
 
+ask :: Eff (Reader e |> es) e
+ask = send \k -> L $ Ask k
 
+runReader
+  :: forall es env res . Functor es
+  => Eff (Reader env |> es) res
+  -> env -> Eff es res
+runReader comp env = loop (run comp)
+  where
+    loop :: Request (Reader env |> es) res -> Eff es res
+    loop = \case
+      Val res -> pure res
+      Msg (L (Ask k)) -> loop (k env)
+      Msg (R unknownReq) -> do
+        response <- resend unknownReq
+        loop response
 
-%TODO недетерминизм и matter of perspective\footnote{\url{https://okmij.org/ftp/Computation/having-effect.html}} % todo
+    resend
+      :: es (Request (Reader env |> es) res)
+      -> Eff es (Request (Reader env |> es) res)
+    resend unknownReq = send \k -> fmap k unknownReq
+\end{minted}
 
-% todo https://okmij.org/ftp/Computation/having-effect.html
-%
-% todo diagrams
+% todo
+
+\subsubsection{Free monads}
+
+% todo free folk in general
+
+% todo Stackless Scala with free monads
+% todo freer monads
+% todo iteratee O. Kiselyov. Iteratees. In Proc. of the 11th International Symposium on Functional and Logic Programming, pages 166–181, 2012.
+
+% todo deep vs shallow handlers
+
+% todo
+
+\subsubsection{Хендлеры через ограниченные продолжения}
+
+% todo deep vs shallow handlers
+
+% todo
+
+\subsubsection{Эффективная реализация хендлеров}
+
+% todo стратегии компиляции
+
+% todo функция это тоже способ унести код куда-то, обобщённый алгебраический эффект отличается более тонким контролем над континуэйшеном места вызова
+
+% todo
+
+\subsubsection{Приложения хендлеров}
+
+% todo  custom schedulers
+
+% todo связь с codata
+
+% todo
+
+\subsection{Трансформеры монад}
+
+% TODO\cite{liang1995monad}
 
 % todo remind of tagless final
 
@@ -166,47 +200,28 @@
 
 % todo ContT, lift = (>>=)
 
-%TODO\cite{liang1995monad} % todo
+% todo fused effects and CPS
 
-%\subsection{Свободные монады}
+% todo
 
-% todo Stackless Scala with free monads
+\subsection{Алгебраичность и эффекты высших порядков}
 
-% todo free monads, freer monads
-
-% todo iteratee O. Kiselyov. Iteratees. In Proc. of the 11th International Symposium on Functional and Logic Programming, pages 166–181, 2012.
+% todo abstracting definitional interpreters & github semantics
 
 % todo Monads and algebras
 
-% todo iteratee
-
-% todo https://homepages.inf.ed.ac.uk/wadler/papers/expression/expression.txt
-
 % todo https://www.eff-lang.org/handlers-tutorial.pdf
 
-% todo алгебраические эффекты
-% todo связь с delimited continuations
-% todo стратегии компиляции, связь с codata
-% todo эффекты высших порядков
-% todo full vs shallow embeddings
-% todo abstracting definitional interpreters & github semantics
-% todo fused effects and CPS
+% todo
 
-% todo функция это тоже способ унести код куда-то, обобщённый алгебраический эффект отличается более тонким контролем над континуэйшеном места вызова
 
 % todo compare open type families & extensible interpreters
 
 % todo Polymorphic Symmetric Multiple Dispatch with Variance
-
 % todo \textit{multimethods}
-
-% todo  custom schedulers
-
 %    Languages with \textit{multimethods}, like Common Lisp’s CLOS, Dylan, and Julia do support adding both new types and operations easily.
 %    What they typically sacrifice is either static type checking, or separate compilation.
 
 % todo ZIO, TS Effect
 
 % todo call-by-push value and how it is related to effects
-
-% todo context polymorphism

@@ -759,7 +759,8 @@
 
 % todo переписать через shift/reset
 
-В принципе монады можно задавать через их вложение в монаду \mintinline{haskell}{Cont}\footnote{\url{https://blog.poisson.chat/posts/2019-10-27-continuation-submonads.html}}.
+Интуитивно это можно понимать следующим образом: реализации bind на самом деле не важно, ей подаётся ``маленькое'' продолжение (собранное с помощью рассахаривания \mintinline{haskell}{do}-нотации), или ``большое'' продолжение, собранное мета-языком или монадой \mintinline{haskell}{Cont}.
+И в принципе монады можно задавать через их вложение в монаду \mintinline{haskell}{Cont}\footnote{\url{https://blog.poisson.chat/posts/2019-10-27-continuation-submonads.html}}.
 
 Таким образом, если язык поддерживает продолжения первого класса, можно в direct-стиле\footnote{\url{https://www.unison-lang.org/docs/fundamentals/abilities/for-monadically-inclined/}} реализовать функциональность произвольной монады, без \mintinline{haskell}{do}-нотации, аппликативных цепочек и прочего синтаксического шума\footnote{\url{http://www.valuedlessons.com/2008/01/monads-in-python-with-nice-syntax.html}}\footnote{\url{https://github.com/lampepfl/monadic-reflection/blob/main/TUTORIAL.md}}.
 Позже мы увидим, что этот подход, в отличие от монад, нативно поддерживает композицию (\ref{sec:effects}), а также не накладывает ограничений на типизацию (\ref{sec:effect-systems}).
