@@ -282,7 +282,7 @@
 \begin{minted}{haskell}
     show :: Animal -> String
     show animal = case animal of
-      Cat name nLifes -> "This is cat " ++ name ++ show nLifes
+      Cat name nLifes -> "This is cat " ++ name ++ " " ++ show nLifes
       Dog name -> "This is dog " ++ name
 \end{minted}
 
@@ -336,7 +336,7 @@ Haskell генерирует функции-аксессоры для досту
 \end{minted}
 
 Кроме совершенно новых типов данных, в Haskell можно объявлять типовые синонимы.
-Это имена, которые можно использовать вместо других типов, если, например, запись оригинального типа слишком длинная для повсеместного написания.
+Это имена, которые можно использовать вместо других типов, если, например, запись оригинального типа слишком длинная для повсеместного написания:
 \begin{minted}{haskell}
     type T a = VeryLongType Int (a -> AnotherLongType a)
 \end{minted}
