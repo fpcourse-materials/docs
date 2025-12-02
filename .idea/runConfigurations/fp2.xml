@@ -4,7 +4,7 @@
       <compiler>PDFLATEX</compiler>
       <compiler-path />
       <sumatra-path />
-      <pdf-viewer>BUILT-IN-PDF-VIEWER</pdf-viewer>
+      <pdf-viewer>NONE</pdf-viewer>
       <viewer-command />
       <compiler-arguments>--shell-escape</compiler-arguments>
       <envs />
