@@ -1,4 +1,4 @@
-\usepackage{hyperref}%! suppress = EscapeHashOutsideCommand
+%! suppress = EscapeHashOutsideCommand
 %! suppress = Quote
 %! suppress = MissingImport
 %! suppress = MissingLabel
@@ -48,18 +48,18 @@
                 \begin{minted}{haskell}
                     f a b =
                       let (w1, x) = g a in
-                      let w2 = w1 <> "ou" in
+                      let w2 = "ou" in
                       let (w3, y) = h b in
-                      (w2 <> w3, x + y)
+                      (w1 <> w2 <> w3, x + y)
                 \end{minted}
             \end{column}\hfill%
             \begin{column}[t]{0.485\textwidth}
                 \pause
                 \begin{minted}{haskell}
                     f a b = runWriter do
-                      x <- g a
+                      x <- g' a
                       tell "ou"
-                      y <- h b
+                      y <- h' b
                       pure (x + y)
 
                     tell :: w -> Writer w ()
@@ -99,9 +99,9 @@
                 \begin{minted}{haskell}
                     f :: Int -> Env -> Int
                     f a = runReader do
-                      x <- g a
+                      x <- g' a
                       y <- asks intField
-                      z <- h
+                      z <- h'
                       pure (x + y + z)
 
                     asks :: (e -> e') -> Reader e e'
@@ -267,7 +267,7 @@
                 \begin{minted}{haskell}
                     f :: Int -> Int -> (Int, ())
                     f x = runState do
-                      b <- g a
+                      b <- g' a
                       st <- get
                       put (st + 1)
                     get :: State s s

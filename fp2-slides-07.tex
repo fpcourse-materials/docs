@@ -26,8 +26,52 @@
 
     \sectionplan{Понятие эффекта}
 
-    \begin{frame}[fragile]{}
-        kek % todo
+    \begin{frame}[fragile]{Эффекты для управления сложностью}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[t]{0.52\textwidth}
+                \begin{minted}{haskell}
+                    getList :: Int -> World -> (World, [Int])
+                    getList n w | n == 0 = (w, [])
+                                | otherwise =
+                      let (w', x) = getInt w in
+                      let (w'', xs) = getList (n - 1) w' in
+                      (w'', x : xs)
+                \end{minted}
+            \end{column}\hfill%
+            \begin{column}[t]{0.43\textwidth}
+                \begin{minted}{haskell}
+                    getList :: Int -> IO [Int]
+                    getList n | n == 0 = pure []
+                              | otherwise = do
+                      x <- getInt
+                      xs <- getList (n - 1)
+                      return (x : xs)
+                \end{minted}
+            \end{column}
+        \end{columns}
     \end{frame}
-    
+
+    \begin{frame}[fragile]{Эффекты как слиент-серверное взаимодействие}
+        \begin{figure}
+            \centering
+            \includegraphics[width=0.6\textwidth]{figs/effects}
+        \end{figure}
+    \end{frame}
+
+    \sectionplan{Хендлеры эффектов}
+
+    \begin{frame}[fragile]{Хендлеры как resumable exceptions}
+        \pause
+        \begin{minted}{haskell}
+            effect reader<e>
+              ctl ask(): e
+
+            fun main()
+              with handler
+                ctl ask() resume(20)
+              print(2 + ask() + ask())
+        \end{minted}
+    \end{frame}
+
 \end{document}
