@@ -11,11 +11,10 @@
 \input{preamble-slides}
 
 \title[12. Трансформеры монад]{Практика 12. Трансформеры монад}
-\date{осень 2024}
+\date{осень 2025}
 
 \begin{document}
 
-    \setcounter{framenumber}{-1}
     \mymaketitle
 
     \begin{frame}[fragile]{В предыдущих сериях}
@@ -93,8 +92,8 @@
             \item[\NB] Но монады в общем случае не коммутируют
             \item[\eg] Попробуем переставить \mintinline{haskell}|Reader| и \mintinline{haskell}|Writer|
             \begin{itemize}
-                \item[1.] \mintinline{haskell}|Reader e (Writer w a)| имеет движок \mintinline{haskell}|e -> (w, a)|
-                \item[2.] \mintinline{haskell}|Writer w (Reader e a)| имеет движок \mintinline{haskell}|(w, e -> a)|
+                \item[1.] \mintinline{haskell}|Reader e (Writer w a)| $\iso$ \mintinline{haskell}|e -> (w, a)|
+                \item[2.] \mintinline{haskell}|Writer w (Reader e a)| $\iso$ \mintinline{haskell}|(w, e -> a)|
                 \item[\advanced] Алгебраически видно, что это не изоморфные типы: $(w * a)^e \neq w * a ^ e$
                 \item Разумной реализации тоже не получается, перестановка от 1 к 2 теряет лог:
                 \begin{minted}{haskell}
@@ -225,11 +224,13 @@
 
     \sectionplan{Материалы}
 
+    \appendix
+
     \begin{frame}[fragile]{Что посмотреть в транспорте}
         \begin{itemize}
             \item \href{https://markkarpov.com/post/the-monads}{\color{blue}(post) The monads of Haskell --- Mark Karpov}
             \item \href{https://youtu.be/m821Vz8N_bo?si=f-2cR0QExCWZr-BK}{\color{blue} [Haskell'23] The Evolution of Effects }
-            \item \href{https://youtu.be/qgfCmQ-2tW0?si=6BjvijRPU2hEmk49}{\color{blue}  Keynote: Daniel Spiewak - The Case For Effect Systems }
+%            \item \href{https://youtu.be/qgfCmQ-2tW0?si=6BjvijRPU2hEmk49}{\color{blue}  Keynote: Daniel Spiewak - The Case For Effect Systems }
             \item \href{https://www.youtube.com/live/0jI-AlWEwYI?si=KzgcHDgZ4GseytRA}{\color{blue} Alexis King - ``Effects for Less'' ZuriHac 2020}
             \item \href{https://youtu.be/vfDazZfxlNs?si=Sjfitsfe33jpbMth}{\color{blue}  ``Building Haskell Programs with Fused Effects'' by Patrick Thomson}
         \end{itemize}
