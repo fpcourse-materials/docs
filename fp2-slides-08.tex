@@ -8,7 +8,6 @@
 
 \input{preamble-slides}
 \setminted{xleftmargin=\parindent, autogobble, escapeinside=??}
-\newcommand{\iso}{\sim}
 
 \title{8. Системы эффектов}
 \author{Андрей Стоян}
@@ -27,22 +26,29 @@
     \sectionplan{Effect Systems --- what and why}
 
     \begin{frame}[fragile]{What are effect systems}
-        \begin{itemize}
-            \item Types describe shapes of function arguments and result \[\lambda x\ldotp f\ap x + 1 : nat\to nat\]
-            \item Sometimes function wants to do something more than act on arguments to produce results
-            \item[\defi] \vocab{Effect} --- interaction with execution context (invocation of ``special functions'') \[\lambda x\ldotp \underline{print}\ap x;~f\ap x + 1 : ~?\]
-            \item[\defi] \vocab{Effect System} tracks function's effects, what function \emph{does} executing \[\lambda x\ldotp print\ap x;~f\ap x + 1 : nat \to^{\{print\}} nat\]
-            \item This can be seen as tracking dynamically scoped variables
-        \end{itemize}
+        \begin{columns}[onlytextwidth]
+            \begin{column}{0.485\textwidth}
+                \begin{itemize}
+                    \item Types describe shapes of function arguments and result \[\lambda x\ldotp f\ap x + 1 : nat\to nat\]
+                    \item[\defi] \vocab{Effect} --- interaction with execution context (invocation of ``special functions'') \[\lambda x\ldotp \underline{print}\ap x;~f\ap x + 1 : ~?\]
+                    \item[\defi] \vocab{Effect System} tracks function's effects, what function \emph{does} executing \[\lambda x\ldotp print\ap x;~f\ap x + 1 : nat \to^{\{print\}} nat\]
+                \end{itemize}
+            \end{column}\hfill%
+            \begin{column}{0.485\textwidth}
+                \begin{center}
+                    \includegraphics[width=\textwidth]{figs/context-communication}
+                \end{center}
+            \end{column}
+        \end{columns}
     \end{frame}
 
     \begin{frame}[fragile]{Why do we need effect systems}
         \begin{itemize}
-            \item Clarify abstraction borders --- all \emph{observable computational aspects} of a function in types
-            \item Establish \vocab{effect safety} --- ensure that context actually supports such effects
+            \item[1.] Clarify abstraction borders --- all \emph{observable} context dependencies of functions in types
+            \item[2.] \pause Establish \vocab{effect safety} --- ensure that context actually supports such effects
             \item[\eg] Thrown exceptions should be eventually handled
             \item[\eg] Required service implementation is provided
-            \item Control \vocab{effect encapsulation (abstraction)} --- no effects are handled accidentally\footnote{Lindley, Sam. "Encapsulating effects." \textit{Dagstuhl Reports, Volume 8, Issue 4}. 2018.}
+            \item[3.] \pause Control \vocab{effect encapsulation (abstraction)} --- no effects are handled accidentally\footnote{Lindley, Sam. "Encapsulating effects." \textit{Dagstuhl Reports, Volume 8, Issue 4}. 2018.}
             \item[\eg] Higher-order function can eventually handle exception from parameter function
             \begin{minted}{kotlin}
                 fun withContent(path: String, f: (String) -> Unit) =
@@ -54,6 +60,31 @@
             \end{minted}
             \item Certainty by construction software
         \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Free variables are the essence}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}{0.485\textwidth}
+                \begin{itemize}
+                    \item[\defi] \textbf{Free variables} --- variables that are not defined in a particular computation
+                    \item So their meaning depend on the context (code around)
+                    \item[\NB] An effect system is about managing free variables
+                    \item Free variables can be dynamically or lexically scoped\ldots
+                \end{itemize}
+            \end{column}\hfill%
+            \begin{column}{0.485\textwidth}
+                \begin{minted}{swift}
+                    func f(x: Int64) {
+                        op(x) // `op` is free for `f`
+                        let g = { =>
+                            x + 1 // `x` is free for ?$\lambda$?
+                        }
+                        g
+                    }
+                \end{minted}
+            \end{column}
+        \end{columns}
     \end{frame}
 
     \sectionplan{Row-based effect systems}
@@ -88,18 +119,58 @@
 
     \sectionplan{Capability-based effect systems}
 
-    \begin{frame}[fragile]{Idea of capabilities}
-        \begin{itemize}
-            \item In rows we tracked invocations of special functions
-            \[\lambda x\ldotp \underline{print}\ap x;~f\ap x + 1 : nat \to^{\{print\}} nat\]
-            \item Instead let's track mentioning of special objects --- capabilities
-            \[\lambda x\ldotp \underline{console}.print\ap x;~f\ap x + 1 : nat \to^{\{console\}} nat\]
-            \item Functions actually take capabilities as arguments --- familiar concept (mb implicitly\footnote{``Effects as Capabilities: Effect Handlers and Lightweight Effect Polymorphism'', Brachthäuser et al, 2020.}\footnote{I.e. capabilities are dynamically scoped values.})
-            \[\lambda \underline{console} \ap x \ldotp console.print\ap x;~f\ap x + 1 : \underline{console} \to nat \to nat\]
-            \item Effect polymorphism works by default as lambda capturing
-            \[map = \Lambda a \ap b\ldotp \lambda f\ap xs\ldotp \ldots : \forall \ap a \ap b\ldotp \underline{(a \to b)} \to list \ap a \to list \ap b \]
-            \item Unifies notions of effects and resources (limited lifetime)
-        \end{itemize}
+    \begin{frame}[fragile]{Dynamically scoped free variables}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}{0.485\textwidth}
+                \begin{itemize}
+                    \item[\defi] Computation use site determines the meaning of such variables
+                    \item Implicit parameters is a close approximation in static languages
+                \end{itemize}
+            \end{column}\hfill%
+            \begin{column}{0.485\textwidth}
+                \begin{minted}{swift}
+                    context(op: (Int64) -> Unit)
+                    func f(x: Int64) {
+                        ...
+                    }
+
+                    context let op = ...
+                    f(12) // `op` is passed implicitly
+                \end{minted}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}[fragile]{Dynamically scoped variables as context validity witnesses}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[]{0.485\textwidth}
+                \begin{itemize}
+                    \item We require a call site to pass witness arguments (\textbf{capabilities}) of special types to proof its validity
+                    \item A function's effects become explicit
+                    \item Context is guaranteed to be appropriate
+                    \item[\eg] Exception handlers are witnessed by parameters of magic \texttt{Handler} type
+                    \item[\NB] Reason about effects just as about bindings --- implicits represent context requirements
+                \end{itemize}
+            \end{column}\hfill%
+            \begin{column}[]{0.485\textwidth}
+                \begin{minted}{swift}
+                    context(
+                        config: Config,
+                        send: (...) -> Unit,
+                        SomeException
+                        // h: Handler<SomeException>
+                    )
+                    func f() {
+                        send(config.address, ...)
+                        if (...) {
+                            throw SomeException() // to h
+                        }
+                    }
+                \end{minted}
+            \end{column}
+        \end{columns}
     \end{frame}
 
     \begin{frame}[fragile]{Example: Kotlin context parameters\footnote{\color{blue}\url{https://github.com/Kotlin/KEEP/blob/context-parameters/proposals/context-parameters.md}}}
@@ -116,7 +187,9 @@
             \end{minted}
             \item Capabilities are passed implicitly by type
             \begin{minted}{kotlin}
-                context(fe: FileError) fun workWithFiles() = fe.reportNotFound("text.txt")
+                context(fe: FileError)
+                fun workWithFiles() = fe.reportNotFound("text.txt")
+
                 withFileError {
                     workWithFiles()
                 }
@@ -124,29 +197,118 @@
         \end{itemize}
     \end{frame}
 
-    \begin{frame}[fragile]{Properties of context parameters as an effect system}
-        \begin{itemize}
-            \item Context parameters are \emph{not safe}
-            \begin{minted}{kotlin}
-                fun crash() {
-                    lateinit var leak: FileError
-                    withFileError {
-                        leak = implicit<FileError>()
+    \begin{frame}[fragile]{Lexically scoped free variables}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[]{0.485\textwidth}
+                \begin{itemize}
+                    \item[\defi] Computation definition side determines the meaning
+                    \item[\eg] Closure capturing
+                \end{itemize}
+            \end{column}\hfill%
+            \begin{column}[]{0.485\textwidth}
+                \begin{minted}{swift}
+                    func f(x: Int64) {
+                        let g = { =>
+                            x + 1 // lexically scoped
+                        }
+                        g
                     }
-                    leak.reportNotFound("out of scope")
-                }
-            \end{minted}
-            \item Context parameters do not guarantee effect abstraction (can be intentionally introduced)
-            \begin{minted}{kotlin}
-                fun accidentalHandling(block: () -> Unit) =
-                    try {
-                        doMyJob1(); block(); doMyJob2()
-                    } catch (e: FileNotFoundException) {
-                        println("I'm not supposed to catch things from block")
-                    }
-            \end{minted}
-        \end{itemize}
+
+                    let g = f(1)
+                    let x = 42
+                    g() // returns 2
+                \end{minted}
+            \end{column}
+        \end{columns}
     \end{frame}
+
+    \begin{frame}[fragile]{Contextual polymorphism}
+        \begin{itemize}
+            \item Lexical scoping helps with higher-order functions
+            \item Can avoid using effect polymorphism in many cases
+        \end{itemize}
+        \vspace{1em}
+        \begin{minted}[escapeinside=##]{swift}
+            func map<T, R>(xs: List<T>, f: (T) -> R): List<R>
+
+            context(config: Config, send: (...) -> String, SomeException)
+            func testMap() {
+                let results = map([1, 2]) { x =>
+                    #\framebox{send}#(#\framebox{config}#.endpoint, x)
+                    if (...) throw SomeException() // to #\framebox{h}#
+                }
+                printAll(results)
+            }
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Effect encapsulation works by default}
+        \begin{minted}{swift}
+            func withSomeException<R>(f: context(SomeException) () -> R): R {
+                try { // h1: Handler<SomeException>, h2: Handler<AnotherException> =>
+                    f() // {h1}
+                } catch (e: SomeException) {
+                    ...
+                } catch (e: AnotherException) {
+                    ... // unreachable code
+                }
+            }
+
+            withSomeException { context(SomeException) =>
+                if (...) throw SomeException()
+                else throw AnotherException() // captured
+            }
+        \end{minted}
+    \end{frame}
+
+    \begin{frame}[fragile]{Effect system safety}
+        \vspace{-1em}
+        \begin{columns}[onlytextwidth]
+            \begin{column}[]{0.485\textwidth}
+                \begin{itemize}
+                    \item Capabilities proof context validity
+                    \item Capabilities should not leak the scope they were provided to
+                    \item Need escape analysis to control this\ldots
+                \end{itemize}
+            \end{column}\hfill%
+            \begin{column}[]{0.485\textwidth}
+                \begin{minted}[escapeinside=##]{swift}
+                    var f: () -> Unit = {}
+                    try { // h =>
+                        f = {
+                            throw SomeException() // to #\framebox{h}#
+                        }
+                    } catch (e: SomeException) {...}
+                    f() // boom
+                \end{minted}
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+%    \begin{frame}[fragile]{Example: context parameters}
+%        \begin{itemize}
+%            \item Context parameters are \emph{not safe}
+%            \begin{minted}{kotlin}
+%                fun crash() {
+%                    lateinit var leak: FileError
+%                    withFileError {
+%                        leak = implicit<FileError>()
+%                    }
+%                    leak.reportNotFound("out of scope")
+%                }
+%            \end{minted}
+%            \item Context parameters do not guarantee effect abstraction (can be intentionally introduced)
+%            \begin{minted}{kotlin}
+%                fun accidentalHandling(block: () -> Unit) =
+%                    try {
+%                        doMyJob1(); block(); doMyJob2()
+%                    } catch (e: FileNotFoundException) {
+%                        println("I'm not supposed to catch things from block")
+%                    }
+%            \end{minted}
+%        \end{itemize}
+%    \end{frame}
 
     \begin{frame}[fragile]{Type-based escape analysis for effect safety\footnote{``Gentrification Gone too Far? Affordable 2nd-Class Values for Fun and (Co-)Effect'', Osvald et al, 2016.}}
         \begin{block}{Rules}
@@ -200,7 +362,7 @@
     \begin{frame}[fragile]{Effekt --- language with implicit capabilities\footnote{\color{blue}\url{https://effekt-lang.org/}}}
         \begin{itemize}
             \item Capabilities provide effectful signatures readings
-            \begin{minted}{scala}
+            \begin{minted}[escapeinside=##]{scala}
                 def buildString(ident : Int)
                   { f : Unit => Unit / {Emit[String]} } : String / {Format}
                 //                   #\big\uparrow# capabilities to be provided by buildString
@@ -236,7 +398,7 @@
     \end{frame}
 
     \begin{frame}[fragile]{Scala capture checking example}
-        \begin{minted}{scala}
+        \begin{minted}[escapeinside=##]{scala}
             class FileSystem
 
             class Logger(fs: FileSystem^):
@@ -318,6 +480,49 @@
             \end{minted}
             \item There is a kind system allowing some types freely pass context boundaries
         \end{itemize}
+    \end{frame}
+
+    \sectionplan{Summary}
+
+    \begin{frame}[fragile]{Summary about effect systems}
+        \begin{itemize}
+            \item Effect systems are about tracking free variables
+        \end{itemize}
+        \begin{block}{Dynamically scoped free variables}
+            \begin{itemize}
+                \item Dealt by implicits
+                \item Represent unfulfilled context requirements of a computation
+                \item User specifies more function parameters
+            \end{itemize}
+        \end{block}
+        \begin{block}{Lexically scoped free variables}
+            \begin{itemize}
+                \item Dealt by type-based escape analysis
+                \item Represent fulfilled context requirements of a computation
+                \item User specifies a function's dataflow
+            \end{itemize}
+        \end{block}
+    \end{frame}
+
+    \begin{frame}[fragile]{Relation to other approaches}
+        \begin{block}{Canonical row-polymorphic effect systems (a la Koka)}
+            \begin{itemize}
+                \item Tracks only dynamically scoped free variables
+                \item We use coeffect-style instead (use left side of a turnstile)
+            \end{itemize}
+        \end{block}
+        \begin{block}{Capability-based effect systems (a la Scala, Effekt)}
+            \begin{itemize}
+                \item Uses implicits as well (or ``context readings'')
+                \item Uses dependent typing to do escape analysis (lifetimes are values)
+            \end{itemize}
+        \end{block}
+        \begin{block}{Modal effect types}
+            \begin{itemize}
+                \item Relative modalities a like unfulfilled implicits
+                \item Lifetime information erased, every context boundary transition changes context requirements of a type
+            \end{itemize}
+        \end{block}
     \end{frame}
 
 \end{document}
