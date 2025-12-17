@@ -1,0 +1,323 @@
+%! suppress = MissingImport
+%! suppress = MissingLabel
+%! suppress = LineBreak
+
+% CLI args https://tex.stackexchange.com/a/1501
+\newif\ifhandout
+\input{flags}
+
+\input{preamble-slides}
+\setminted{xleftmargin=\parindent, autogobble, escapeinside=??}
+\newcommand{\iso}{\sim}
+
+\title{8. Системы эффектов}
+\author{Андрей Стоян}
+\institute[ИПКН ИТМО]{ИПКН ИТМО}
+
+\date{осень 2025}
+
+\begin{document}
+
+    \mymaketitle
+
+    \begin{frame}[noframenumbering]{Содержание}
+        \tableofcontents
+    \end{frame}
+
+    \sectionplan{Effect Systems --- what and why}
+
+    \begin{frame}[fragile]{What are effect systems}
+        \begin{itemize}
+            \item Types describe shapes of function arguments and result \[\lambda x\ldotp f\ap x + 1 : nat\to nat\]
+            \item Sometimes function wants to do something more than act on arguments to produce results
+            \item[\defi] \vocab{Effect} --- interaction with execution context (invocation of ``special functions'') \[\lambda x\ldotp \underline{print}\ap x;~f\ap x + 1 : ~?\]
+            \item[\defi] \vocab{Effect System} tracks function's effects, what function \emph{does} executing \[\lambda x\ldotp print\ap x;~f\ap x + 1 : nat \to^{\{print\}} nat\]
+            \item This can be seen as tracking dynamically scoped variables
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Why do we need effect systems}
+        \begin{itemize}
+            \item Clarify abstraction borders --- all \emph{observable computational aspects} of a function in types
+            \item Establish \vocab{effect safety} --- ensure that context actually supports such effects
+            \item[\eg] Thrown exceptions should be eventually handled
+            \item[\eg] Required service implementation is provided
+            \item Control \vocab{effect encapsulation (abstraction)} --- no effects are handled accidentally\footnote{Lindley, Sam. "Encapsulating effects." \textit{Dagstuhl Reports, Volume 8, Issue 4}. 2018.}
+            \item[\eg] Higher-order function can eventually handle exception from parameter function
+            \begin{minted}{kotlin}
+                fun withContent(path: String, f: (String) -> Unit) =
+                    try {
+                        val content = readFromFile(path)
+                        f(content) // can accidentally catch exception from here
+                        deleteFile(path)
+                    } catch (e: FileException) {}
+            \end{minted}
+            \item Certainty by construction software
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{Row-based effect systems}
+
+    \begin{frame}[fragile]{Row-based effect systems with row-polymorphism}
+        \begin{itemize}
+            \item \emph{All} function effects are represented as an unordered row of labels
+            \[\Lambda a\ldotp\lambda xs\ldotp map \ap (\lambda x\ldotp print\ap x; yield\ap x) \ap xs : \forall a \ldotp list\ap a \to^{\{print, yield \ap a\}} list \ap unit \]
+            \item Need to use \vocab{effect polymorphism} to inherit effects of fist-class functions
+            \[printMap = \Lambda \mu \ap a \ap b\ldotp \lambda f\ap xs\ldotp \ldots : \forall \mu \ap a \ap b\ldotp (a \to^\mu b) \to list \ap a \to^{\{print|\mu\}} list \ap b \]
+            \item There is a subtyping relation on effect rows
+            \item[\NB] Need to annotate all HOFs --- verbose, cannot introduce effect checking incrementally
+            \item Effect safety is ``obvious''
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Duplicated labels and effect encapsulation\footnote{``Koka: Programming with row-polymorphic effect types'', D.Leijen, 2014.}}
+        \begin{itemize}
+            \item Labels can duplicate: $\{exc, exc\} \neq \{exc\}$
+            \item Helps for type inference determinism ($\{exc|\mu\} \sim \{exc\} \rightsquigarrow \mu = \{\}$)
+            \item Otherwise \texttt{catch} will be supposed to deal with all exceptions
+            \[catch : \forall \mu\ap a\ldotp (unit\to^{\{exn|\mu\}} a, exception \to^{\mu} a) \to^\mu a\]
+            \item Duplication provides effect encapsulation
+            \begin{gather*}
+                inject : \forall\mu a\ldotp (()\to^{\{exn|\mu\}}a) \to^{\{exn,exn|\mu\}} a
+                \\
+                \lambda x\ldotp catch(\ldots;~\underbrace{inject(\lambda \_\ldotp throw)}_{\{exn,exn\}};~\ldots, \lambda\_\ldotp x) : a \to^{exn} a
+            \end{gather*}
+            \item[\NB] Row-based system support, but do not force encapsulation
+        \end{itemize}
+    \end{frame}
+
+    \sectionplan{Capability-based effect systems}
+
+    \begin{frame}[fragile]{Idea of capabilities}
+        \begin{itemize}
+            \item In rows we tracked invocations of special functions
+            \[\lambda x\ldotp \underline{print}\ap x;~f\ap x + 1 : nat \to^{\{print\}} nat\]
+            \item Instead let's track mentioning of special objects --- capabilities
+            \[\lambda x\ldotp \underline{console}.print\ap x;~f\ap x + 1 : nat \to^{\{console\}} nat\]
+            \item Functions actually take capabilities as arguments --- familiar concept (mb implicitly\footnote{``Effects as Capabilities: Effect Handlers and Lightweight Effect Polymorphism'', Brachthäuser et al, 2020.}\footnote{I.e. capabilities are dynamically scoped values.})
+            \[\lambda \underline{console} \ap x \ldotp console.print\ap x;~f\ap x + 1 : \underline{console} \to nat \to nat\]
+            \item Effect polymorphism works by default as lambda capturing
+            \[map = \Lambda a \ap b\ldotp \lambda f\ap xs\ldotp \ldots : \forall \ap a \ap b\ldotp \underline{(a \to b)} \to list \ap a \to list \ap b \]
+            \item Unifies notions of effects and resources (limited lifetime)
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Example: Kotlin context parameters\footnote{\color{blue}\url{https://github.com/Kotlin/KEEP/blob/context-parameters/proposals/context-parameters.md}}}
+        \begin{itemize}
+            \item Can define a capability and it's scope
+            \begin{minted}{kotlin}
+                class FileError {
+                    fun reportNotFound(fileName: String): Nothing = throw FNFE(fileName)
+                }
+                fun <R> withFileError(block: context(FileError) () -> R) =
+                    try {
+                        with (FileError()) { block() }
+                    } catch (e: FileNotFoundException) { println(e) }
+            \end{minted}
+            \item Capabilities are passed implicitly by type
+            \begin{minted}{kotlin}
+                context(fe: FileError) fun workWithFiles() = fe.reportNotFound("text.txt")
+                withFileError {
+                    workWithFiles()
+                }
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Properties of context parameters as an effect system}
+        \begin{itemize}
+            \item Context parameters are \emph{not safe}
+            \begin{minted}{kotlin}
+                fun crash() {
+                    lateinit var leak: FileError
+                    withFileError {
+                        leak = implicit<FileError>()
+                    }
+                    leak.reportNotFound("out of scope")
+                }
+            \end{minted}
+            \item Context parameters do not guarantee effect abstraction (can be intentionally introduced)
+            \begin{minted}{kotlin}
+                fun accidentalHandling(block: () -> Unit) =
+                    try {
+                        doMyJob1(); block(); doMyJob2()
+                    } catch (e: FileNotFoundException) {
+                        println("I'm not supposed to catch things from block")
+                    }
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Type-based escape analysis for effect safety\footnote{``Gentrification Gone too Far? Affordable 2nd-Class Values for Fun and (Co-)Effect'', Osvald et al, 2016.}}
+        \begin{block}{Rules}
+            \begin{enumerate}
+                \item Capabilities are second-class
+                \item First-class functions cannot refer to second-class values through free variables
+                \item Functions can return only first-class values
+                \item Only first-class values can be stored in object fields or mutable variables
+            \end{enumerate}
+        \end{block}
+        \begin{itemize}
+            \item[\eg]
+            \begin{minted}{kotlin}
+                fun <R> withFile(f: @local (@local File) -> R): R
+                withFile { newFile -> { oldFile.copyTo(newFile) } } // error
+            \end{minted}
+            \item Or just make all functions second-class --- \vocab{blocks}\footnote{``Effects as Capabilities: Effect Handlers and Lightweight Effect Polymorphism'', Brachthäuser et al, 2020.}
+            \begin{minted}{scala}
+                def foreach[A](l: List[A]) { f: A => Unit }: Unit
+            \end{minted}
+            \item[\NB] We cannot even write curried \texttt{map}!
+            \item[\NB] Everything is very bad with OOP staff as well
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{``From Scope-Based Reasoning to Type-Based Reasoning and Back''\footnote{``Effects, Capabilities, and Boxes'', Brachthäuser et al, 2022.}}
+        \begin{itemize}
+            \item Want to restore first-class-ness for functions
+            \item Implicitly track in context for each variable over which capabilities it closes
+            %! suppress = EscapeAmpersand
+            \begin{align*}
+                \infer[Tracked]{\Gamma\vdash f : \sigma ~|~ \{f\}}{f :^\star \sigma \in \Gamma}
+                &&
+                \infer[Transparent]{\Gamma\vdash f : \sigma ~|~ C}{f :^C \sigma \in \Gamma}
+            \end{align*}
+            \item Boxing: add information about capabilities from context to types
+            \begin{align*}
+                \infer[BoxIntro]{\Gamma \vdash \mathbf{box}\ap b : \sigma~ \mathbf{at}\ap C ~|~ \{\}}{\Gamma \vdash b : \sigma ~|~ C}
+                &&
+                \infer[BoxElim]{\Gamma \vdash \mathbf{unbox}\ap e : \sigma ~|~ C}{\Gamma \vdash e : \sigma ~\mathbf{at}~C ~|~ \{\}}
+            \end{align*}
+            \item Boxed blocks are first-class values, unboxing checks capabilities
+            \item Using \vocab{reference-dependent types} for effect polymorphism
+            \begin{minted}{haskell}
+                fun <T, R> map(f: (T) -> R): (List<T>) -> R at {f} = box { xs -> go(f, xs) }
+                map { x -> console.print(x) } : (List<T>) -> Unit at {console}
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Effekt --- language with implicit capabilities\footnote{\color{blue}\url{https://effekt-lang.org/}}}
+        \begin{itemize}
+            \item Capabilities provide effectful signatures readings
+            \begin{minted}{scala}
+                def buildString(ident : Int)
+                  { f : Unit => Unit / {Emit[String]} } : String / {Format}
+                //                   #\big\uparrow# capabilities to be provided by buildString
+                //          capabilities required by buildString #\big\uparrow#
+            \end{minted}
+            \item Effect encapsulation enabled by default --- can provide only explicitly declared capabilities
+            \begin{minted}{scala}
+                def encapsulated { f : Unit => Unit / {} } : Unit =
+                  try { ...; f(); ... } with Exn { ... }
+            \end{minted}
+            \item Uses boxing and reference-dependent effect polymorphism tracking effect tags
+            \begin{minted}{scala}
+                def map[T, R] { f : T => R } : List[T] => List[R] at {f}
+                map { x => do print(x); x + 1 } : List[T] => List[R] at {Console}
+            \end{minted}
+            \item Anonymous objects are second-class by default like functions
+            \item Type inference is mostly future work
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Scala scoped capabilities\footnote{``Scoped capabilities for polymorphic effects'', Odersky et al, 2022..}\footnote{\color{blue}\url{https://docs.scala-lang.org/scala3/reference/experimental/cc.html}}}
+        \begin{itemize}
+            \item Every value can be marked as tracked (or capability) in type-level: \mintinline{scala}|File^|
+            \item Values enumerate captured capabilities in types by names: \mintinline{scala}|LazyList[Int]^{file,f}|
+            \item Object capability set --- capabilities saved in class primary constructor
+            \item Capabilities form a hierarchy
+            \begin{minted}{scala}
+                def usingLogFile[T](f: OutputStream^, op: (Logger^{f}) => T): T =
+                  op(Logger(f))
+            \end{minted}
+            \item \mintinline{scala}|->| --- pure function, \mintinline{scala}|=>| --- tracked function (\mintinline{scala}|->^|), \mintinline{scala}|->^{c1,c2}| --- capturing c1 and c2
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Scala capture checking example}
+        \begin{minted}{scala}
+            class FileSystem
+
+            class Logger(fs: FileSystem^):
+              def log(s: String): Unit = ??? // Write to a log file, using `fs`
+
+            def test(fs: FileSystem^): LazyList[Int]^{fs} =
+              val l: Logger^{fs} = Logger(fs)
+              l.log("hello world!")
+              val xs: LazyList[Int]^{l} =
+                LazyList.from(1)
+                  .map { i =>
+                    l.log(s"computing elem # $i")
+                    i * i
+                  }
+              xs
+        \end{minted}
+    \end{frame}
+
+    \sectionplan{Modal-based effect systems}
+
+    \begin{frame}[fragile]{Modal effect types\footnote{``Modal Effect Types'', Sam Lindley et al, 2024.}}
+        \begin{itemize}
+            \item Modal logic is about different models of truth: must be true, may be true\ldots
+            \item Type modalities tell about usability of type in different contexts
+            \item Insight: types should mark transitions between effect contexts, rather than repeating context
+            \item Modalities are boxes describing context they can be unboxed in
+            \item Modalities inference is similar to first-class polymorphism
+            \item[\NB] Everything is first-class, you pay transferring context borders
+            \item Formalizing Frank's abilities\footnote{``Doo bee doo bee doo'', Lucas Convert et al.}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Absolute modalities}
+        \begin{itemize}
+            \item Describes full effect context
+            \begin{minted}{haskell}
+                gen : [yield](List Int -> 1)
+                gen xs = map (fun x -> do yield x); ()
+            \end{minted}
+            \item Function with only described effects
+            \begin{minted}{haskell}
+                asList : [yield](1 -> 1) -> List Int
+                asList m = handle m () with
+                  return () -> []
+                  yield x r -> x :: r ()
+            \end{minted}
+            \item Boxes are first-class, can be stored in data structures
+            \item Unboxing is implicit (can be prevented with tilde), boxing --- explicit
+            \begin{minted}{haskell}
+                asList [yield](fun () -> yield 1; yield 2; ())
+            \end{minted}
+            \item Paper do not describe polymorphic modalities
+            \begin{minted}{haskell}
+                asList : [yield e](1 -> 1) -> List e
+            \end{minted}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}[fragile]{Relative modalities}
+        \begin{itemize}
+            \item Define effect transformations: bring me to the right context and I'll unbox
+            \begin{minted}{haskell}
+                --       #\big\downarrow# can use all effects of the context plus `yield`
+                asList : <yield>(1 -> 1) -> List Int
+                asList m = handle m () with ...
+                --                #\big\uparrow# transfered value to right context
+            \end{minted}
+            \item Variable should be used only under the context compatible with binding occurrence
+            \item Effect encapsulation:
+            \begin{minted}{haskell}
+                find : (Int -> Bool) -> List Int -> Maybe Int
+                find p xs = handle
+                  (map (fun x -> if mask(p x) then do yield x else ()) xs) with ...
+            \end{minted}
+            \item Relative modalities are enough to type functions with at most one row-polymorphic variable
+            \item Cannot encode curried map, need effect polymorphism
+            \begin{minted}{haskell}
+                map : [e](a -> b) -> [e](List a -> List b)
+            \end{minted}
+            \item There is a kind system allowing some types freely pass context boundaries
+        \end{itemize}
+    \end{frame}
+
+\end{document}

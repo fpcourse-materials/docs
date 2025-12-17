@@ -35,7 +35,7 @@
     \begin{frame}[fragile]{Абстрактный тип данных --- \mintinline{haskell}|Monad|}
         \vspace{-0.5em}
         \begin{itemize}
-            \item[\defi] АДТ --- интерфейс конструирования обитателей некоторого множества
+            \item[\defi] АТД --- интерфейс конструирования обитателей некоторого множества
             \item[\eg] АТД стек: операции \texttt{push(elem)} и \texttt{pop -> elem}
             \item[\eg] АТД \mintinline{haskell}|Monad|: операции \mintinline{haskell}|pure| и \mintinline{haskell}|>>=|
             \item[\eg] Множества: \mintinline{haskell}|[]|, \mintinline{haskell}|Maybe|, \mintinline{haskell}|Either e|
@@ -58,7 +58,7 @@
     \begin{frame}[fragile]{Вычисления из сложных множеств (доменов)}
         \begin{itemize}
             \item Вычисление с двумя ячейками состояния лежит в \texttt{s -> s' -> ((a, s), s')}
-            \item Для этого множества нужно определить все операции АДТ:
+            \item Для этого множества нужно определить все операции АТД:
             \begin{itemize}
                 \item Удобный способ конструирования обитателей: \mintinline{haskell}|Monad|
                 \item Функции \mintinline{haskell}|get|, \mintinline{haskell}|put|, \mintinline{haskell}|modify| для \texttt{s}
