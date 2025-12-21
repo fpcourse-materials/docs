@@ -219,11 +219,47 @@ runReader comp env = loop (run comp)
       Val res -> pure res
       Msg (L (Ask k)) -> loop (k env)
       Msg (R unknownReq) -> do
-        response <- send \k -> fmap k unknownReq
+        response <- Eff \k -> Msg (fmap k unknownReq)
         loop response
 \end{minted}
 
-\subsubsection{Free monads}
+\subsubsection{Free monads} \label{subsubsec:free-monads}
+
+Чтобы получить полноценное решение более простым и минималистичным образом, перейдём к самой классической реализации хендлеров через свободные монады.
+Для начала обсудим сами свободные монады.
+
+Рассмотрим некоторую алгебраическую структуру, например, моноид (нейтральный элемент и ассоциативная бинарная операция).
+По произвольному множеству $X$ можно построить некоторый моноид $M(X)$ наиболее ``экономичным'' образом~--- \vocab{свободный моноид}.
+Это делается следующим образом: к множеству $X$ добавляют деревья выражений с операциями моноида:
+\begin{minted}{haskell}
+    data M x = Element x | Mempty | Mappend (M x) (M x)
+    instance Monoid (M x) where
+      mempty = Mempty
+      mappend l r = Mappend l r
+\end{minted}
+Ещё только нужно организовать новое множество таким образом, чтобы в нём не было одинаковых с точки зрения алгебры деревьев (например, \mintinline{haskell}{Mappend Mempty Mempty} и \mintinline{haskell}{Mempty}).
+В случае моноида в этом случае можно выбрать тип списка:
+\begin{minted}{haskell}
+    type M x = [x]
+    instance Monoid (M x) where
+      mempty = []
+      mappend = ++
+\end{minted}
+
+Свободные монады строятся аналогично свободным моноидам.
+Используем определение монады как функтора с операциями \texttt{pure} и \texttt{join}.
+Тогда по произвольному функтору $F$ можно получить монаду $Free(F)$ (покажем это с помощью эквивалентного определения монад из Haskell):
+\begin{minted}{haskell}
+    data Free f a = Pure a | Join (f (Free f a))
+    instance Functor f => Monad (Free f) where
+      return = Pure
+      Pure x >>= k = k x
+      Join f >>= k = Join (fmap (>>= k) f)
+\end{minted}
+
+
+
+
 
 % todo free folk in general
 
@@ -232,6 +268,8 @@ runReader comp env = loop (run comp)
 % todo iteratee O. Kiselyov. Iteratees. In Proc. of the 11th International Symposium on Functional and Logic Programming, pages 166–181, 2012.
 
 % todo deep vs shallow handlers
+
+% todo what is algebraic about algebraic effects
 
 % todo
 
