@@ -116,6 +116,8 @@
 
 % todo историческая справка
 
+% todo больше впечатляющих примеров
+
 \subsubsection{Хендлеры через ограниченные продолжения}
 
 Как мы уже видели ранее, различные эффекты можно реализовывать с помощью доступа к текущему продолжению (\ref{subsubsec:god-cont}, \ \ref{subsubsec:monadic-reflection}).
@@ -132,29 +134,32 @@
 Такие операции называют \vocab{tail-resumptive}, они очень сильно напоминают обычные функции, за исключением того, что их реализации определяются контекстом (хендлером).
 Таким образом, tail-resumptive операции можно реализовать как неявную передачу словаря функций от хендлера к \texttt{perform}, и тем самым избежать дорогих манипуляций продолжениями~\cite{xie2020effect}\footnote{Хендлеры tail-resumptive операций напоминают co-pattern-matching (см.\ \ref{subsubsec:data-codata}).}.
 
-\subsubsection{Client-server communication}
+\subsubsection{Встроенные хендлеры как явная клиент-серверная коммуникация} \label{subsubsec:extensible-effects}
 
-% todo \cite{Extensible effects}
+Чтобы лучшим образом понять семантику хендлеров, реализуем язык с хендлерами как встроенный в Haskell.
+Начнём с варианта, предложенного Олегом Киселёвым, максимально прямолинейно кодирующего идею клиент-серверной коммуникации терма и контекста~\cite{kiselyov2013extensible}.
 
-% todo похоже на генераторы ранее
-
+Начнём с эффекта \texttt{ask}, запрашивающего числа у контекста.
+Зададим тип данных сообщений к контексту, это либо конечный результат вычисления, либо запрос \mintinline{haskell}{Ask}, содержащий ``обратный адрес''~--- текущее продолжение:
 \begin{minted}{haskell}
-    data Request res = Val res | Ask (Int -> Request res)
+    data Message res = Val res | Ask (Int -> Message res)
+\end{minted}
 
-    newtype Eff res = Eff { runEff :: forall res' . (res -> Request res') -> Request res' }
-      deriving Functor
+Продолжения будем собирать в специализированный \mintinline{haskell}{Monad Cont} с подходящим response type (см.~\ref{subsubsec:monad-cont}, \ \ref{subsubsec:god-cont}):
+\begin{minted}{haskell}
+    newtype Eff res = Eff
+      { runEff :: forall res' . (res -> Message res') -> Message res' }
+\end{minted}
 
-    instance Applicative Eff where
-      pure x = Eff \k -> k x
-      (<*>) = ap
-
-    instance Monad Eff where
-      comp >>= k = Eff \k' -> runEff comp \x -> runEff (k x) k'
-
+Тогда эффект \texttt{ask} реализуется просто как ``отправка'' запроса \mintinline{haskell}{Ask} с текущим продолжением:\footnote{Ранее мы аналогично реализовывали генераторы, см.\ \ref{subsubsec:generators-coroutines}.}
+\begin{minted}{haskell}
     ask :: Eff Int
     ask = Eff \k -> Ask k
+\end{minted}
 
-    run :: Eff res -> Request res
+Хендлер мы реализуем как ``сервер'', который в цикле обрабатывает запросы, пока вычисление не пришлёт конечный результат:
+\begin{minted}{haskell}
+    run :: Eff res -> Message res
     run comp = runEff comp Val
 
     runReader :: Eff res -> Int -> res
@@ -163,7 +168,10 @@
         loop = \case
           Val res -> res
           Ask k -> loop (k env)
+\end{minted}
 
+Наконец, мы можем писать effectful код:
+\begin{minted}{haskell}
     exampleReader :: Int -> Int
     exampleReader = runReader do
       x <- ask
@@ -171,59 +179,49 @@
       pure (x + y)
 \end{minted}
 
+\subsubsection{Расширяемые сообщения и пересылка}
+
+Абстрагируем тип сообщений по ``форме'' запросов, которые в них могут участвовать (см.\ \ref{subsubsec:functor-fixpoint}):
 \begin{minted}{haskell}
-data (e |> es) a = L (e a) | R (es a)
-  deriving Functor
+    data Message effs res = Val res | Request (effs (Message effs res))
+\end{minted}
 
--- Codensity (Request es)
-newtype Eff es res = Eff { runEff :: forall res'. (res -> Request es res') -> Request es res' }
-  deriving Functor
+Предыдущий тип сообщений получается передачей следующего функтора формы:
+\begin{minted}{haskell}
+    newtype Reader env msg = Ask (env -> msg)
+\end{minted}
 
-instance Applicative (Eff es) where
-  pure x = Eff \k -> k x
-  (<*>) = ap
+\begin{task}
+    Убедитесь, что \mintinline{haskell}{Message (Reader Int) res} эквивалентно предыдущему типу сообщений.
+\end{task}
 
-instance Monad (Eff es) where
-  Eff comp >>= k = Eff \k' -> comp \x -> runEff (k x) k'
+Копроизведение функторов формы является функтором формы (см.\ \ref{subsubsec:functor-coprod}):
+\begin{minted}{haskell}
+    data (eff |> effs) a = L (eff a) | R (effs a)
+\end{minted}
 
-data Request es res = Val res | Msg (es (Request es res))
+Теперь операция \texttt{ask} допускает существование других типов запросов:
+\begin{minted}{haskell}
+    ask :: Eff (Reader env |> effs) env
+    ask = Eff \k -> Msg $ L $ Ask k
+\end{minted}
 
-send
-  :: (forall res'. (res -> Request es res') -> es (Request es res'))
-  -> Eff es res
-send f = Eff \k -> Msg (f k)
-
-run :: Eff es res -> Request es res
-run (Eff f) = f Val
-
-
-newtype Reader e k = Ask (e -> k)
-  deriving Functor
-
-ask :: Eff (Reader e |> es) e
-ask = send \k -> L $ Ask k
-
+Новый хендлер обрабатывает только часть запросов, остальные пересылает хендлеру выше (скомпозировав правильным образом продолжения):
+\begin{minted}{haskell}
 runReader
-  :: forall es env res . Functor es
-  => Eff (Reader env |> es) res
-  -> env -> Eff es res
+  :: forall effs env res . Functor es
+  => Eff (Reader env |> effs) res
+  -> env -> Eff effs res
 runReader comp env = loop (run comp)
   where
-    loop :: Request (Reader env |> es) res -> Eff es res
+    loop :: Request (Reader env |> effs) res -> Eff effs res
     loop = \case
       Val res -> pure res
       Msg (L (Ask k)) -> loop (k env)
       Msg (R unknownReq) -> do
-        response <- resend unknownReq
+        response <- send \k -> fmap k unknownReq
         loop response
-
-    resend
-      :: es (Request (Reader env |> es) res)
-      -> Eff es (Request (Reader env |> es) res)
-    resend unknownReq = send \k -> fmap k unknownReq
 \end{minted}
-
-% todo
 
 \subsubsection{Free monads}
 
@@ -235,15 +233,11 @@ runReader comp env = loop (run comp)
 
 % todo deep vs shallow handlers
 
-% todo deep vs shallow handlers
-
 % todo
 
 \subsubsection{Приложения хендлеров}
 
 % todo  custom schedulers
-
-% todo связь с codata
 
 % todo
 
