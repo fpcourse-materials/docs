@@ -223,7 +223,7 @@ runReader comp env = loop (run comp)
         loop response
 \end{minted}
 
-\subsubsection{Free monads} \label{subsubsec:free-monads}
+\subsubsection{Свободные монады} \label{subsubsec:free-monads}
 
 Чтобы получить полноценное решение более простым и минималистичным образом, перейдём к самой классической реализации хендлеров через свободные монады.
 Для начала обсудим сами свободные монады.
@@ -257,6 +257,21 @@ runReader comp env = loop (run comp)
       Join f >>= k = Join (fmap (>>= k) f)
 \end{minted}
 
+Переименуем конструкторы:
+\begin{minted}{haskell}
+    data Term sig var = Var var | Op (sig (Term sig var))
+    (>>=) :: Term sig var -> (var -> Term sig var') -> Term sig var'
+\end{minted}
+Это не что иное, как кодирование алгебраических термов над сигнатурой \texttt{sig} и переменными из множества \texttt{var}.
+А монадическое связывание~--- это подстановка.
+
+\subsubsection{Хендлеры через свободные монады}
+
+Заметим, что следующие типы изоморфны: \mintinline{haskell}{Message} $\iso$ \mintinline{haskell}{Free} $\iso$ \mintinline{haskell}{Term}.
+Хендлеры как раз и возникли в процессе изучения того, как описывать эффекты в виде алгебраических структур~\cite{bauer2018algebraic}\footnote{\href{https://www.youtube.com/watch?v=vPVMXLJVylU&list=PLt7hcIEdZLAkebYy70DdBDm2qLrw7ptfp}{(youtube) What is algebraic about algebraic effects and handlers --- Andrej Bauer.}}.
+
+
+
 
 
 
@@ -273,13 +288,13 @@ runReader comp env = loop (run comp)
 
 % todo
 
-\subsubsection{Приложения хендлеров}
+\subsubsubsection{Приложения хендлеров}
 
 % todo  custom schedulers
 
 % todo
 
-\subsection{Трансформеры монад}
+\subsubsection{Трансформеры монад}
 
 % TODO\cite{liang1995monad}
 
@@ -293,7 +308,7 @@ runReader comp env = loop (run comp)
 
 % todo
 
-\subsection{Алгебраичность и эффекты высших порядков}
+\subsubsection{Алгебраичность и эффекты высших порядков}
 
 % todo abstracting definitional interpreters & github semantics
 
