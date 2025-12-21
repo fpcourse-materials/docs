@@ -192,7 +192,7 @@
 Функциональную стрелку называют экспоненциальным типом.
 Действительно, комбинаторно количество обитателей \mintinline{haskell}|A -> B| вычисляется как \[|A \to B| = |B|^{|A|}\]
 
-Так как проектировать типы?
+Так как же проектировать типы?
 Тому есть несколько соображений:
 \begin{itemize}
     \item В типе должно быть не меньше элементов, чем в предметной области, все необходимые объекты были представимы.
@@ -562,7 +562,7 @@
 
 С технической точки зрения, мы поняли, что условное ветвление (if, паттерн-матчинг, конструкция switch) и виртуальные вызовы (вызовы замыканий, методов на интерфейсах) взаимозаменимы.
 
-Стоит также отметить, что изоморфизм \mintinline{haskell}|Fix f ?$\simeq$? forall d . (f d -> d) -> d| является обобщением изоморфизма \mintinline{haskell}{a ?$\sim$? forall r . (a -> r) -> r} (при \mintinline{haskell}{f = Const a}), который является основой CPS трансформации, рассматриваемой нами далее в~\ref{sec:continuations}.
+Стоит также отметить, что изоморфизм \mintinline{haskell}|Fix f ?$\simeq$? forall d . (f d -> d) -> d| является обобщением изоморфизма \mintinline{haskell}{a ?$\sim$? forall r . (a -> r) -> r} (при \mintinline{haskell}{f = Const a}), который является основой CPS трансформации, рассматриваемой нами далее в главе~\ref{sec:continuations}.
 
 \subsubsection{Deforestation \& list fusion} \label{subsubsec:deforestation-fusion}
 
@@ -855,7 +855,7 @@ Church encoding для списков даёт \vocab{push stream}, или \voca
 co-Church encoding для списков даёт \vocab{pull stream}, или \vocab{external iteration}, или \vocab{Iterator pattern}.
 Чтобы получить следующий элемент, его нужно явно запросить (pull) потребляющему коду.
 Это представление часто гораздо удобнее с точки зрения использования (см.~\ref{subsubsec:stream-fusion})\footnote{\url{https://github.com/pulldown-cmark/pulldown-cmark/?tab=readme-ov-file\#why-a-pull-parser}}, однако сложнее на стороне имплементации, потому что нужно выделить и поддерживать экзистенциальное состояние в коалгебре.
-Генераторы призваны автоматизировать выделение этого состояния, так как можно заметить, что это continuation вычисления (см. далее~\ref{sec:continuations}).
+Генераторы призваны автоматизировать выделение этого состояния, так как можно заметить, что это continuation вычисления (см. далее~\ref{subsubsec:generators-coroutines}).
 
 % todo про коммуникацию двух кусков кода и инициацию этой коммуникации
 
