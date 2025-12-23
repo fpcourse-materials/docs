@@ -277,7 +277,7 @@ runReader comp env = loop (run comp)
 Это не что иное, как кодирование алгебраических термов над сигнатурой \texttt{sig} и переменными из множества \texttt{var}.
 А монадическое связывание~--- это подстановка.
 
-\subsubsection{Хендлеры через свободные монады}
+\subsubsection{Хендлеры через свободные монады} \label{subsubsec:free-monad-handlers}
 
 Заметим, что следующие типы изоморфны: \mintinline{haskell}{Message} $\iso$ \mintinline{haskell}{Free} $\iso$ \mintinline{haskell}{Term}.
 Хендлеры как раз и возникли в процессе изучения того, как описывать эффекты в виде алгебраических структур~\cite{bauer2018algebraic}\footnote{\href{https://www.youtube.com/watch?v=vPVMXLJVylU&list=PLt7hcIEdZLAkebYy70DdBDm2qLrw7ptfp}{(youtube) What is algebraic about algebraic effects and handlers --- Andrej Bauer.}}.
@@ -361,29 +361,39 @@ runReader comp env = loop (run comp)
 
 \subsubsection{Приложения хендлеров} \label{subsubsec:handler-applications}
 
+Рассмотрим хендлеры tail-resumptive операций, обращающиеся с продолжениями тривиальным образом.
+Они нужны для распространения значений и функциональности вниз по стеку.
+Как мы обсуждали ранее~\ref{subsubsec:evidence-passing}, такие хендлеры аналогичны наличию динамических свободных переменных или неявных аргументов функций~\ref{subsubsec:ad-hoc-implicits}, и, вместе с ними, рекордов или анонимных классов~\ref{subsubsec:data-codata}.
 
+Среди нетривиальных сценариев использования продолжений выделим следующие:
+\begin{itemize}
+    \item Продолжение можно не вызвать, так, можно реализовать механизм исключений.
+    Однако, на практике продолжения могут содержать логику финализации ресурсов.
+    В этом случае всё равно нужна какая-то специальная обработка~\footnote{\url{https://koka-lang.github.io/koka/doc/book.html#sec-resource}}.
+    \item Можно вызвать несколько раз для эмуляции недетерминизма.
+    Это ограничивает использование эффективных мутабельных продолжений~\ref{subsec:efficient-cps}~\cite{leijen2018algebraic}\footnote{\url{https://koka-lang.github.io/koka/doc/book.html#sec-multi-resume}}.
+    \item Можно вызвать не сразу.
+    Это нужно для реализации изменяемого состояния, генераторов и корутин.
+    Для изменяемого состояния это слишком дорого.
+    Генераторы~--- хорошее применение, но built-in реализация генераторов может быть эффективнее за счёт экономии аллокаций продолжений (создаётся сразу \mintinline{kotlin}{Iterator})\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}.
+    Реализация корутин поверх хендлеров даёт возможность пользователям писать собственные планировщики, что, на данный момент, самое котируемое применение хендлеров на данный момент~\cite{sivaramakrishnan2021retrofitting, phipps2023continuing}.
+\end{itemize}
 
+\subsubsection{Трансформеры монад} \label{subsubsec:monad-transformers}
 
+В классической реализации хендлеров через свободные монады~\ref{subsubsec:free-monad-handlers}, каждый хендлер порождает промежуточное дерево из непроинтерпретированных операций.
+Естественным образом возникает желание дефорестировать~\ref{subsubsec:deforestation-fusion} эти промежуточные деревья.
+Можно пойти до конца и полностью избавиться от свободных монад и функторов сигнатур~\cite{wu2015fusion}.
+Так, мы фактически получим tagless final shallow embedding~\ref{subsec:tagless-final}, другое популярное решение expression problem~--- \vocab{трансформеры монад}~\cite{liang1995monad,jones1995functional}\footnote{\url{https://hackage.haskell.org/package/mtl}}.
+В целом эти подходы, равносильны по выразительности, однако могут иметь на практике различные особенности~\cite{schrijvers2019monad}.
 
-% todo custom schedulers
-
-% todo
-
-\subsubsection{Трансформеры монад}
-
-% TODO\cite{liang1995monad}
-
-% todo remind of tagless final
-
+% todo show some hint how deforestation gives monad transformers
 % todo lift - monad morphism
-
 % todo ContT, lift = (>>=)
 
-% todo fused effects and CPS
+%\subsubsection{Алгебраичность и эффекты высших порядков}
 
-% todo
 
-\subsubsection{Алгебраичность и эффекты высших порядков}
 
 % todo abstracting definitional interpreters & github semantics
 
@@ -410,3 +420,5 @@ runReader comp env = loop (run comp)
 % todo abstracting definitional interpreters, github semantics (в домашку это)
 
 % todo break и continue в домашку
+
+% todo куда-нибудь про супермонады и скалу
