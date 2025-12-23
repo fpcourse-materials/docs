@@ -316,6 +316,11 @@ runReader comp env = loop (run comp)
       Op (R other) -> Op (fmap (`runReader` env) other)
 \end{minted}
 
+\begin{task}
+    Постройте пример вычисления из \mintinline{haskell}{Reader} и \mintinline{haskell}{State}.
+    Какое дерево получится после интерпретации одного из эффектов?
+\end{task}
+
 Как обычно, свёртку можно обобщить в виде катаморфизма:
 \begin{minted}{haskell}
     handle
