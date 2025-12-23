@@ -112,7 +112,7 @@
 \end{minted}
 
 Если ближайший контекст нужный запрос обработать не может, запрос делегируется внешнему контексту, и так пока подходящий контекст не будет найден.
-На этой неделе основывается модульность интерпретаторов, заданных хендлерами.
+На этой идее основывается модульность интерпретаторов, заданных хендлерами.
 
 % todo историческая справка
 
@@ -132,7 +132,7 @@
 
 Если мы посмотрим на реализацию операции \texttt{ask}, то мы увидим, что она последним действием вызывает продолжение, возвращая управление вызвавшему коду.
 Такие операции называют \vocab{tail-resumptive}, они очень сильно напоминают обычные функции, за исключением того, что их реализации определяются контекстом (хендлером).
-Таким образом, tail-resumptive операции можно реализовать как неявную передачу словаря функций от хендлера к \texttt{perform}, и тем самым избежать дорогих манипуляций продолжениями~\cite{xie2020effect}\footnote{Хендлеры tail-resumptive операций напоминают co-pattern-matching (см.\ \ref{subsubsec:data-codata}).}.
+Таким образом, tail-resumptive операции можно реализовать как неявную передачу словаря функций от хендлера к \texttt{perform}, и тем самым избежать дорогих манипуляций продолжениями~\cite{xie2020effect}\footnote{Хендлеры tail-resumptive операций напоминают co-pattern-matching и, соответственно, объекты (см.\ \ref{subsubsec:data-codata}).}.
 
 \subsubsection{Встроенные хендлеры как явная клиент-серверная коммуникация} \label{subsubsec:extensible-effects}
 
@@ -308,8 +308,7 @@ runReader comp env = loop (run comp)
 Чтобы пропустить неизвестную операцию и интерпретировать поддерево (продолжение), используется \texttt{fmap}:
 \begin{minted}{haskell}
     runReader
-      :: Functor effs
-      => Comp (Reader env |> effs) res -> env -> Comp effs res
+      :: Functor effs => Comp (Reader env |> effs) res -> env -> Comp effs res
     runReader comp env = case comp of
       Res res -> Res res
       Op (L (Ask () k)) -> runReader (k env) env
@@ -324,33 +323,49 @@ runReader comp env = loop (run comp)
 Как обычно, свёртку можно обобщить в виде катаморфизма:
 \begin{minted}{haskell}
     handle
-      :: Functor effs
-      => (res -> d) -> (effs d -> d)
-      -> Comp effs res -> d
+      :: Functor effs => (res -> d) -> (effs d -> d) -> Comp effs res -> d
     handle val alg = \case
-      Res -> val res
-      Op effs -> Op (alg $ handle val alg <$> effs)
+      Pure res -> val res
+      Op eff -> alg $ fmap (handle val alg) eff
+\end{minted}
+Теперь в реализации продолжение (поддерево) уже проинтерпретировано в нужный домен:
+\begin{minted}{haskell}
+    runReader
+      :: Functor effs => Eff (Reader env |> effs) res -> env -> Eff effs res
+    runReader = handle (\res _env -> pure res) \case
+      L (Ask k) -> \env -> k env env
+      R other -> \env -> Op (fmap ($ env) other)
 \end{minted}
 
+Когда хендлеры реализуют как built-in возможность в языке, нужно принять дизайн-решение, в предоставляемом продолжении текущий эффект уже проинтерпретирован, или нет.
+Первый вариант называют \vocab{deep handlers}, второй~--- \vocab{shallow handlers}, они выразимы друг через друга~\cite{hillerstrom2018shallow}.
+
+К сожалению, поскольку различные варианты эффектов упорядочены как на уровне термов, так и на уровне типов, нам нужна операция, превращающая вычисление от меньшего количества эффектов в вычисление с большим:
+\begin{minted}{haskell}
+    liftF :: Functor effs => Comp effs res -> Comp (eff |> effs) res
+    liftF = \case
+      Pure x -> Pure x
+      Op effs -> Op $ R $ liftF <$> effs
+
+    example :: Comp (Reader Int |> State Int) ()
+    example = do
+      env <- ask
+      liftF (put env)
+\end{minted}
+От порядка можно избавиться с помощью классов типов~\cite{swierstra2008data} (\ref{subsubsec:open-structs}).
+
+Можно заметить, что помимо большого количества аллокаций, использование \mintinline{haskell}{Monad Free} может приводить к квадратичной сложности кода из-за линейных проходов в каждом bind'е.
+Существуют различные альтернативные схемы кодирования~\cite{ploeg2014reflection, kiselyov2015freer}.
+
+Свободные монады находят и другие, правда, аналогичные применения: trampolining~\cite{bjarnarson2012stackless} и пайплайны~\cite{kiselyov2012iteratees}~\cite[chapter 14]{bragilevsky-haskell}.
+
+\subsubsection{Приложения хендлеров} \label{subsubsec:handler-applications}
 
 
 
 
-% todo data a la carte
 
-% todo Stackless Scala with free monads
-% todo freer monads
-% todo iteratee O. Kiselyov. Iteratees. In Proc. of the 11th International Symposium on Functional and Logic Programming, pages 166–181, 2012.
-
-% todo deep vs shallow handlers
-
-% todo what is algebraic about algebraic effects
-
-% todo
-
-\subsubsection{Приложения хендлеров}
-
-% todo  custom schedulers
+% todo custom schedulers
 
 % todo
 
@@ -392,8 +407,6 @@ runReader comp env = loop (run comp)
 
 % todo порядок интерпретаторов и interleaving of effects
 
-% todo abstracting definitional interpreters, github semantics
-
-% todo сравните хендлеры с генераторами ранее
+% todo abstracting definitional interpreters, github semantics (в домашку это)
 
 % todo break и continue в домашку

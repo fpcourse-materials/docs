@@ -1008,7 +1008,7 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
         coerce $ sort @(Wrapped fresh a) $ coerce xs
 \end{minted}
 
-\subsubsection{Открытые структуры}
+\subsubsection{Открытые структуры} \label{subsubsec:open-structs}
 
 В динамических языках можно создавать объекты на ходу, последовательно дописывая в них содержимое, и не вводя предварительно декларацию.
 В Haskell тоже так можно, используя пары для произведений и \mintinline{haskell}|Either| для сумм.
@@ -1021,8 +1021,6 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 \begin{minted}{haskell}
     (Int, Double) ?заменяем на? (Member Int d, Member Double d) => Prod d
 \end{minted}
-
-Далее мы вернёмся снова к открытым суммам, потому что они являются важной частью типизации расширяемых интерпретаторов~\cite{swierstra2008data}. % todo ref
 
 \subsubsection{Исключения и открытая иерархия}
 
