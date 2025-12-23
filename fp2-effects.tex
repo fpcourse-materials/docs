@@ -118,6 +118,9 @@
 
 % todo больше впечатляющих примеров
 
+% todo ссылка на простой туториал по хендлерам
+% todo https://www.eff-lang.org/handlers-tutorial.pdf
+
 \subsubsection{Хендлеры через ограниченные продолжения}
 
 Как мы уже видели ранее, различные эффекты можно реализовывать с помощью доступа к текущему продолжению (\ref{subsubsec:god-cont}, \ \ref{subsubsec:monadic-reflection}).
@@ -376,7 +379,7 @@ runReader comp env = loop (run comp)
     Это нужно для реализации изменяемого состояния, генераторов и корутин.
     Для изменяемого состояния это слишком дорого.
     Генераторы~--- хорошее применение, но built-in реализация генераторов может быть эффективнее за счёт экономии аллокаций продолжений (создаётся сразу \mintinline{kotlin}{Iterator})\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}.
-    Реализация корутин поверх хендлеров даёт возможность пользователям писать собственные планировщики, что, на данный момент, самое котируемое применение хендлеров на данный момент~\cite{sivaramakrishnan2021retrofitting, phipps2023continuing}.
+    Реализация корутин поверх хендлеров даёт возможность пользователям писать собственные планировщики, что, на данный момент, самое котируемое применение хендлеров на данный момент~\cite{sivaramakrishnan2021retrofitting, phipps2023continuing}. % todo
 \end{itemize}
 
 \subsubsection{Трансформеры монад} \label{subsubsec:monad-transformers}
@@ -384,22 +387,21 @@ runReader comp env = loop (run comp)
 В классической реализации хендлеров через свободные монады~\ref{subsubsec:free-monad-handlers}, каждый хендлер порождает промежуточное дерево из непроинтерпретированных операций.
 Естественным образом возникает желание дефорестировать~\ref{subsubsec:deforestation-fusion} эти промежуточные деревья.
 Можно пойти до конца и полностью избавиться от свободных монад и функторов сигнатур~\cite{wu2015fusion}.
-Так, мы фактически получим tagless final shallow embedding~\ref{subsec:tagless-final}, другое популярное решение expression problem~--- \vocab{трансформеры монад}~\cite{liang1995monad,jones1995functional}\footnote{\url{https://hackage.haskell.org/package/mtl}}.
-В целом эти подходы, равносильны по выразительности, однако могут иметь на практике различные особенности~\cite{schrijvers2019monad}.
+Так, мы фактически получим tagless final shallow embedding~\ref{subsec:tagless-final}, другое популярное решение expression (stable denotations) problem~--- \vocab{трансформеры монад}~\cite{liang1995monad,jones1995functional}\footnote{\url{https://hackage.haskell.org/package/mtl}}.
+В целом эти подходы, равносильны по выразительности, однако могут иметь на практике различные особенности встраивания в язык~\cite{schrijvers2019monad}.
+Однако, в отличие от трансформеров, хендлеры можно сделать удобной built-in возможностью языка.
 
 % todo show some hint how deforestation gives monad transformers
 % todo lift - monad morphism
 % todo ContT, lift = (>>=)
 
-%\subsubsection{Алгебраичность и эффекты высших порядков}
+\subsubsection{Алгебраичность и эффекты высших порядков}
 
-
+% todo оригинальные статьи
 
 % todo abstracting definitional interpreters & github semantics
 
 % todo Monads and algebras
-
-% todo https://www.eff-lang.org/handlers-tutorial.pdf
 
 % todo
 
