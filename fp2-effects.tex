@@ -178,6 +178,14 @@
       y <- ask
       pure (x + y)
 \end{minted}
+Монада \mintinline{haskell}{Eff} превратит его в ленивый список сообщений:
+\begin{minted}{haskell}
+    exampleReader :: Int -> Int
+    exampleReader = loop $
+      Ask \x ->
+      Ask \y ->
+      Val (x + y)
+\end{minted}
 
 \subsubsection{Расширяемые сообщения и пересылка}
 
@@ -200,7 +208,7 @@
     data (eff |> effs) a = L (eff a) | R (effs a)
 \end{minted}
 
-Теперь операция \texttt{ask} допускает существование других типов запросов:
+Теперь операция \texttt{ask} допускает существование других типов запросов \texttt{effs}:
 \begin{minted}{haskell}
     ask :: Eff (Reader env |> effs) env
     ask = Eff \k -> Msg $ L $ Ask k
@@ -222,6 +230,10 @@ runReader comp env = loop (run comp)
         response <- Eff \k -> Msg (fmap k unknownReq)
         loop response
 \end{minted}
+
+Заметьте, что в результирующем домене остались непроинтерпретированные эффекты.
+Конечный домен получится применением всех необходимых интерпретаторов.
+Так решается stable denotations problem (\ref{subsec:expression-problem}).
 
 \subsubsection{Свободные монады} \label{subsubsec:free-monads}
 
@@ -270,13 +282,56 @@ runReader comp env = loop (run comp)
 Заметим, что следующие типы изоморфны: \mintinline{haskell}{Message} $\iso$ \mintinline{haskell}{Free} $\iso$ \mintinline{haskell}{Term}.
 Хендлеры как раз и возникли в процессе изучения того, как описывать эффекты в виде алгебраических структур~\cite{bauer2018algebraic}\footnote{\href{https://www.youtube.com/watch?v=vPVMXLJVylU&list=PLt7hcIEdZLAkebYy70DdBDm2qLrw7ptfp}{(youtube) What is algebraic about algebraic effects and handlers --- Andrej Bauer.}}.
 
+Вместо переменных мы будем хранить чистый результат вычисления, а сигнатуры будем записывать в виде $P\times (A \to K)$, где $P$~--- параметр операции, а $A$~--- результат операции, по которому хендлер выбирает нужный подтерм-продолжение для возобновления вычисления:
+\begin{minted}{haskell}
+    data Comp effs res = Res res | Op (effs (Comp effs res))
+    data Reader env comp = Ask () (env -> comp)
+    data State s comp = Get () (s -> comp) | Put s (() -> comp)
+\end{minted}
+
+Реализация \mintinline{haskell}{Monad Comp} будет как раз композировать продолжения для нас в \mintinline{haskell}{do}-нотации:
+\begin{minted}{haskell}
+    ask = Op (Ask () (\e -> Val e)
+    example = do
+      x <- ask
+      y <- ask
+      pure (x + y)
+    -- ?$\alpha\beta$?-эквивалентно
+    example =
+      Op (Ask () (\x ->
+      Op (Ask () (\y ->
+      Res (x + y)))))
+\end{minted}
+
+Хендлер также просто сворачивает список операций.
+Операции, которые он не умеет обрабатывать, он оставляет в дереве.
+Чтобы пропустить неизвестную операцию и интерпретировать поддерево (продолжение), используется \texttt{fmap}:
+\begin{minted}{haskell}
+    runReader
+      :: Functor effs
+      => Comp (Reader env |> effs) res -> env -> Comp effs res
+    runReader comp env = case comp of
+      Res res -> Res res
+      Op (L (Ask () k)) -> runReader (k env) env
+      Op (R other) -> Op (fmap (`runReader` env) other)
+\end{minted}
+
+Как обычно, свёртку можно обобщить в виде катаморфизма:
+\begin{minted}{haskell}
+    handle
+      :: Functor effs
+      => (res -> d) -> (effs d -> d)
+      -> Comp effs res -> d
+    handle val alg = \case
+      Res -> val res
+      Op effs -> Op (alg $ handle val alg <$> effs)
+\end{minted}
 
 
 
 
 
-
-% todo free folk in general
+% todo data a la carte
 
 % todo Stackless Scala with free monads
 % todo freer monads
@@ -288,7 +343,7 @@ runReader comp env = loop (run comp)
 
 % todo
 
-\subsubsubsection{Приложения хендлеров}
+\subsubsection{Приложения хендлеров}
 
 % todo  custom schedulers
 
