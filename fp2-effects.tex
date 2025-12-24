@@ -96,7 +96,7 @@
 
 \subsection{Хендлеры эффектов} \label{subsec:effect-handlers}
 
-Хендлеры эффектов --- это универсальный метод построения модульных интерпретаторов встроенных языков, напрямую реализующий клиент-серверную метафору.
+Хендлеры эффектов --- это современный\footnote{\href{https://youtu.be/m821Vz8N_bo?si=HQTDfs52vYKaBcqJ}{(youtube) The Evolution of Effects --- Nickolas Wu.}} универсальный метод построения модульных интерпретаторов встроенных языков, напрямую реализующий клиент-серверную метафору.
 Как обычно бывает, хендлеры были изобретены множество раз.
 В этой главе мы посмотрим на основные реализации, которые лучше всего помогут нам понять концепцию.
 
@@ -190,7 +190,7 @@
       Val (x + y)
 \end{minted}
 
-\subsubsection{Расширяемые сообщения и пересылка}
+\subsubsection{Расширяемые сообщения и пересылка} \label{subsubsec:extensible-messages}
 
 Абстрагируем тип сообщений по ``форме'' запросов, которые в них могут участвовать (см.\ \ref{subsubsec:functor-fixpoint}):
 \begin{minted}{haskell}
@@ -276,6 +276,7 @@ runReader comp env = loop (run comp)
 \begin{minted}{haskell}
     data Term sig var = Var var | Op (sig (Term sig var))
     (>>=) :: Term sig var -> (var -> Term sig var') -> Term sig var'
+    data MonoidSig subtree = Mempty | MAppend subtree subtree -- (Bool -> subtree)
 \end{minted}
 Это не что иное, как кодирование алгебраических термов над сигнатурой \texttt{sig} и переменными из множества \texttt{var}.
 А монадическое связывание~--- это подстановка.
@@ -283,7 +284,7 @@ runReader comp env = loop (run comp)
 \subsubsection{Хендлеры через свободные монады} \label{subsubsec:free-monad-handlers}
 
 Заметим, что следующие типы изоморфны: \mintinline{haskell}{Message} $\iso$ \mintinline{haskell}{Free} $\iso$ \mintinline{haskell}{Term}.
-Хендлеры как раз и возникли в процессе изучения того, как описывать эффекты в виде алгебраических структур~\cite{bauer2018algebraic}\footnote{\href{https://www.youtube.com/watch?v=vPVMXLJVylU&list=PLt7hcIEdZLAkebYy70DdBDm2qLrw7ptfp}{(youtube) What is algebraic about algebraic effects and handlers --- Andrej Bauer.}}.
+Хендлеры в классическом виде как раз и возникли в процессе изучения того, как описывать эффекты в виде алгебраических структур~\cite{bauer2018algebraic}\footnote{\href{https://www.youtube.com/watch?v=vPVMXLJVylU&list=PLt7hcIEdZLAkebYy70DdBDm2qLrw7ptfp}{(youtube) What is algebraic about algebraic effects and handlers --- Andrej Bauer.}}.
 
 Вместо переменных мы будем хранить чистый результат вычисления, а сигнатуры будем записывать в виде $P\times (A \to K)$, где $P$~--- параметр операции, а $A$~--- результат операции, по которому хендлер выбирает нужный подтерм-продолжение для возобновления вычисления:
 \begin{minted}{haskell}
@@ -372,9 +373,9 @@ runReader comp env = loop (run comp)
 \begin{itemize}
     \item Продолжение можно не вызвать, так, можно реализовать механизм исключений.
     Однако, на практике продолжения могут содержать логику финализации ресурсов.
-    В этом случае всё равно нужна какая-то специальная обработка~\footnote{\url{https://koka-lang.github.io/koka/doc/book.html#sec-resource}}.
+    В этом случае всё равно нужна какая-то специальная обработка~\footnote{\url{https://koka-lang.github.io/koka/doc/book.html\#sec-resource}}.
     \item Можно вызвать несколько раз для эмуляции недетерминизма.
-    Это ограничивает использование эффективных мутабельных продолжений~\ref{subsec:efficient-cps}~\cite{leijen2018algebraic}\footnote{\url{https://koka-lang.github.io/koka/doc/book.html#sec-multi-resume}}.
+    Это ограничивает использование эффективных мутабельных продолжений~\ref{subsec:efficient-cps}~\cite{leijen2018algebraic}\footnote{\url{https://koka-lang.github.io/koka/doc/book.html\#sec-multi-resume}}.
     \item Можно вызвать не сразу.
     Это нужно для реализации изменяемого состояния, генераторов и корутин.
     Для изменяемого состояния это слишком дорого.
@@ -395,13 +396,19 @@ runReader comp env = loop (run comp)
 % todo lift - monad morphism
 % todo ContT, lift = (>>=)
 
-\subsubsection{Алгебраичность и эффекты высших порядков}
+\subsubsection{Алгебраичность и эффекты высших порядков} \label{subsubsec:algebraicity-higer-order}
+
+В начале нулевых появилась идея описывать effect-операции не сразу монадами, а алгебраически, с помощью сигнатур и уравнений~\cite{plotkin2002notions}.
+Эффекты в этом формализме являются композируемыми по построению, как композируемы сигнатуры (конкатенация сигнатур~--- сигнатура~\ref{subsubsec:extensible-messages}).
+
+
+Проблема заключается в том, что
+
+% todo bidirectional effects
 
 % todo оригинальные статьи
 
 % todo abstracting definitional interpreters & github semantics
-
-% todo Monads and algebras
 
 % todo
 
