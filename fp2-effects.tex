@@ -258,7 +258,7 @@ runReader comp env = loop (run comp)
     type M x = [x]
     instance Monoid (M x) where
       mempty = []
-      mappend = ++
+      mappend = (++)
 \end{minted}
 
 Свободные монады строятся аналогично свободным моноидам.
@@ -375,12 +375,12 @@ runReader comp env = loop (run comp)
     Однако, на практике продолжения могут содержать логику финализации ресурсов.
     В этом случае всё равно нужна какая-то специальная обработка~\footnote{\url{https://koka-lang.github.io/koka/doc/book.html\#sec-resource}}.
     \item Можно вызвать несколько раз для эмуляции недетерминизма.
-    Это ограничивает использование эффективных мутабельных продолжений~\ref{subsec:efficient-cps}~\cite{leijen2018algebraic}\footnote{\url{https://koka-lang.github.io/koka/doc/book.html\#sec-multi-resume}}.
+    Это ограничивает использование эффективных мутабельных продолжений~\ref{subsec:efficient-cps}~\cite{leijen2018algebraic}\footnote{\url{https://koka-lang.github.io/koka/doc/book.html\#sec-multi-resume}}, а также требует нетривиальной обработки при работе с ресурсами.
     \item Можно вызвать не сразу.
     Это нужно для реализации изменяемого состояния, генераторов и корутин.
     Для изменяемого состояния это слишком дорого.
     Генераторы~--- хорошее применение, но built-in реализация генераторов может быть эффективнее за счёт экономии аллокаций продолжений (создаётся сразу \mintinline{kotlin}{Iterator})\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}.
-    Реализация корутин поверх хендлеров даёт возможность пользователям писать собственные планировщики, что, на данный момент, самое котируемое применение хендлеров на данный момент~\cite{sivaramakrishnan2021retrofitting, phipps2023continuing}. % todo
+    Реализация корутин поверх хендлеров даёт возможность пользователям писать собственные планировщики, что самое котируемое применение хендлеров на данный момент~\cite{sivaramakrishnan2021retrofitting, phipps2023continuing}. % todo
 \end{itemize}
 
 \subsubsection{Трансформеры монад} \label{subsubsec:monad-transformers}
