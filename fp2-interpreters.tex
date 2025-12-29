@@ -768,7 +768,7 @@
       Neg (Neg e) -> transform1 e                                    -- проблема
       Neg (Add l r) -> Add (transform1 (Neg l)) (transform1 (Neg r)) -- проблема
 \end{minted}
-Чтобы восстановить композиционность семантики, нужно экплицировать контекстные зависимости с помощью стрелочного домена домена~\cite{kiselyov2012typed}:
+Чтобы восстановить композиционность семантики, нужно экплицировать контекстные зависимости с помощью стрелочного домена~\cite{kiselyov2012typed}:
 \begin{minted}{haskell}
     data Ctx = CtxPos | CtxNeg
     flipCtx = \case CtxPos -> CtxNeg; CtxNeg -> CtxPos

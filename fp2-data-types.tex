@@ -323,6 +323,7 @@
 \[
     L = FIX\ap\lambda r\ldotp 1 + a \times r
 \]
+
 Закодируем это на Haskell.
 В качестве комбинатора рекурсии возьмём \mintinline{haskell}{data FixList a}:
 \begin{minted}{haskell}
@@ -347,11 +348,13 @@
       [] -> ini
       x:xs -> f x (foldr ini f xs)
 \end{minted}
+
 Действительно, свёртка в общем смысле позволяет заменить каждый конструктор данных в дереве на некоторую функцию.
 В результате получается вычисление, имеющее доступ ко всему содержимому структуры данных, и возвращающее результат агрегации:
 \begin{center}
     \includegraphics[width=0.5\textwidth]{figs/foldr}
 \end{center}
+
 То есть количество и типы аргументов свёртки зависят от ``формы'' сворачиваемого типа.
 В случае списка требуется нольарная функция вместо \mintinline{haskell}{Nil} и бинарная вместо \mintinline{haskell}{Cons}.
 Мы же эти две функции представляем в как одну с помощью типа-формы.
@@ -423,6 +426,7 @@
     cata :: Functor f => (f a -> a) -> Fix f -> a
     cata phi = phi . fmap (cata phi) . out
 \end{minted}
+
 Иначе говоря, \mintinline{haskell}{cata} заменяет все конструкторы \mintinline{haskell}{In} на функцию \texttt{phi}, которая содержит информацию о том, как реагировать на разные варианты конструкторов в дереве:
 \begin{minted}{haskell}
     example           = In  (Cons 1 (In  (Cons 2 (In  (Cons 3  (In  Nil))))))
@@ -760,7 +764,7 @@
 Таким образом, \mintinline{haskell}{Box} это не что иное, как \point{абстрактный тип данных (ADT)}: он включает в себя скрытое состояние неизвестной природы и набор операций для работы с ним~\cite{gibbons2008unfolding}.
 На самом деле мы уже встречали такую конструкцию ранее, когда говорили про экзистенциальные типы~\ref{subsubsec:existentials} (там мы использовали инстансы классы типов в качестве кортежей функций).
 
-Известно, что ООП объекты тоже имеют коалгебраическую природу.
+ООП объекты тоже можно рассматривать через коалгебры.
 Подробнее про соотношение объектов и абстрактных типов данных можно почитать в~\cite{cook2009understanding}.
 
 % todo Pierce about data abstraction
@@ -860,7 +864,7 @@ co-Church encoding для списков даёт \vocab{pull stream}, или \v
 % todo про коммуникацию двух кусков кода и инициацию этой коммуникации
 
 Нередко работу с потоками называют \vocab{реактивным программированием}\footnote{\href{https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx}{(youtube) React 2014 : Erik Meijer - What does it mean to be Reactive?}}.
-Чистой версией является \vocab{functional reactive programming (FRP)}, представляющее потоки как функции от времени\footnote{\href{https://youtu.be/rfmkzp76M4M?si=TRBq8wWbcDOhSbIO}{(youtube) Conal Elliott - The Essence \& Origins of Functional Reactive Programming}}~\cite{elliott1997functional}.
+%Чистой версией является \vocab{functional reactive programming (FRP)}, представляющее потоки как функции от времени\footnote{\href{https://youtu.be/rfmkzp76M4M?si=TRBq8wWbcDOhSbIO}{(youtube) Conal Elliott - The Essence \& Origins of Functional Reactive Programming}}~\cite{elliott1997functional}.
 
 \subsubsection{Data vs codata} \label{subsubsec:data-codata}
 
