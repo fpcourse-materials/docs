@@ -225,7 +225,7 @@
 Новый хендлер обрабатывает только часть запросов, остальные пересылает хендлеру выше (скомпозировав правильным образом продолжения):
 \begin{minted}{haskell}
 runReader
-  :: forall effs env res . Functor es
+  :: forall effs env res . Functor effs
   => Eff (Reader env |> effs) res
   -> env -> Eff effs res
 runReader comp env = loop (run comp)

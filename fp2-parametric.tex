@@ -294,8 +294,8 @@ Haskell позволяет также абстрагироваться по ти
 \end{task}
 
 Сейчас язык кайндов, который должен контролировать типы, слишком беден.
-Действительно, кайнд \mintinline{haskell}|Suc| --- \mintinline{haskell}|Suc :: Type -> Type|, соответственно ничто не мешает написать \mintinline{haskell}|Suc (Maybe Int)|.
-В то же время он слишком ограничивающий, поскольку не поддерживает полиморфизм, что дало начало большому количеству дублирований а ля \mintinline{haskell}|Typeable (ty :: Type)|, \mintinline{haskell}|Typeable1 (ty :: Type -> Type)|\ldots
+Действительно, кайнд \mintinline{haskell}|Suc| --- \mintinline{haskell}|Suc :: Type -> Type|, соответственно ничто не мешает написать, например, \mintinline{haskell}|Suc (Maybe Int)|.
+В то же время он слишком ограничивающий, поскольку не поддерживает полиморфизм, что дало начало большому количеству дублирований а ля \\ \mintinline{haskell}|Typeable (ty :: Type)|, \mintinline{haskell}|Typeable1 (ty :: Type -> Type)|\ldots
 
 Современный Haskell имеет расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_data.html#extension-TypeData}{TypeData}, позволяющее объявлять новые типы и кайнды подобно тому, как \mintinline{haskell}{data} позволяет объявлять новые типы.
 \begin{minted}{haskell}
