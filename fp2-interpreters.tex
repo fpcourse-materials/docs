@@ -775,7 +775,7 @@
 
     transform1' :: Expr1 -> (Ctx -> Expr1)
     transform1' expr = case expr of
-      Lit x -> \case CtxNeg -> List (-x); CtxPos -> Lit x
+      Lit x -> \case CtxNeg -> Lit (-x); CtxPos -> Lit x
       Neg e -> \ctx -> transform1' e (flipCtx ctx)
       Add l r -> \ctx -> Add (transform1' l ctx) (transform1' r ctx)
 \end{minted}

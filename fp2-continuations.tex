@@ -724,7 +724,7 @@
 Оказывается, что да\footnote{\url{http://www.schoolofhaskell.com/school/to-infinity-and-beyond/pick-of-the-week/the-mother-of-all-monads}}\footnote{\url{https://blog.poisson.chat/posts/2019-10-26-reasonable-continuations.html}}~\cite{filinski1994representing}.
 
 Вспомним, что монада --- это конструктор типа \texttt{m}, которым мы представляем денотацию вычисления.
-Операции \texttt{pure} и \texttt{>>=} позволяют создавать и композировать денотации.
+Операции \texttt{pure} и \texttt{bind} позволяют создавать и композировать денотации.
 Таким образом, мы имеем вычисления, представленные в виде first-class данных.
 
 Если наш язык предоставляет продолжения первого класса (для примера возьмём \mintinline{haskell}{Cont (m r)} как такой язык), мы можем определить две операции: \texttt{reflect}~--- исполнить монадическое вычисление в языке с продолжениями и получить результат \texttt{a}; \texttt{reify}~--- по вычислению в языке с продолжениями получить денотацию\footnote{Для энергичного языка \texttt{reify} должна принимать thunk \texttt{(() -> a) -> m a}.}.
