@@ -476,7 +476,7 @@
     eval1 term env = case term of
       Var1 name -> Map.findWithDefault (Var1 name) name env
       App1 f arg -> case eval1 f env of
-        Closure env' body ->
+        Closure env' name body ->
             let arg' = eval1 arg env in
             eval1 body (Map.insert name arg' env')
         t -> App1 t (eval1 arg env)
