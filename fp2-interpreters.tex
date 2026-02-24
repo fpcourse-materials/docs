@@ -1059,7 +1059,7 @@ Expression problem возникала и решалась много раз: exp
     data Input rec = Input
 
     algBasic' :: Basic (Int -> Int) -> Int -> Int
-    algBasic' = \case Const x -> \_env -> x; Plus l r -> \_env -> l + r
+    algBasic' = \case Const x -> \_env -> x; Plus l r -> \env -> l env + r env
 
     algInput :: Input (Int -> Int) -> Int -> Int
     algInput = \case Input -> \env -> env
