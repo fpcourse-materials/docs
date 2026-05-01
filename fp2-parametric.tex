@@ -137,7 +137,7 @@ For example, Church numerals have higher rank\footnote{\url{https://okmij.org/ft
 
 %! suppress = LineBreak
 \begin{task}
-    What rank does the type \mintinline{haskell}|Int -> (forall a . a -> a)|? have?
+    What rank does the type \mintinline{haskell}|Int -> (forall a . a -> a)| have?
 \end{task}
 
 Many problems associated with higher-rank types can be avoided by wrapping them.
@@ -516,7 +516,7 @@ Thus, the generated code constantly consults this table and makes virtual calls 
 \begin{itemize}
     \item[\positive] Compilation time is small;
     \item[\positive] The performance behavior is predictable (it does not lead to surprising runtime pauses);
-    \item[\positive] Efficient work with value values;
+    \item[\positive] Efficient work with value types;
     \item[\positive] High flexibility;
     \item[\positive] Type information is not erased;
     \item[\negative] A significant constant overhead from virtual calls through the table, and performance strongly depends on compiler optimizations.
@@ -566,7 +566,7 @@ Accordingly, pattern matching on such tuples simply allows referring to each of 
 \end{minted}
 Consequently, there is no distinction between differently nested unboxed tuples:
 \begin{minted}{haskell}
-    (# A, (# B, C #)) ?$\\equiv$? (# #( A, B #), C #) ?$\\equiv$? (# A, B, C #)
+    (# A, (# B, C #) #) ?$\equiv$? (# (# A, B #), C #) ?$\equiv$? (# A, B, C #)
 \end{minted}
 
 \subsubsection{Classification of values by runtime representation}

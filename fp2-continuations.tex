@@ -808,14 +808,14 @@ Thus, the \texttt{yield} operation suspends the computation and saves the contin
 Now we can write code that sequentially produces multiple results:
 \begin{minted}{haskell}
     exampleGen :: [Int]
-    exampleGen = it2list $ makeGen do
+    exampleGen = box2list $ makeGen do
       yield 1
       yield 2
       yield 3
 \end{minted}
 
 \begin{task}
-    Reduce \mintinline{haskell}{runCont exampleGen (\() -> Stop))} to normal form.
+    Reduce \mintinline{haskell}{runCont exampleGen (\() -> Stop)} to normal form.
 \end{task}
 
 

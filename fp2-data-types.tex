@@ -332,7 +332,7 @@ As the recursion combinator we take \mintinline{haskell}{data FixList a}:
     -- FixList a ?$\iso$? Shape a (FixList a) ?$\iso$? Shape a (Shape a (FixList a)) ?$\iso$? ...
 
     example :: FixList Int -- [1, 2, 3]
-    example = In (Right (1, In (Right (2, In (Right 3, Left ())))))
+    example = In (Right (1, In (Right (2, In (Right (3, In (Left ())))))))
 \end{minted}
 
 % todo step-by-step pictures showing fold and unfold in action
@@ -341,7 +341,7 @@ Thus, we have separated the list definition into two parts: one is responsible f
 The shape can be reused in the definition of a fold:
 \begin{minted}{haskell}
     foldr :: (Either () (a, r) -> r) -> FixList a -> r
-    foldr phi (FixList shape) = case shape of
+    foldr phi (In shape) = case shape of
       Left () -> phi (Left ())
       Right (x, xs) -> phi (Right (x, foldr phi xs))
     -- compare with the classical definition
@@ -726,7 +726,7 @@ Let us encode the existential quantifier using a new type (see~\ref{subsubsec:ex
 \begin{minted}{haskell}
     data Box f where
       --     exists s. (s,    s -> f s)
-      Box :: forall s . s -> (s -> f s) -> Box
+      Box :: forall s . s -> (s -> f s) -> Box f
 
     ana' :: Functor f => Box f -> Fix f
     ana' (Box currSeed psi) =
@@ -791,7 +791,7 @@ Later, a technique using the co-structure of a list --- an unfold or \mintinline
     unstream :: Stream a -> [a]
     unstream (Stream next s) = case next s of
       Done -> []
-      Yield a s' -> a : unstream next s'
+      Yield a s' -> a : unstream (Stream next s')
 \end{minted}
 
 The idea is that now \point{stream processing functions are non-recursive} and easily undergo basic compiler deforesting transformations in the style of~\cite{wadler1988deforestation}.
@@ -883,8 +883,8 @@ Then, using pattern matching we can deconstruct values of an algebraic data type
 
     fold :: (ListF a r -> r) -> List a -> r
     fold alg xs = case xs of
-      Fix Nil -> alg Nil
-      Fix (Cons y ys) -> alg (Cons y (fold alg ys))
+      List Nil -> alg Nil
+      List (Cons y ys) -> alg (Cons y (fold alg ys))
 \end{minted}
 
 However, one can also define a data type through the ways to deconstruct it using the \mintinline{haskell}{codata} keyword (in an imaginary language).
@@ -908,7 +908,7 @@ The two preceding examples can be written, for example, in Kotlin as follows (th
 
     fun <a, r> fold(alg: (Pair<a, r>?) -> r, xs: List<a>): r =
         if (xs.layer == null) alg(null)
-        else alg(Pair(xs.layer.first, fold(alg, xs.list.second)))
+        else alg(Pair(xs.layer.first, fold(alg, xs.layer.second)))
 
     interface CoList<a> { fun force(): Pair<a, CoList<a>>? }
 

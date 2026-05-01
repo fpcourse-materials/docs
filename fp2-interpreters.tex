@@ -16,7 +16,7 @@ However, it is difficult for a human to program in this language; a new language
 To obtain a new language, we build a software interpreter.
 A \vocab{software interpreter} $U_M^N$ is a program in language $M$\footnote{By a language we mean the set of programs in that language, in other words, the set of trees of a certain form.} that takes as input a program in language $N$ and its input --- data from $D$, and returns the result of executing that program on that data: \[U_M^N : N\times D\to D\]
 
-We will call the implementation language of the interpreter $M$ the \vocab{meta-language}, and $L$ the \vocab{object language}.
+We will call the implementation language of the interpreter $M$ the \vocab{meta-language}, and $N$ the \vocab{object language}.
 One can intuitively think of an interpreter as follows: it is an explanation, understandable to the meta-language, of what the constructs of the object language mean.
 In other words, which meta-language instructions need to be executed to obtain the desired semantics of the object language instructions.
 
@@ -403,9 +403,9 @@ In this representation one can choose any type for naming free variables:
 Adding each bound variable adds a new inhabitant \mintinline{haskell}|Nothing| to the variable type for referring to the nearest bound variable:
 \begin{minted}{haskell}
     -- ?$\lambda x\ldotp x \ap y$?
-    example1 = Lam $ Nothing `App` Just "y"
+    example1 = Lam $ Var Nothing `App` Var (Just "y")
     -- ?$\lambda x \ap y\ldotp x \ap y \ap z$?
-    example2 = Lam $ Lam $ Just Nothing `App` Nothing `App` Just (Just "z")
+    example2 = Lam $ Lam $ Var (Just Nothing) `App` Var Nothing `App` Var (Just (Just "z"))
 \end{minted}
 
 Monadic bind is the implementation of substitution for such terms:
@@ -804,7 +804,7 @@ Let us consider our example of tagless initial encoding~\ref{subsubsec:typed-tag
     eval :: Expr ty -> ty
     eval = \case
       Const x  -> x
-      IsZero t -> eval == 0
+      IsZero t -> eval t == 0
       If c t e -> if eval c then eval t else eval e
 \end{minted}
 To obtain a final encoding, we parameterize the domain by the resulting type of the expression:
@@ -1038,7 +1038,7 @@ As a model language we take the expression language with addition:
     data Basic rec = Const Int | Plus rec rec
 
     algBasic :: Basic Int -> Int
-    algBasic = \case Const x -> c; Plus l r -> l + r
+    algBasic = \case Const x -> x; Plus l r -> l + r
 
     evalBasic :: Fix Basic -> Int
     evalBasic = cata algBasic

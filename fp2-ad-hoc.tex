@@ -76,7 +76,7 @@ Writing a sort for a list of elements of a specific type is trivial:
     sort :: [Int] -> [Int]
     sort = \case [] -> []; x:xs -> insert x (sort xs)
       where
-        insert x xs = let (l, r) = List.partition (?\framebox{<}? x) xs in l ++ x : r)
+        insert x xs = let (l, r) = List.partition (?\framebox{<}? x) xs in l ++ x : r
 \end{minted}
 
 In the implementation, the only type-specific information we use is the ordering on its inhabitants.
@@ -108,7 +108,7 @@ In the case of dictionaries, we model this as a function between dictionaries:
 
 Now we can sort a list of lists by constructing the appropriate dictionary:
 \begin{minted}{haskell}
-    ghci> sort (listDict intDict) [[3, 2], [2, 1], [0]]
+    ghci> sort (listDict intOrd) [[3, 2], [2, 1], [0]]
 \end{minted}
 
 A comparison of explicit dictionary passing and type classes can be seen in the following table:
@@ -497,7 +497,7 @@ The only way to work with a data family is to place the implementation in a type
     instance XListOp () where
       xelem () (IntList size) = size > 0
 
-    instance XList Bool where
+    instance XListOp Bool where
       xelem key (ByteArray bs) = ...
 
     xelemAll :: XListOp elem => XList elem -> [elem] -> Bool
@@ -839,7 +839,7 @@ For instance, we can introduce wrappers for numbers that in the problem domain r
 Now the type system will prevent confusing them.
 \begin{minted}{haskell}
     newtype ModuleId = ModuleId Int64
-    newtype CourceId = CourceId Int64
+    newtype CourseId = CourseId Int64
 \end{minted}
 
 There is an extremely underappreciated programming practice\footnote{\url{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}} where our program has a clear boundary at which data from the external world is parsed.
@@ -894,7 +894,7 @@ They can be freely coerced (there are no prerequisites for \mintinline{haskell}|
 A type parameter has the representational role if the type constructor can be coerced only when the arguments can be coerced:
 \begin{minted}{haskell}
     data Maybe a = Nothing | Just a
-    instance Coerce a b => Coerce (Maybe a) (Maybe b)
+    instance Coercible a b => Coercible (Maybe a) (Maybe b)
 \end{minted}
 
 A type parameter has the nominal role if the type constructor can be coerced only when the arguments are equal.
@@ -1043,7 +1043,7 @@ To make a type an exception, one needs to declare an \mintinline{haskell}|Except
       toException = SomeException
 
       fromException :: SomeException -> Maybe a
-      fromException (SomeExcetion e) = cast e
+      fromException (SomeException e) = cast e
 \end{minted}
 Where \mintinline{haskell}|SomeException| is an existential wrapper similar to \mintinline{haskell}|Dynamic| (see\ \ref{subsubsec:type-reflection}), into which the concrete exception type is wrapped.
 By catching \mintinline{haskell}|SomeException|, one can catch any exception (\texttt{cast} will always succeed).
@@ -1064,7 +1064,7 @@ The Haskell runtime system provides intrinsics for throwing and catching excepti
       Nothing -> throw e
       Just e' -> handler e'
 
-    ghci> throw "error" `catch` (e :: String) -> putStrLn e
+    ghci> throw "error" `catch` \(e :: String) -> putStrLn e
 \end{minted}
 
 In the simplest case, a custom exception type can be implemented in two lines.

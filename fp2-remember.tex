@@ -282,7 +282,7 @@ If the pattern resembles the way the value was constructed, it is selected among
 \begin{minted}{haskell}
     show :: Animal -> String
     show animal = case animal of
-      Cat name nLifes -> "This is cat " ++ name ++ " " ++ show nLifes
+      Cat name nLives -> "This is cat " ++ name ++ " " ++ show nLives
       Dog name -> "This is dog " ++ name
 \end{minted}
 
@@ -432,7 +432,7 @@ Thus, where a pure function would return a value of type \texttt{a}, after intro
 
 \begin{itemize}
     \item If a function can fail, then \texttt{f = Maybe}.
-    \item If a function reads global environment of type \texttt{e}, then \texttt{f = e -> \_}.
+    \item If a function reads a global environment of type \texttt{e}, then \texttt{f = e -> \_}.
     \item If a function reads and updates state \texttt{s}, then \texttt{f = s -> (s, \_)}.
 \end{itemize}
 

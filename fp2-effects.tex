@@ -219,7 +219,7 @@ The coproduct of shape functors is a shape functor (see\ \ref{subsubsec:functor-
 Now the \texttt{ask} operation admits the existence of other request types \texttt{effs}:
 \begin{minted}{haskell}
     ask :: Eff (Reader env |> effs) env
-    ask = Eff \k -> Msg $ L $ Ask k
+    ask = Eff \k -> Request $ L $ Ask k
 \end{minted}
 
 The new handler processes only a portion of the requests, forwarding the rest to the handler above (composing the continuations in the correct way):
@@ -230,12 +230,12 @@ runReader
   -> env -> Eff effs res
 runReader comp env = loop (run comp)
   where
-    loop :: Request (Reader env |> effs) res -> Eff effs res
+    loop :: Message (Reader env |> effs) res -> Eff effs res
     loop = \case
       Val res -> pure res
-      Msg (L (Ask k)) -> loop (k env)
-      Msg (R unknownReq) -> do
-        response <- Eff \k -> Msg (fmap k unknownReq)
+      Request (L (Ask k)) -> loop (k env)
+      Request (R unknownReq) -> do
+        response <- Eff \k -> Request (fmap k unknownReq)
         loop response
 \end{minted}
 
@@ -300,7 +300,7 @@ Instead of variables we store the pure result of the computation, and signatures
 
 The \mintinline{haskell}{Monad Comp} implementation will compose continuations for us in \mintinline{haskell}{do}-notation:
 \begin{minted}{haskell}
-    ask = Op (Ask () (\e -> Val e)
+    ask = Op (Ask () (\e -> Res e))
     example = do
       x <- ask
       y <- ask
@@ -334,13 +334,13 @@ As usual, the fold can be generalized as a catamorphism:
     handle
       :: Functor effs => (res -> d) -> (effs d -> d) -> Comp effs res -> d
     handle val alg = \case
-      Pure res -> val res
+      Res res -> val res
       Op eff -> alg $ fmap (handle val alg) eff
 \end{minted}
 Now in the implementation the continuation (subtree) is already interpreted into the desired domain:
 \begin{minted}{haskell}
     runReader
-      :: Functor effs => Eff (Reader env |> effs) res -> env -> Eff effs res
+      :: Functor effs => Comp (Reader env |> effs) res -> env -> Comp effs res
     runReader = handle (\res _env -> pure res) \case
       L (Ask k) -> \env -> k env env
       R other -> \env -> Op (fmap ($ env) other)
@@ -353,7 +353,7 @@ Unfortunately, since the various effect variants are ordered both at the term le
 \begin{minted}{haskell}
     liftF :: Functor effs => Comp effs res -> Comp (eff |> effs) res
     liftF = \case
-      Pure x -> Pure x
+      Res x -> Res x
       Op effs -> Op $ R $ liftF <$> effs
 
     example :: Comp (Reader Int |> State Int) ()
