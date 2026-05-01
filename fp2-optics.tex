@@ -4,21 +4,21 @@
 
 В функциональном программировании принято персистентно работать с данными.
 В этой главе мы рассмотрим, когда и почему это важно.
-А так же~--- функциональную оптику~--- набор абстракций для удобной работы с данными.
+А также~--- функциональную оптику~--- набор абстракций для удобной работы с данными.
 
 \subsection{Персистентные структуры данных}
 
 Структуры данных разделяют на \vocab{изменяемые (mutable)} и \vocab{неизменяемые (immutable)}.
 Это классификация лишь по внутренней реализации, используются изменяемые ячейки памяти или нет.
 
-По использованию выделают \vocab{эфемерные} и \vocab{персистентные} структуры данных. % todo verify
+По использованию выделяют \vocab{эфемерные} и \vocab{персистентные} структуры данных. % todo verify
 Изменения эфемерной структуры данных можно наблюдать по той же ссылке:
 \begin{minted}{Swift}
     let xs = MutableList<Int>.empty()
     xs.add(42)
     print(xs)
 \end{minted}
-В то время как изменение персистентной порождает каждый раз новые ссылки, а по старым остаются доступны предыдущие версии структуры:
+В то время как изменение персистентной структуры каждый раз порождает новые ссылки, а по старым остаются доступны предыдущие версии структуры:
 \begin{minted}{haskell}
     let xs = []
     let xs' = 42 : xs
@@ -37,7 +37,7 @@
 Если в вершинах хранить небольшие массивы, которые современные аритектуры процессоров могут эффективно копировать, можно существенно уменьшить высоту дерева и алгоритмическую сложность операций (e.g. \mintinline{scala}|scala.immutable.Vector|).
 
 \begin{task}
-    Реализуйте не Haskell персистентное декартово дерево по неявному ключу.
+    Реализуйте на Haskell персистентное декартово дерево по неявному ключу.
     Какие особенности Haskell усложняют использование этой структуры?
 \end{task}
 
@@ -146,7 +146,7 @@ TODO % todo
 \begin{minted}{haskell}
     view l (set l s x) ?$\equiv$? x
     set l s (view l s) ?$\equiv$? s
-    set l (view l s x) y ?$\equiv$? set l s y
+    set l (set l s x) y ?$\equiv$? set l s y
 \end{minted}
 
 Например, можно легко изменить возраст пользователя:
@@ -231,7 +231,7 @@ TODO % todo
 \end{minted}
 
 Теперь можем естественным образом определить композицию для различных девайсов.
-Можно заметить, что этот подход требует квадратичное количество инстансов от количества оптических девайсов.
+Можно заметить, что этот подход требует квадратичного количества инстансов по числу оптических девайсов.
 
 \begin{minted}{haskell}
     instance Composable SimpleLens SimpleLens SimpleLens where
@@ -250,13 +250,13 @@ TODO % todo
       , aset :: s -> b -> t
       }
 
-    instance Composable SimplePrism SimpleLens SimplePrism where
-      compose :: SimplePrism s t a b -> SimpleLens a b c d -> SimplePrism s t c d
-      compose p l = SimplePrism
-        { preview = fmap (view l) . preview p
-        , pset = \s d -> case preview p s of
+    instance Composable SimplePrism SimpleLens AffineTraversal where
+      compose :: SimplePrism s t a b -> SimpleLens a b c d -> AffineTraversal s t c d
+      compose p l = AffineTraversal
+        { apreview = fmap (view l) . preview p
+        , aset = \s d -> case preview p s of
             Left t -> t
-            Right a -> pset p s (set l a d)
+            Right a -> review p (set l a d)
         }
 \end{minted}
 

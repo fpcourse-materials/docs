@@ -257,7 +257,7 @@
 
 \subsection{Данные в Haskell}
 
-В Haskell есть встроенная возможность объявлять новые типы данных на основании других типов, а так же создавать их экземпляры.
+В Haskell есть встроенная возможность объявлять новые типы данных на основании других типов, а также создавать их экземпляры.
 
 Зададим тип данных, описывающий животных:
 \begin{minted}{haskell}
@@ -280,8 +280,8 @@
 Мы сопоставляем значение типа с образцом.
 Если образец похож на то, как было сконструировано значение, то он выбирается среди других образцов и переменные, задекларированные в нём, начинают ссылаться на соответствующее позиционно содержимое структуры данных:
 \begin{minted}{haskell}
-    show :: Animal -> String
-    show animal = case animal of
+    describeAnimal :: Animal -> String
+    describeAnimal animal = case animal of
       Cat name nLifes -> "This is cat " ++ name ++ " " ++ show nLifes
       Dog name -> "This is dog " ++ name
 \end{minted}
@@ -291,7 +291,7 @@
     data Penguin = Penguin { getName :: String, getAge :: Int }
     penguin = Penguin { getName = "Andrey", getAge = 500 }
 \end{minted}
-Haskell генерирует функции-аксессоры для доступа к полям объекта:
+Haskell генерирует функции-аксессоры для доступа к полям значения:
 \begin{minted}{haskell}
     ghci> :t getName :: Penguin -> String
 \end{minted}
@@ -302,16 +302,16 @@ Haskell генерирует функции-аксессоры для досту
 Если нет, будем возвращать специально выделенное константное значение этого типа.
 \begin{minted}{haskell}
     data MaybeD = NothingD | JustD Double
-    sqrt :: Double -> MaybeD
-    sqrt x = if x < 0 then NothingD else JustD (calcSqrt x)
+    safeSqrtD :: Double -> MaybeD
+    safeSqrtD x = if x < 0 then NothingD else JustD (calcSqrt x)
 \end{minted}
 
-Можно заметить, что так нам придётся объявлять по типу \texttt{MaybeT} для каждого типа \texttt{T}.
+Можно заметить, что так нам придётся объявлять отдельный тип \texttt{MaybeT} для каждого типа \texttt{T}.
 Поэтому Haskell позволяет абстрагироваться в типе, аналогично тому как можно абстрагироваться по значениям в терме.
 \begin{minted}{haskell}
     data Maybe a = Nothing | Just a
-    sqrt :: Double -> Maybe Double
-    sqrt x = if x < 0 then Nothing else Just (calcSqrt x)
+    safeSqrt :: Double -> Maybe Double
+    safeSqrt x = if x < 0 then Nothing else Just (calcSqrt x)
 \end{minted}
 
 Заметьте, что сейчас \texttt{Maybe} --- это не совсем тип, так как теперь нужно передать типовой параметр, чтобы получить конкретный тип.

@@ -42,10 +42,10 @@
 
 \begin{figure}
     \centering
-    \begin{subfigure}[h]{0.29\linewidth}
+    \begin{subfigure}[ht]{0.29\linewidth}
         \includegraphics[width=1\textwidth]{figs/cont-exit}
     \end{subfigure}
-    \begin{subfigure}[h]{0.7\linewidth}
+    \begin{subfigure}[ht]{0.7\linewidth}
         \includegraphics[width=1\textwidth]{figs/cont-try-catch}
     \end{subfigure}
     \caption{Конструкция \mintinline{kotlin}|exit| выбрасывает продолжение и программа останавливается, в то время как \mintinline{kotlin}{throw} выбрасывает лишь часть продолжения до ближайшего \mintinline{kotlin}{try-catch}.}
@@ -192,7 +192,7 @@
 Первая рекурсивная реализация \texttt{evalDirect} не заботилась о продолжениях.
 Однако, продолжения --- это неотъемлемая часть процесса вычисления, вычислителю нужно знать, что делать дальше в каждый момент.
 На самом деле \texttt{evalDirect} лишь делегирует работу с продолжениями определяемого языка мета-языку, но каким образом?
-Заметьте, что полученная в итоге реализация \texttt{evalK} хвостово-рекурсивная, а значит, может быть скомпилирована в цикл, не потребляющий стек вызовов, при этом \mintinline{haskell}{K} это стек.
+Заметьте, что полученная в итоге реализация \texttt{evalK} хвостово-рекурсивна, а значит, может быть скомпилирована в цикл, не потребляющий стек вызовов. При этом \mintinline{haskell}{K} и есть стек.
 Таким образом, в первом случае мы делали рекурсивные вызовы и продолжение аллоцировалось на (аппаратном) стеке мета-языка, а во втором случае мы самостоятельно аллоцируем стек в куче.
 
 В случае, если стек мета-языка реализован поверх аппаратного, есть риск ошибки его переполнения.
@@ -207,9 +207,9 @@
 С их помощью можно реализовать как возможности манипуляции потоком управления вроде генераторов и корутин\footnote{\url{https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style\#Example:_coroutines}}\footnote{\url{https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.coroutines/suspend-coroutine.html}}, так и все остальные эффекты вроде состояния (см.\ далее\ \ref{sec:effects}).
 
 \vocab{Продолжения первого класса (first-class continuations)} --- продолжения, которые представимы в программе в виде значений.
-Учитывая, что продолжение имеет вакантное место ещё не вычисленного подвыражения, продолжения первого класса представляют функциями первого класса.
+Учитывая, что продолжение имеет вакантное место ещё не вычисленного подвыражения, продолжения первого класса представляются функциями первого класса.
 
-Чтобы получить в коде продолжение первого класса, нужно либо написать код в CPS, либо воспользоваться встроенным в язык оператором, которых придумано великое множество~\cite[приложение A]{hillerstrom2022foundations}.
+Чтобы получить в коде продолжение первого класса, нужно либо написать код в CPS, либо воспользоваться встроенным в язык оператором; таких операторов придумано великое множество~\cite[приложение A]{hillerstrom2022foundations}.
 Например, $J$, \texttt{escape}~\cite{reynolds1972definitional}, \texttt{call/cc}\ldots
 
 Для примера реализуем в языке операцию \texttt{Cont}, позволяющую захватить текущее продолжение.
@@ -464,7 +464,7 @@
 
 Самым известным классическим оператором, который использовали в Scheme для получения продолжений первого класса, является \vocab{\texttt{call/cc} (call with current continuation)}\footnote{\url{https://en.wikipedia.org/wiki/Call-with-current-continuation}}\footnote{\url{https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style\#callCC}}.
 Предоставляемое продолжение является \vocab{неограниченным (undelimited/abortive)}, так как оно содержит ``конец программы'' --- никакой код не будет исполняться после его вызова.
-Неограниченные продолжения де-факто --- не совсем функции, так как они не возвращают результата (он уже ``beyond the grave''), следовательно, они также не композируются (также как странно композировать \texttt{abort} с \texttt{exit})\footnote{\url{https://okmij.org/ftp/continuations/undelimited.html}}\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
+Неограниченные продолжения де-факто не совсем являются функциями, так как они не возвращают результата (он уже ``beyond the grave''). Следовательно, они также не композируются; точно так же странно композировать \texttt{abort} с \texttt{exit}\footnote{\url{https://okmij.org/ftp/continuations/undelimited.html}}\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
 Они скорее являются ко-значениями: пока часть программы выполняется, они ожидают её результата~\cite{curien2000duality}.
 
 Давайте сэмулируем \texttt{call/cc} в монаде \mintinline{haskell}{Cont}.
@@ -480,7 +480,7 @@
       pure (show $ y - 4)
 \end{minted}
 
-\subsection{Delimited continuations} \label{subsec:delimited-cont}
+\subsection{Разграниченные продолжения (delimited continuations)} \label{subsec:delimited-cont}
 
 В современной практике, как правило, используют продолжения не до конца программы, а только до определённой точки.
 Их называют \vocab{ограниченными} или \vocab{разграниченными продолжениями}, \vocab{delimited} или \vocab{composable continuations}, \vocab{subcontinuations}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}.
@@ -631,12 +631,12 @@
 \subsection{Приложения продолжений} \label{subsec:cont-applications}
 
 Продолжения полезны для понимания смысла программ, которые мы пишем каждый день (см.\ \ref{foot:the-lost-art-of-denotations}).
-Кроме того, как мы увидим в этой главе, продолжения первого класса можно использовать как средство построения могущественных встроенных языков.
+Кроме того, как мы увидим в этой главе, продолжения первого класса можно использовать как средство построения выразительных встроенных языков.
 
 \subsubsection{Всё через продолжения} \label{subsubsec:god-cont}
 
 Реализуем ряд полезных встроенных языков с помощью продолжений первого класса.
-Чтобы получить доступ к продолжениям, воспользуемся shallow embedded языком \mintinline{haskell}{Cont}\footnote{\url{https://blog.poisson.chat/posts/2019-10-26-reasonable-continuations.html}}.
+Чтобы получить доступ к продолжениям, воспользуемся shallow-embedded языком \mintinline{haskell}{Cont}\footnote{\url{https://blog.poisson.chat/posts/2019-10-26-reasonable-continuations.html}}.
 Таким образом, будем работать с башней языков Haskell, \mintinline{haskell}{Cont}, X, где X --- рассматриваемый встроенный язык.
 
 Начнём с тривиального встроенного императивного языка:
@@ -667,7 +667,7 @@
       pure (n + 1)
 \end{minted}
 Обратите внимание, что семантика операции обрыва вычисления полностью сосредоточена в функции \texttt{abort}, в то время как в \mintinline{haskell}{Monad Maybe} соответствующая функция бы отвечала лишь за конструирование элемента домена, а уже монадическое связывание~--- за работу с продолжениями.
-Имея доступ к first-class continuations, нам уже не нужно реализовывать монадическое связывание вручную.
+Имея доступ к продолжениям первого класса, нам уже не нужно реализовывать монадическое связывание вручную.
 Говорят, что для произвольного \texttt{m}, \mintinline{haskell}{Cont (m r) a} --- ``бесплатная'' реализация монады\footnote{\url{https://hackage.haskell.org/package/kan-extensions-5.2/docs/Control-Monad-Codensity.html}}.
 
 Реализация работы с ошибками через возвращение специального результата (\mintinline{haskell}{Either} в Haskell, \mintinline{rust}{Result} в Rust, \mintinline{go}{nil} в Go\ldots) имеет монадическую семантику (условные ветвления на каждом выбрасывают только часть продолжения), в то время как полноценный механизм исключений имеет доступ ко всему ограниченному продолжению до соответствующего блока \mintinline{kotlin}{try-catch}, что напоминает нашу текущую реализацию.

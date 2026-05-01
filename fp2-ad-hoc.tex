@@ -201,7 +201,7 @@ Haskell также предоставляет возможность сохра�
       ShowDict :: Show a => ShowDict a
 
     f :: ShowDict b -> (Show b => b) -> b
-    f d x = case d of ShowDict -> ?\framebox{x}? -- в скоупе доступен инстанс Show b
+    f d x = case d of ShowDict -> ?\framebox{x}? -- в области видимости доступен инстанс Show b
 \end{minted}
 
 \begin{task}
@@ -214,16 +214,16 @@ Haskell также предоставляет возможность сохра�
 Чтобы вызвать ограниченно-полиморфную функцию, GHC производит вывод инстансов или, иначе говоря, автоматически конструирует свидетелей.
 Вывод инстансов тесно интегрирован с общей системой вывода типов Haskell~\cite{spj-type-inference}.
 
-В действительности вывод инстансов это не что иное, как \point{задача населения типа}.
+В действительности вывод инстансов~--- это ни что иное, как \point{задача населения типа}.
 Действительно, после трансляции в Core (промежуточное представление в GHC), классы типов представляют собой словари функций.
 У нас в контексте имеются конкретные словари и функции, позволяющие из одних словарей получать другие.
 Требуется найти терм, конструирующий словарь нужного типа.
 
 Пусть, например, внутри функции \mintinline{haskell}|f :: Show a => ..| происходит вызов ограниченно--полиморфной функции
 \mintinline{haskell}|g :: Show [a] -> ..|.
-То есть, у нас имеется словарь \mintinline{haskell}|d1 :: ShowDict a|, а так же функция \mintinline{haskell}|d2 :: ShowDict a -> ShowDict [a]|, пришедшая из импортов\footnote{Инстансы можно импортировать пустым импортом: \mintinline{haskell}|import Module ()|.}.
+То есть у нас имеется словарь \mintinline{haskell}|d1 :: ShowDict a|, а также функция \mintinline{haskell}|d2 :: ShowDict a -> ShowDict [a]|, пришедшая из импортов\footnote{Инстансы можно импортировать пустым импортом: \mintinline{haskell}|import Module ()|.}.
 Необходимо сконструировать терм типа \mintinline{haskell}|ShowDict [a]|.
-Очевидно, это будет просто аппликации одного к другому: \texttt{d2 d1}.
+Очевидно, это будет просто аппликация одного к другому: \texttt{d2 d1}.
 
 Вывод инстансов происходит рекурсивно.
 Чтобы вывести \mintinline{haskell}|ShowDict [a]|, выводится сначала посылка \mintinline{haskell}|ShowDict a|.
@@ -272,7 +272,7 @@ Haskell также предоставляет возможность сохра�
 Затем, исходя из типов, выводятся инстансы классов типов.
 То есть мы пишем какой-то интересный интеллектуальный код, а параллельно с нами компилятор выписывает неинтересный код.
 
-\begin{figure}[h]
+\begin{figure}[ht]
     \centering
     \includegraphics[width=0.4\textwidth]{figs/class-sinergy}
     \caption{Классы типов + вывод инстансов = кодогенерация.}
@@ -281,7 +281,7 @@ Haskell также предоставляет возможность сохра�
 
 Вывод инстансов опирается только на вид ``головы'' декларации --- справа от \mintinline{haskell}|=>|, а ограничения слева применяются постфактум.
 Это можно использовать, чтобы писать более общие инстансы.
-Так, например, работает \vocab{constraint trick}\footnote{\url{https://chrisdone.com/posts/haskell-constraint-trick/}}, позволяющий резолвить ad-hoc полиморфные функции в параметрически-полиморфном контексте.
+Так, например, работает \vocab{constraint trick}\footnote{\url{https://chrisdone.com/posts/haskell-constraint-trick/}}, позволяющий разрешать ad-hoc-полиморфные функции в параметрически-полиморфном контексте.
 
 \subsubsection{Построение типа по значению} \label{subsubsec:reify}
 
@@ -291,7 +291,7 @@ Haskell также предоставляет возможность сохра�
 
 В действительности мы, конечно, не можем честно получить синтаксически тип нужного размера, просто потому, что типы существуют строго до стадии исполнения.
 Однако, как мы знаем, словари классов типов имеют воплощение в рантайме (случай полиморфной рекурсии~--- как раз пример, когда этого нельзя полностью избежать).
-Поэтому воспользуемся continuation passing style, который будет подробно рассмотрен далее в главе~\ref{sec:continuations}: вместо того, чтобы вернуть результат, примем продолжение, умеющее работать с любым типом с \mintinline{haskell}|KnownNat| (пользуемся типовыми абстракциями и аппликациями, см.\ \ref{subsec:lang-parametric-polumorphism})\footnote{В не самых свежих версиях GHC потребуется воспользоваться техникой \mintinline{haskell}{Proxy} из \ref{subsubsec:proxy}.}:
+Поэтому воспользуемся continuation-passing style, который будет подробно рассмотрен далее в главе~\ref{sec:continuations}: вместо того чтобы вернуть результат, примем продолжение, умеющее работать с любым типом с \mintinline{haskell}|KnownNat| (пользуемся типовыми абстракциями и аппликациями, см.~\ref{subsec:lang-parametric-polumorphism})\footnote{В не самых свежих версиях GHC потребуется воспользоваться техникой \mintinline{haskell}{Proxy} из \ref{subsubsec:proxy}.}:
 \begin{minted}{haskell}
     reify :: Int -> (forall n. KnownNat n => a) -> a
     reify n k
@@ -312,7 +312,7 @@ Haskell также предоставляет возможность сохра�
 Классы типов можно не делать специальным языковым механизмом, но вместо этого предоставлять на языковом уровне неявные параметры и население, достаточные для реализации классов типов.
 
 Так, в Scala существует механизм имплиситов (implicits)~\cite{kvrikava2019scala}\footnote{Дизайн неявных параметров в Scala3 изменился \href{https://youtu.be/dr0PUXQhg3M?si=pCydSikA_gnnCMrq}{(youtube) Scala Implicits Revisited, Martin Odersky}.}.
-Параметры функций могут быть помечены ключевым словом \mintinline{scala}|implicit|, тогда Scala попытается их вывести самостоятельно с помощью доступных в скоупе \mintinline{scala}|implicit| деклараций.
+Параметры функций могут быть помечены ключевым словом \mintinline{scala}|implicit|, тогда Scala попытается их вывести самостоятельно с помощью доступных в области видимости \mintinline{scala}|implicit| деклараций.
 Объявления переменных, функций и конструкторов объектов также могут быть помечены \mintinline{scala}|implicit|, тогда они будут использоваться при населении.
 Теперь мы можем смоделировать словарь функций, например, с помощью интерфейсов (которые в Scala называются \mintinline{scala}|trait|) и ООП синглтонов, чтобы получить классы типов~\cite{oliveira2010type}:
 \begin{minted}{scala}
@@ -324,7 +324,7 @@ Haskell также предоставляет возможность сохра�
     // Обёртка для удобства вызова.
     def show[T](x: T)(implicit ev: Show[T]): String = ev.show(x)
 
-    // Объект-синклтон, значение для пачки функций.
+    // Объект-синглтон, значение для пачки функций.
     implicit object intShow extends Show[Int] {
         def show(x: Int): String = x.toString
     }
@@ -577,12 +577,12 @@ Haskell предоставляет явный синтаксис для объя
 
 \subsubsection{Семейства первого класса}
 
-Помимо инъективности, классы типов также не обязательно обладают свойством \vocab{generavity}, критически важным для вывода типов, --- один и тот же результат не обязательно получен из того же самого семейства:
+Помимо инъективности, классы типов также не обязательно обладают свойством \vocab{generativity}, критически важным для вывода типов, --- один и тот же результат не обязательно получен из одного и того же семейства:
 \begin{minted}{haskell}
     f a ?$\sim$? g a ?$\Rightarrow$? f ?$\sim$? g
 \end{minted}
 
-Вместе инъективность и generavity --- \vocab{matchability}.
+Вместе инъективность и generativity --- \vocab{matchability}.
 Когда Haskell работает с типом стрелочного кайнда, он подразумевает, что этот тип matchable.
 Соответственно, семейства не могут передаваться в качестве параметров, а все их вхождения должны быть полностью применёнными ко всем аргументам (fully saturated).
 Либо нужно явно указать, что семейство возвращает конструктор (в этом конкретном месте семантика зависит от переноса аргументов направо от \mintinline{haskell}{::}):
@@ -790,11 +790,11 @@ Haskell предоставляет явный синтаксис для объя
 
 \subsubsection{Несинтаксические типовые эквивалентности, System FC} \label{subsubsec:system-fc}
 
-Современный Haskell является синтаксически богатым языком, который, однако, несмотря не многообразие конструкций, транслируется в маленький типизированный внутренний язык.
-Это язык $System~F_C$~\cite{sulzmann2007system}, расширяет $System~F$ (\ref{subsec:lang-parametric-polumorphism}) несинтаксическими эквивалентностями типов.
+Современный Haskell является синтаксически богатым языком, который, однако, несмотря на многообразие конструкций, транслируется в маленький типизированный внутренний язык.
+Это язык $System~F_C$~\cite{sulzmann2007system}, расширяющий $System~F$ (\ref{subsec:lang-parametric-polumorphism}) несинтаксическими эквивалентностями типов.
 Оказывается, этого достаточно, чтобы поддержать такие возможности Haskell как обобщённые алгебраические типы, ассоциированные семейства типов, функциональные зависимости и т.д.
 
-А именно, вводится встроенный констреинт $\sim$, свидетельствующий о эквивалентности двух типов\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/equality_constraints.html}}.
+А именно, вводится встроенный констреинт $\sim$, свидетельствующий об эквивалентности двух типов\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/equality_constraints.html}}.
 Например, тип функции \texttt{id} может быть записан таким странным образом:
 \begin{minted}{haskell}
     f :: forall a b . a ?$\sim$? b => a -> b
@@ -865,7 +865,7 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
       coerce :: from -> to
 \end{minted}
 
-\begin{figure}[h]
+\begin{figure}[ht]
     \centering
     \includegraphics[width=\linewidth]{figs/coersions}
     \caption{Принципы построения инстансов \mintinline{haskell}|Coercible|~\cite{breitner2014safe}.}
@@ -927,7 +927,7 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 Звучит знакомо, и действительно, Haskell реализует этот механизм через классы типов~\cite{peyton2016reflection}.
 
 Библиотека предоставляет магический класс типов \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/Type-Reflection.html}{\mintinline{haskell}|Typeable|}, который реализуется компилятором для каждого конкретного типа через \mintinline{haskell}{deriving}.
-Чтобы получить информацию о типе, в скоупе должен быть инстанс \mintinline{haskell}|Typeable| для этого типа.
+Чтобы получить информацию о типе, в области видимости должен быть инстанс \mintinline{haskell}|Typeable| для этого типа.
 Структура типа представлена типом-суммы \href{https://hackage.haskell.org/package/ghc-internal-9.1001.0/docs/src/GHC.Internal.Data.Typeable.Internal.html#TypeRep}{\mintinline{haskell}|TypeRep|}, который предоставляет возможность дополнительного типового контроля с помощью обобщённых алгебраических типов данных и типовых тегов.
 \begin{minted}{haskell}
     class Typeable a where
@@ -947,7 +947,7 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 \end{task}
 
 С помощью структуры представления типа и экзистенциальных типов в Haskell можно эмулировать динамическую типизацию.
-А именно: любой тип может быть преобразован в \href{}{\mintinline{haskell}|Dynamic|}, а потом безопасно преобразован обратно.
+А именно: любой тип может быть преобразован в \href{https://hackage.haskell.org/package/base/docs/Data-Dynamic.html}{\mintinline{haskell}|Dynamic|}, а потом безопасно преобразован обратно.
 \begin{minted}{haskell}
     data Dynamic where
       Dynamic :: Typeable a => a -> Dynamic
@@ -964,7 +964,7 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 
 \subsubsection{Data reflection} \label{subsubsec:data-reflection}
 
-Как мы обсуждали ранее, в свойство когерентности гарантирует, что каждому типу в Haskell соответствует ровно один инстанс определённого класса типов.
+Как мы обсуждали ранее, свойство когерентности гарантирует, что каждому типу в Haskell соответствует ровно один инстанс определённого класса типов.
 И единственный способ объявить инстанс в Haskell --- декларацией на верхнем уровне, то есть он не может зависеть ни от каких локальных данных.
 Однако в Haskell есть библиотека \href{https://hackage.haskell.org/package/reflection-2.1.6/docs/Data-Reflection.html}{Data.Reflection}\footnote{\url{https://www.tweag.io/blog/2017-12-21-reflection-tutorial/}}, которая позволяет создавать локальные инстансы для свежих, чёрной магией сгенерированных\footnote{\url{https://www.schoolofhaskell.com/user/thoughtpolice/using-reflection}}, типов.
 
@@ -981,7 +981,7 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
     reify :: a -> (forall fresh . Reifies fresh a => Proxy fresh -> res) -> res
 \end{minted}
 
-Чтобы воспользоваться нестандартным инстансом класса типов для некого типа \texttt{a}, нужно объявить новый тип (например, с помощью \mintinline{haskell}|newtype|), содержащий данный, и написать для него нужный инстанс (см, например, \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/Data-Ord.html#t:Down}{Down}).
+Чтобы воспользоваться нестандартным инстансом класса типов для некоторого типа \texttt{a}, нужно объявить новый тип (например, с помощью \mintinline{haskell}|newtype|), содержащий данный, и написать для него нужный инстанс (см., например, \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/Data-Ord.html#t:Down}{Down}).
 Мы не хотим объявлять по новой декларации для каждого случая, поэтому заведём обёртку, похожую на \href{https://hackage.haskell.org/package/tagged-0.8.8/docs/Data-Tagged.html}{Data.Tagged}, которая позволяет добавлять фантомный типовой тег к типу значения.
 Варьируя тег, можно получить сколь угодно много типов, оборачивающих данный.
 \begin{minted}{haskell}
