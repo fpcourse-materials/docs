@@ -64,6 +64,26 @@
 \usepackage[english, russian] {babel}
 \usepackage{indentfirst, verbatim}
 \usetikzlibrary{cd, babel}
+\addto\captionsenglish{%
+    \renewcommand{\contentsname}{Contents}%
+    \renewcommand{\listfigurename}{List of Figures}%
+    \renewcommand{\listtablename}{List of Tables}%
+    \renewcommand{\refname}{References}%
+    \renewcommand{\figurename}{Figure}%
+    \renewcommand{\tablename}{Table}%
+    \renewcommand{\partname}{Part}%
+    \renewcommand{\appendixname}{Appendix}%
+}
+\addto\captionsrussian{%
+    \renewcommand{\contentsname}{Contents}%
+    \renewcommand{\listfigurename}{List of Figures}%
+    \renewcommand{\listtablename}{List of Tables}%
+    \renewcommand{\refname}{References}%
+    \renewcommand{\figurename}{Figure}%
+    \renewcommand{\tablename}{Table}%
+    \renewcommand{\partname}{Part}%
+    \renewcommand{\appendixname}{Appendix}%
+}
 % ------------------------------------------------
 
 % Fonts
@@ -95,7 +115,7 @@
 \newcommand{\eqbeta}{=_\beta}
 \newcommand{\eqeta}{=_\eta}
 \newcommand{\iso}{\cong}
-\newtheorem{task}{Упражнение}
+\newtheorem{task}{Exercise}
 % ------------------------------------------------
 
 % Head
@@ -145,139 +165,134 @@
 \begin{document}
 
     \begin{center}
-    {\LARGE ФП 2.0}
-        \footnote{Автор Андрей Стоян (\texttt{andrey.stoyan.csam@gmail.com}).}\footnote{Спасибо Илье Колегову за первое внимательное прочтение и кучу комментариев. Спасибо моим студентам, которые своим интересом к предмету сделали эту работу возможной.}\footnote{Версия от \today, \currenttime.}
+    {\LARGE FP 2.0}
+        \footnote{Author Andrey Stoyan (\texttt{andrey.stoyan.csam@gmail.com}).}\footnote{Thanks to Ilya Kolegov for the first careful read and many comments. Thanks to my students whose interest in the subject made this work possible.}\footnote{Version \today, \currenttime.}
         \\
-        осень 2025
+        Fall 2025
     \end{center}
 
     \tableofcontents
 
     \newpage
 
-    \section*{Введение}
+    \section*{Introduction}
 
-    Многие сложные концепции в дизайне языков и программ могут быть поняты как частные случаи некоторых простых фундаментальных принципов, которые, как правило, считаются общеизвестным фольклором, не требующим дополнительных пояснений.
-    Однако, сложность в том, что эти знания рассеяны по книгам, статьям и ``культовым'' блог-постам, и требуется довольно много времени и сил для восстановления целостной картины.
+    Many complex concepts in language design and programming can be understood as special cases of some simple fundamental principles that are usually treated as common folklore and do not require extra explanation.
+    However, the difficulty is that this knowledge is scattered across books, papers, and “cult” blog posts, and it takes a lot of time and effort to reconstruct the whole picture.
 
-    Цель данного курса --- собрать в одном месте такие фольклорные знания и организовать их в некоторую систему.
-    Курс будет явным образом опираться на классические работы, исследующие принципы построения языков, и помогать в их изучении.
-    Просмотр упоминаемых статей является важной частью самостоятельной работы в рамках курса.
+    The goal of this course is to gather such folklore knowledge in one place and organize it into a coherent system.
+    The course will explicitly rely on classical works studying the principles of language design and help with their study.
+    Reading the referenced papers is an important part of independent work in the course.
 
-    Под функциональным программированием, вынесенным даже в заголовок курса, понимается трепетное отношение к понятию эффекта, которое в ФП, в отличие от других школ мысли, не считается аксиоматической данностью, но предметом для изучения, сознательного конструирования и аккуратного обращения.
-    Этот подход оказывается очень полезным для изучения языков, построения могущественных языковых конструкций, а так же является основой для продуктивного стиля программирования.
-    Кроме того, функциональные языки сравнительно просты, в результате чего новые идеи и подходы нередко зарождаются в них и распространяются далее.
+    By functional programming, highlighted even in the course title, we mean a careful attitude towards the notion of effect, which in FP — unlike other schools of thought — is not considered an axiomatic given but a subject for study, conscious construction, and careful handling.
+    This approach turns out to be very useful for learning languages, building powerful language constructs, and is also the foundation of a productive programming style.
+    Moreover, functional languages are relatively simple, which means new ideas and approaches often begin there and spread further.
 
-    В качестве основного языка курса выбран Haskell, так как он, с одной стороны, воплощает в себе многие концепции, часто доведенные до некоторого логического завершения, и достаточно могуществен для кодирования других.
-    С другой стороны, всё ещё является прикладным промышленным языком программирования.
+    Haskell is chosen as the main language of the course because, on the one hand, it embodies many concepts often brought to a certain logical completion and is powerful enough to encode others.
+    On the other hand, it remains a practical industrial programming language.
 
-    В связи с широтой контекста, данный курс не всегда является глубоким.
-    Так, детали реализации в GHC или теор-категорные основания вещей могут даваться в общем виде и без конкретики.
-    В то же время, в плоскости языкового дизайна через оптику функционального программирования курс пытается быть максимально подробным.
+    Because of the breadth of the topic, this course is not always deep.
+    Thus, implementation details in GHC or the category-theoretic foundations of some concepts may be given in general terms and without specifics.
+    At the same time, in the realm of language design through the lens of functional programming, the course tries to be as detailed as possible.
 
-    Таким образом, данный курс может быть полезен тем, кто интересуется дизайном языков и красивыми обобщениями программистских концепций, хочет улучшить свои навыки проектирования API, или планирует вести практическую деятельность на функциональных языках.
+    Thus, this course may be useful for those who are interested in language design and elegant generalizations of programming concepts, want to improve their API design skills, or plan to work practically with functional languages.
 
-    Пререквизитом к прохождению курса является знание основ функционального программирования: алгебраических типов данных, паттерн-матчинга, свёрток, параметрического полиморфизма, классов типов, базовых монад.
-    Дополнительно будет полезным умение читать типовые дроби, знакомство с полиморфным $\lambda$-исчислением и кодированием Чёрча.
+    A prerequisite for the course is knowledge of the basics of functional programming: algebraic data types, pattern matching, folds, parametric polymorphism, type classes, and basic monads.
+    It is also useful to be able to read type judgments, and to be familiar with polymorphic lambda calculus and Church encoding.
 
 
     \clearpage
 
 
-    \section{Воспоминания о ФП}
+    \section{FP Recollections}
 
     \input{fp2-remember}
 
     \clearpage
 
 
-    \section{Параметрический полиморфизм} \label{sec:parametric-polymorphism}
+    \section{Parametric Polymorphism} \label{sec:parametric-polymorphism}
 
     \input{fp2-parametric}
 
     \clearpage
 
 
-    \section{Специальный (ad-hoc) полиморфизм} \label{sec:ad-hoc}
+    \section{Ad-hoc Polymorphism} \label{sec:ad-hoc}
 
     \input{fp2-ad-hoc}
 
     \clearpage
 
 
-    \section{Типы данных} \label{sec:data-common}
+    \section{Data Types} \label{sec:data-common}
 
     \input{fp2-data-types}
 
     \clearpage
 
 
-    \section{Интерпретаторы}
+    \section{Interpreters}
 
     \input{fp2-interpreters}
 
     \clearpage
 
 
-    \section{Продолжения (continuations)} \label{sec:continuations}
+    \section{Continuations} \label{sec:continuations}
 
     \input{fp2-continuations}
 
     \clearpage
 
 
-    \section{Эффекты и модульные интерпретаторы} \label{sec:effects}
+    \section{Effects and Modular Interpreters} \label{sec:effects}
 
     \input{fp2-effects}
 
+    \clearpage
+
+
+    \section{Effect Systems TODO} \label{sec:effect-systems}
+
+    \input{fp2-effect-systems}
+
+    \clearpage
+
+    \section{Datatype-generic programming TODO} \label{sec:datatype-generic}
+
+    \input{fp2-derivings}
+
+    \clearpage
+
+
+    \section{Persistence and Optics TODO}
+
+    \input{fp2-optics}
+
 %    \clearpage
-%
-%
-%    \section{Системы эффектов} \label{sec:effect-systems}
-%
-%    \input{fp2-effect-systems}
-%
-%    \clearpage
 
 
-%    \section{Datatype-generic programming} \label{sec:datatype-generic}
-%%
-%%    \input{fp2-derivings}
-%%
-%%    \clearpage
-%
-%
-%    \section{Персистентность и оптика}
-%%
-%%    \input{fp2-optics}
-%%
-%    \clearpage
+    % todo substructurality, resources....
+
+    % todo conclusion with links to everything
 
 
-    % todo субструктурность, ресурсы....
-
-    % todo заключение со ссылками на всё
-
-
-%%    \section{Компилятор GHC и runtime}
+%%    \section{GHC Compiler and runtime}
 %
 %    \input{fp2-ghc-internals}
 
     % todo Perhaps Not The Answer You Were Expecting But You Asked For It
 
-    % todo зависимые типы в Haskell
+    % todo dependent types in Haskell
 
-    % todo рассовать упражнений по конспекту
+    % todo distribute exercises across the notes
 
-    % todo Wadler's "Introduction to functional programming"
+    % todo better about defunctionalization, shallow, fusion...
 
-    % todo coroutines & structured concurrency
+    % todo "section, chapter, paragraph"
 
-    % todo получше про defunctionalization, shallow, fusion...
-
-    % todo "раздел, глава, параграф"
-
-    % todo разметка ссылок на статьи, чтобы контролировать распределение внимания
+    % todo annotate references to articles to control attention distribution
 
     \begin{center}
         \vspace{2em}

@@ -1,36 +1,36 @@
 %! suppress = MissingLabel
 
-Ранее мы признали работу со сложностью главной задачей программиста, а построение встроенных языков~--- основным инструментом её решения (\ref{subsec:interpreters-rules}).
-В данной главе мы рассмотрим понятие эффекта.
-Оно тесно связано со встроенными языками и даст нам лучшее понимание, когда их конструировать, что это даёт, и с чем нужно быть осторожным.
+Earlier we recognized managing complexity as the programmer's main task, and constructing embedded languages as the primary tool for solving it (\ref{subsec:interpreters-rules}).
+In this chapter we consider the notion of an effect.
+It is closely related to embedded languages and will give us a better understanding of when to construct them, what this gives us, and what one needs to be careful about.
 
-Для реализации встроенных языков мы предпочли shallow embedding в форме tagless final (\ref{subsec:tagless-final}), который максимально переиспользует возможности мета-языка и позволяет давать различные интерпретации одной программе.
-Далее мы исследовали процесс вычисления и извлекли понятие продолжения (\ref{sec:continuations}).
-Оказалось, что tagless final языки, которые мы строили вокруг монад, можно выразить через продолжения удобнее и проще (\ref{subsubsec:god-cont},\ \ref{subsubsec:monadic-reflection}).
-В этой главе мы поймём, как это поможет решить expression problem (\ref{subsec:expression-problem}) до конца.
+For implementing embedded languages we preferred shallow embedding in the form of tagless final (\ref{subsec:tagless-final}), which maximally reuses the capabilities of the meta-language and allows giving different interpretations to the same program.
+Next we studied the computation process and extracted the notion of a continuation (\ref{sec:continuations}).
+It turned out that the tagless final languages we were building around monads can be expressed through continuations more conveniently and simply (\ref{subsubsec:god-cont},\ \ref{subsubsec:monadic-reflection}).
+In this chapter we will understand how this will help us solve the expression problem (\ref{subsec:expression-problem}) completely.
 
-С историческо-философской перспективы, теория эффектов является прочным мостом между функциональной и императивной парадигмами программирования.
-Они возникли порознь как Машина Тьюринга и $\lambda$-исчисление Чёрча, и оставались довольно изолированными школами мысли довольно долгое время.
-Это стало меняться в последние 30 лет, и мы стали понимать, как эти два мира дополняют друг друга.
-Теория эффектов до сих пор является крайне горячей темой\footnote{\href{https://youtu.be/m821Vz8N_bo?si=HQTDfs52vYKaBcqJ}{(youtube) The Evolution of Effects --- Nickolas Wu.}}\footnote{\url{https://github.com/yallop/effects-bibliography}}.
+From a historical-philosophical perspective, the theory of effects is a solid bridge between the functional and imperative programming paradigms.
+The two originated separately --- as the Turing machine and Church's $\lambda$-calculus --- and remained largely isolated schools of thought for decades.
+Only in the last 30 years has this begun to change, and we have come to understand how the two worlds complement each other.
+The theory of effects remains an extremely hot topic to this day\footnote{\href{https://youtu.be/m821Vz8N_bo?si=HQTDfs52vYKaBcqJ}{(youtube) The Evolution of Effects --- Nickolas Wu.}}\footnote{\url{https://github.com/yallop/effects-bibliography}}.
 
-\subsection{Понятие эффекта} \label{subsec:about-effects}
+\subsection{The notion of an effect} \label{subsec:about-effects}
 
-Начнём разговор от обратного, со свойства чистоты.
-\vocab{Чистая функция} обладает следующими свойствами:
+Let us begin the discussion from the opposite end, with the property of purity.
+A \vocab{pure function} possesses the following properties:
 \begin{itemize}
-    \item Её результат всегда одинаков при одинаковом наборе аргументов (никак более нетривиально не зависит ни от чего более);
-    \item Её единственный наблюдаемый результат --- её возвращаемое значение.
+    \item Its result is always the same given the same set of arguments (it does not depend on anything else in any more non-trivial way);
+    \item Its only observable result is its return value.
 \end{itemize}
 
 % todo obsidian What is a purely functional language?
 
-В целом стиль программирования с использованием чистых функций приветствуется, так как он обладает множеством хороших свойств.
-Так, про них можно удобно рассуждать с помощью equational reasoning; всё, что нужно для понимания кода, явно написано в этом коде; классические системы типов хорошо работают, предоставляя полноту абстракции, качественную документацию и частичную спецификацию\ldots
-Также известно, что всё можно записать с помощью чистых вычислений, даже работу с IO~\cite{jones2001tackling}.
+In general, the programming style using pure functions is encouraged, as it possesses many good properties.
+One can conveniently reason about them using equational reasoning; everything needed to understand the code is explicitly written in that code; classical type systems work well, providing abstraction completeness, quality documentation, and partial specification\ldots
+It is also known that everything can be expressed using pure computations, even working with IO~\cite{jones2001tackling}.
 
-Однако, используя только чистые функции, всё приходится делать вручную.
-В случае с IO (с состоянием аналогично) --- передавать результирующий мир в аргументы раз за разом:
+However, using only pure functions, everything must be done manually.
+In the case of IO (and similarly with state) --- passing the resulting world as an argument again and again:
 \begin{minted}{haskell}
     getList :: Int -> World -> (World, [Int])
     getList n w | n == 0 = (w, [])
@@ -40,9 +40,9 @@
       (w'', x : xs)
 \end{minted}
 
-Таким образом, код из чистых функций заполнен несущественными церемониями, за которыми не видно бизнес-логики и сути.
-Чтобы сосредоточиться на важных деталях, нужно делегировать весь этот bookkeeping стороннему коду, замести неинтересные детали под ковёр.
-Тогда код выше можно будет переписать, например, следующим образом:
+Thus, code made of pure functions is filled with inessential ceremony, behind which the business logic and essence are hidden.
+To focus on the important details, one needs to delegate all this bookkeeping to external code, sweep the uninteresting details under the rug.
+Then the code above can be rewritten, for example, as follows:
 \begin{minted}{haskell}
     getList :: Int -> IO [Int]
     getList n | n == 0 = pure []
@@ -52,120 +52,120 @@
       return (x : xs)
 \end{minted}
 
-Абстрактную сущность, которой мы будем делегировать несущественные для данного фрагмента бизнес-логики детали, мы будем называть \vocab{контекстом исполнения (execution context)}\footnote{\url{https://okmij.org/ftp/Computation/having-effect.html} \label{lab:having-effect}}.
-А \vocab{эффектом}~--- взаимодействие функции с контекстом исполнения, которое происходит с помощью вызова \vocab{effect-операций} (например, \texttt{getInt} из примера выше)\footnote{Также эффектом иногда называют функцию перехода в dataflow-анализе~\cite{moller2012static}. По сути, она как раз описывает изменение контекста.}. % todo Effect systems revisited—control-flow algebra and semantics % todo Data-flow analyses as effects and graded monads
-Так, на контекст исполнения можно смотреть как на сервер, которому функция-клиент шлёт запросы и получает ответы (см.\ рис.\ \ref{fig:effect-server}).
-В этой модели такая функция может нарушать оба свойства чистых функций.
+The abstract entity to which we will delegate details inessential to the given fragment of business logic we will call the \vocab{execution context}\footnote{\url{https://okmij.org/ftp/Computation/having-effect.html} \label{lab:having-effect}}.
+And an \vocab{effect} is the interaction of a function with the execution context, which occurs through calls to \vocab{effect operations} (for example, \texttt{getInt} from the example above)\footnote{Sometimes the term ``effect'' also refers to the transfer function in dataflow analysis~\cite{moller2012static}. In essence, it describes the change of context.}. % todo Effect systems revisited—control-flow algebra and semantics % todo Data-flow analyses as effects and graded monads
+Thus, one can view the execution context as a server to which the client function sends requests and receives responses (see\ Fig.\ \ref{fig:effect-server}).
+In this model, such a function can violate both properties of pure functions.
 
 \begin{figure}
     \centering
     \includegraphics[width=0.5\textwidth]{figs/effects}
-    \caption{Эффекты как клиент-серверное взаимодействие.}
+    \caption{Effects as client-server interaction.}
     \label{fig:effect-server}
 \end{figure}
 
-На практике этим контекстом является интерпретатор (встроенного) языка, а effect-операциями --- его конструкции.
-Если язык является встроенным, то говорят о \vocab{пользовательских (user-defined) эффектах}.
-Так мы снова возвращаемся к задаче построения модульных интерпретаторов (\ref{subsec:expression-problem}).
-К тому же, реализация вычислительного контекста также может делегировать реализацию некоторой функциональности другому контексту исполнения, и так далее.
-Получаем уже знакомую нам башню интерпретаторов (\ref{subsubsec:interpreters-tower}).
+In practice, this context is the interpreter of an (embedded) language, and the effect operations are its constructs.
+If the language is embedded, one speaks of \vocab{user-defined effects}.
+Thus we again return to the task of building modular interpreters (\ref{subsec:expression-problem}).
+Moreover, the implementation of a computational context can also delegate the implementation of certain functionality to another execution context, and so on.
+We obtain the already familiar tower of interpreters (\ref{subsubsec:interpreters-tower}).
 
-Рассмотрим некоторые примеры вычислительных контекстов и операций:
+Let us consider some examples of computational contexts and operations:
 \begin{itemize}
-    \item Контекст --- подсистема управления памятью, \texttt{modify} --- effect-операция: контекст для нас поддерживает состояние ячеек памяти;
-    \item Контекст~--- хендлер исключения, \texttt{throw MyException}~--- effect-операция: контекст за нас определяет, как ошибка будет обрабатываться (обратите внимание, что тут управление не возвращается терму);
-    \item Контекст~--- настройки инъекции зависимостей, запрос функциональности~--- effect-операция: контекст за нас определяет реализацию функциональности, которой нам пользоваться\footnote{Существует термин \vocab{contextual polymorphism}~--- код в разных контекстах может иметь различное поведение.}.
-    Как мы увидим далее, этот и подобные простые эффекты можно реализовать просто и эффективно (см.\ \ref{subsubsec:evidence-passing}).
+    \item Context --- memory management subsystem, \texttt{modify} --- effect operation: the context maintains the state of memory cells for us;
+    \item Context --- exception handler, \texttt{throw MyException} --- effect operation: the context determines how the error will be handled for us (note that here control does not return to the term);
+    \item Context --- dependency injection settings, requesting functionality --- effect operation: the context determines the implementation of the functionality we use\footnote{There exists the term \vocab{contextual polymorphism} --- code in different contexts can have different behavior.}.
+    As we will see later, this and similar simple effects can be implemented simply and efficiently (see\ \ref{subsubsec:evidence-passing}).
 \end{itemize}
 
 \begin{task}
-    Приведите ещё примеры вычислительных контекстов и операций.
+    Give more examples of computational contexts and operations.
 \end{task}
 
-Когда мы говорим про standalone язык, на котором мы программируем (например, Haskell), любое наше действие в программе исполняется им.
-То есть, например, сложение --- effect-операция?
-В таком случае разумно выделить подмножество конструкций языка, достаточно ``интересных'', чтобы считать, что они порождают эффект.
+When we talk about a standalone language in which we program (for example, Haskell), any action of ours in the program is executed by it.
+That is, for instance, is addition an effect operation?
+In that case it is reasonable to identify a subset of language constructs that are ``interesting'' enough to be considered as producing an effect.
 
-Какие конструкции языка считать ``интересными''?
-Заметим, что с одной стороны это хорошо, что эффекты скрывают от нас некоторую сложность, позволяя сосредоточиться на других вещах.
-С другой стороны, это же и плохо, ведь мы эту сложность перестаём наблюдать, а она пронизывает наш код, поддерживает неявные зависимости между его частями.
-Таким образом, эффекты требуют дополнительной аккуратности со стороны программиста\footnote{\href{https://youtu.be/_nG09Z_tdUU?si=lo9It6299rsB1vAr}{(youtube) Kris Jenkins --- Side-Effects Are The Complexity Iceberg.}}.
-Соответственно, именно такие непростые конструкции и стоит считать ``интересными''.
-Как минимум точно стоит считать ``интересными'' конструкции, использование которых выводит функцию из категории чистых.
-Также, это могут быть операции, делающие сложные нелокальные модификации потока управления (поддерживаемого интерпретатором в виде продолжения).
+Which language constructs should be considered ``interesting''?
+Notice that on the one hand it is good that effects hide some complexity from us, allowing us to focus on other things.
+On the other hand, this is also bad, because we cease to observe this complexity, yet it permeates our code and maintains implicit dependencies between its parts.
+Thus, effects require additional care from the programmer\footnote{\href{https://youtu.be/_nG09Z_tdUU?si=lo9It6299rsB1vAr}{(youtube) Kris Jenkins --- Side-Effects Are The Complexity Iceberg.}}.
+Accordingly, it is precisely such non-trivial constructs that should be considered ``interesting.''
+At the very least, constructs whose use takes a function out of the pure category should definitely be considered ``interesting.''
+Also, these can be operations that make complex non-local modifications to the control flow (maintained by the interpreter in the form of a continuation).
 
-В конечном итоге выбор ``интересных'' конструкций зависит от задачи и перспективы разработчика\footref{lab:having-effect}.
-Так, конструкции, влияющие на произвольные наблюдаемые свойства кода, как, например, терминируемость или вычислительная сложность, могут мотивировать считать рекурсивные вызовы или долгие операции эффектами.
+Ultimately, the choice of ``interesting'' constructs depends on the task and the developer's perspective\footref{lab:having-effect}.
+Thus, constructs affecting arbitrary observable properties of code, such as termination or computational complexity, can motivate considering recursive calls or long-running operations as effects.
 
-Далее мы научимся отслеживать и контролировать использование эффектов на уровне типов с помощью систем эффектов (см.\ далее\ \ref{sec:effect-systems}).
+Later we will learn to track and control the use of effects at the type level using effect systems (see\ later\ \ref{sec:effect-systems}).
 
-\subsection{Хендлеры эффектов} \label{subsec:effect-handlers}
+\subsection{Effect handlers} \label{subsec:effect-handlers}
 
-Хендлеры эффектов --- это современный универсальный метод построения модульных интерпретаторов встроенных языков, напрямую реализующий клиент-серверную метафору.
-Как обычно бывает, хендлеры были изобретены множество раз.
-В этой главе мы посмотрим на основные реализации, которые лучше всего помогут нам понять концепцию.
+Effect handlers are a modern universal method for building modular interpreters of embedded languages, directly implementing the client-server metaphor.
+As is often the case, handlers were invented multiple times.
+In this chapter we will look at the main implementations that will best help us understand the concept.
 
-Основная идея хендлеров эффектов довольно проста.
-Вводится языковая конструкция \texttt{handle}, позволяющая задать вычислительный контекст для определённого скоупа, предоставляющий реализации effect-операций.
-Также вводится конструкция \texttt{perform}, позволяющая вызвать effect-операцию (отправить запрос контексту).
-Каждая операция имеет набор параметров, а также ``обратный адрес'', продолжение места вызова, в который она вернёт результат.
-Например, на экспериментальном языке Koka\footnote{\url{https://koka-lang.github.io/koka/doc/index.html}} контекст, предоставляющий некоторую константу, может быть реализован следующим образом (\texttt{resume}~--- имя продолжения места вызова, \texttt{perform} вставляется неявно):
+The main idea of effect handlers is fairly simple.
+A language construct \texttt{handle} is introduced that allows defining a computational context for a given scope, providing implementations of effect operations.
+A construct \texttt{perform} is also introduced that allows invoking an effect operation (sending a request to the context).
+Each operation has a set of parameters, as well as a ``return address,'' the continuation of the call site, to which it will return the result.
+For example, in the experimental language Koka\footnote{\url{https://koka-lang.github.io/koka/doc/index.html}} a context providing some constant can be implemented as follows (\texttt{resume} is the name of the call-site continuation, \texttt{perform} is inserted implicitly):
 \begin{minted}{cpp}
     with handler
       ctl ask() resume(21)
     ask() + ask()
 \end{minted}
 
-Если ближайший контекст нужный запрос обработать не может, запрос делегируется внешнему контексту, и так пока подходящий контекст не будет найден.
-На этой идее основывается модульность интерпретаторов, заданных хендлерами.
+If the nearest context cannot handle the required request, the request is delegated to an outer context, and so on until a suitable context is found.
+The modularity of interpreters defined by handlers is based on this idea.
 
-% todo историческая справка
+% todo historical note
 
-% todo больше впечатляющих примеров
+% todo more impressive examples
 
-% todo ссылка на простой туториал по хендлерам
+% todo link to simple handler tutorial
 % todo https://www.eff-lang.org/handlers-tutorial.pdf
 
-\subsubsection{Хендлеры через ограниченные продолжения}
+\subsubsection{Handlers via delimited continuations}
 
-Как мы уже видели ранее, различные эффекты можно реализовывать с помощью доступа к текущему продолжению (\ref{subsubsec:god-cont}, \ \ref{subsubsec:monadic-reflection}).
-Хендлеры эффектов дополняют эту идею тем, что используют ограниченные продолжения, чтобы передавать управление различным интерпретаторам (хендлерам).
+As we have already seen, various effects can be implemented using access to the current continuation (\ref{subsubsec:god-cont}, \ \ref{subsubsec:monadic-reflection}).
+Effect handlers extend this idea by using delimited continuations to transfer control to various interpreters (handlers).
 
-Известно, что классические операторы манипуляции ограниченными продолжениями, monadic reflection и хендлеры эффектов выразимы друг через друга~\cite{forster2017expressive}.
+It is known that the classical operators for manipulating delimited continuations, monadic reflection, and effect handlers are expressible in terms of each other~\cite{forster2017expressive}.
 
-\subsubsection{Эффективная реализация хендлеров} \label{subsubsec:evidence-passing}
+\subsubsection{Efficient implementation of handlers} \label{subsubsec:evidence-passing}
 
-В общем виде скорость работы \texttt{perform} определяется скоростью захвата и восстановления ограниченных продолжений.
-Однако, существует класс операций, которые можно реализовать гораздо эффективнее.
+In general, the speed of \texttt{perform} is determined by the speed of capturing and restoring delimited continuations.
+However, there exists a class of operations that can be implemented much more efficiently.
 
-Если мы посмотрим на реализацию операции \texttt{ask}, то мы увидим, что она последним действием вызывает продолжение, возвращая управление вызвавшему коду.
-Такие операции называют \vocab{tail-resumptive}, они очень сильно напоминают обычные функции, за исключением того, что их реализации определяются контекстом (хендлером).
-Таким образом, tail-resumptive операции можно реализовать как неявную передачу словаря функций от хендлера к \texttt{perform}, и тем самым избежать дорогих манипуляций продолжениями~\cite{xie2020effect}\footnote{Хендлеры tail-resumptive операций напоминают co-pattern-matching и, соответственно, объекты (см.\ \ref{subsubsec:data-codata}).}.
+If we look at the implementation of the \texttt{ask} operation, we see that its last action is calling the continuation, returning control to the calling code.
+Such operations are called \vocab{tail-resumptive}; they strongly resemble ordinary functions, except that their implementations are determined by the context (handler).
+Thus, tail-resumptive operations can be implemented as implicit passing of a dictionary of functions from the handler to \texttt{perform}, thereby avoiding expensive continuation manipulations~\cite{xie2020effect}\footnote{Handlers of tail-resumptive operations resemble co-pattern matching and, correspondingly, objects (see\ \ref{subsubsec:data-codata}).}.
 
-\subsubsection{Встроенные хендлеры как явная клиент-серверная коммуникация} \label{subsubsec:extensible-effects}
+\subsubsection{Embedded handlers as explicit client-server communication} \label{subsubsec:extensible-effects}
 
-Чтобы лучшим образом понять семантику хендлеров, реализуем язык с хендлерами как встроенный в Haskell.
-Начнём с варианта, предложенного Олегом Киселёвым, максимально прямолинейно кодирующего идею клиент-серверной коммуникации терма и контекста~\cite{kiselyov2013extensible}.
+To better understand the semantics of handlers, let us implement a language with handlers embedded in Haskell.
+We start with the variant proposed by Oleg Kiselyov, which most straightforwardly encodes the idea of client-server communication between the term and the context~\cite{kiselyov2013extensible}.
 
-Начнём с эффекта \texttt{ask}, запрашивающего числа у контекста.
-Зададим тип данных сообщений к контексту, это либо конечный результат вычисления, либо запрос \mintinline{haskell}{Ask}, содержащий ``обратный адрес''~--- текущее продолжение:
+Let us begin with the \texttt{ask} effect, which requests numbers from the context.
+We define the data type of messages to the context: it is either the final result of the computation, or a request \mintinline{haskell}{Ask} containing a ``return address'' --- the current continuation:
 \begin{minted}{haskell}
     data Message res = Val res | Ask (Int -> Message res)
 \end{minted}
 
-Продолжения будем собирать в специализированный \mintinline{haskell}{Monad Cont} с подходящим response type (см.~\ref{subsubsec:monad-cont}, \ \ref{subsubsec:god-cont}):
+We will assemble continuations into a specialized \mintinline{haskell}{Monad Cont} with a suitable response type (see~\ref{subsubsec:monad-cont}, \ \ref{subsubsec:god-cont}):
 \begin{minted}{haskell}
     newtype Eff res = Eff
       { runEff :: forall res' . (res -> Message res') -> Message res' }
 \end{minted}
 
-Тогда эффект \texttt{ask} реализуется просто как ``отправка'' запроса \mintinline{haskell}{Ask} с текущим продолжением:\footnote{Ранее мы аналогично реализовывали генераторы, см.\ \ref{subsubsec:generators-coroutines}.}
+Then the \texttt{ask} effect is implemented simply as ``sending'' an \mintinline{haskell}{Ask} request with the current continuation:\footnote{Earlier we similarly implemented generators, see\ \ref{subsubsec:generators-coroutines}.}
 \begin{minted}{haskell}
     ask :: Eff Int
     ask = Eff \k -> Ask k
 \end{minted}
 
-Хендлер мы реализуем как ``сервер'', который в цикле обрабатывает запросы, пока вычисление не пришлёт конечный результат:
+We implement the handler as a ``server'' that processes requests in a loop until the computation sends the final result:
 \begin{minted}{haskell}
     run :: Eff res -> Message res
     run comp = runEff comp Val
@@ -178,7 +178,7 @@
           Ask k -> loop (k env)
 \end{minted}
 
-Наконец, мы можем писать effectful код:
+Finally, we can write effectful code:
 \begin{minted}{haskell}
     exampleReader :: Int -> Int
     exampleReader = runReader do
@@ -186,7 +186,7 @@
       y <- ask
       pure (x + y)
 \end{minted}
-Монада \mintinline{haskell}{Eff} превратит его в ленивый список сообщений:
+The \mintinline{haskell}{Eff} monad will turn it into a lazy list of messages:
 \begin{minted}{haskell}
     exampleReader :: Int -> Int
     exampleReader = loop $
@@ -195,34 +195,34 @@
       Val (x + y)
 \end{minted}
 
-\subsubsection{Расширяемые сообщения и пересылка} \label{subsubsec:extensible-messages}
+\subsubsection{Extensible messages and forwarding} \label{subsubsec:extensible-messages}
 
-Абстрагируем тип сообщений по ``форме'' запросов, которые в них могут участвовать (см.\ \ref{subsubsec:functor-fixpoint}):
+Let us abstract the message type over the ``shape'' of requests that can participate in them (see\ \ref{subsubsec:functor-fixpoint}):
 \begin{minted}{haskell}
     data Message effs res = Val res | Request (effs (Message effs res))
 \end{minted}
 
-Предыдущий тип сообщений получается передачей следующего функтора формы:
+The previous message type is obtained by passing the following shape functor:
 \begin{minted}{haskell}
     newtype Reader env msg = Ask (env -> msg)
 \end{minted}
 
 \begin{task}
-    Убедитесь, что \mintinline{haskell}{Message (Reader Int) res} эквивалентно предыдущему типу сообщений.
+    Verify that \mintinline{haskell}{Message (Reader Int) res} is equivalent to the previous message type.
 \end{task}
 
-Копроизведение функторов формы является функтором формы (см.\ \ref{subsubsec:functor-coprod}):
+The coproduct of shape functors is a shape functor (see\ \ref{subsubsec:functor-coprod}):
 \begin{minted}{haskell}
     data (eff |> effs) a = L (eff a) | R (effs a)
 \end{minted}
 
-Теперь операция \texttt{ask} допускает существование других типов запросов \texttt{effs}:
+Now the \texttt{ask} operation admits the existence of other request types \texttt{effs}:
 \begin{minted}{haskell}
     ask :: Eff (Reader env |> effs) env
     ask = Eff \k -> Msg $ L $ Ask k
 \end{minted}
 
-Новый хендлер обрабатывает только часть запросов, остальные пересылает хендлеру выше (скомпозировав правильным образом продолжения):
+The new handler processes only a portion of the requests, forwarding the rest to the handler above (composing the continuations in the correct way):
 \begin{minted}{haskell}
 runReader
   :: forall effs env res . Functor effs
@@ -239,26 +239,26 @@ runReader comp env = loop (run comp)
         loop response
 \end{minted}
 
-Заметьте, что в результирующем домене остались непроинтерпретированные эффекты.
-Конечный домен получится применением всех необходимых интерпретаторов.
-Так решается stable denotations problem (\ref{subsec:expression-problem}).
+Notice that uninterpreted effects remain in the resulting domain.
+The final domain is obtained by applying all the necessary interpreters.
+This is how the stable denotations problem (\ref{subsec:expression-problem}) is solved.
 
-\subsubsection{Свободные монады} \label{subsubsec:free-monads}
+\subsubsection{Free monads} \label{subsubsec:free-monads}
 
-Чтобы получить полноценное решение более простым и минималистичным образом, перейдём к самой классической реализации хендлеров через свободные монады.
-Для начала обсудим сами свободные монады.
+To obtain a full-fledged solution in a simpler and more minimalistic way, let us turn to the most classical implementation of handlers via free monads.
+First, let us discuss free monads themselves.
 
-Рассмотрим некоторую алгебраическую структуру, например, моноид (нейтральный элемент и ассоциативная бинарная операция).
-По произвольному множеству $X$ можно построить некоторый моноид $M(X)$ наиболее ``экономичным'' образом~--- \vocab{свободный моноид}.
-Это делается следующим образом: к множеству $X$ добавляют деревья выражений с операциями моноида:
+Consider some algebraic structure, for example, a monoid (a neutral element and an associative binary operation).
+From an arbitrary set $X$ one can construct a certain monoid $M(X)$ in the most ``economical'' way --- the \vocab{free monoid}.
+This is done as follows: to the set $X$ one adds expression trees with the monoid operations:
 \begin{minted}{haskell}
     data M x = Element x | Mempty | Mappend (M x) (M x)
     instance Monoid (M x) where
       mempty = Mempty
       mappend l r = Mappend l r
 \end{minted}
-Ещё только нужно организовать новое множество таким образом, чтобы в нём не было одинаковых с точки зрения алгебры деревьев (например, \mintinline{haskell}{Mappend Mempty Mempty} и \mintinline{haskell}{Mempty}).
-В случае моноида в этом случае можно выбрать тип списка:
+One only needs to organize the new set so that there are no trees that are identical from the algebra's perspective (for example, \mintinline{haskell}{Mappend Mempty Mempty} and \mintinline{haskell}{Mempty}).
+In the case of a monoid, one can choose the list type:
 \begin{minted}{haskell}
     type M x = [x]
     instance Monoid (M x) where
@@ -266,9 +266,9 @@ runReader comp env = loop (run comp)
       mappend = (++)
 \end{minted}
 
-Свободные монады строятся аналогично свободным моноидам.
-Используем определение монады как функтора с операциями \texttt{pure} и \texttt{join}.
-Тогда по произвольному функтору $F$ можно получить монаду $Free(F)$ (покажем это с помощью эквивалентного определения монад из Haskell):
+Free monads are constructed analogously to free monoids.
+We use the definition of a monad as a functor with operations \texttt{pure} and \texttt{join}.
+Then from an arbitrary functor $F$ one can obtain a monad $Free(F)$ (we show this using the equivalent monad definition from Haskell):
 \begin{minted}{haskell}
     data Free f a = Pure a | Join (f (Free f a))
     instance Functor f => Monad (Free f) where
@@ -277,44 +277,44 @@ runReader comp env = loop (run comp)
       Join f >>= k = Join (fmap (>>= k) f)
 \end{minted}
 
-Переименуем конструкторы:
+Let us rename the constructors:
 \begin{minted}{haskell}
     data Term sig var = Var var | Op (sig (Term sig var))
     (>>=) :: Term sig var -> (var -> Term sig var') -> Term sig var'
     data MonoidSig subtree = Mempty | MAppend subtree subtree -- (Bool -> subtree)
 \end{minted}
-Это не что иное, как кодирование алгебраических термов над сигнатурой \texttt{sig} и переменными из множества \texttt{var}.
-А монадическое связывание~--- это подстановка.
+This is nothing other than an encoding of algebraic terms over the signature \texttt{sig} with variables from the set \texttt{var}.
+And monadic bind is substitution.
 
-\subsubsection{Хендлеры через свободные монады} \label{subsubsec:free-monad-handlers}
+\subsubsection{Handlers via free monads} \label{subsubsec:free-monad-handlers}
 
-Заметим, что следующие типы изоморфны: \mintinline{haskell}{Message} $\iso$ \mintinline{haskell}{Free} $\iso$ \mintinline{haskell}{Term}.
-Хендлеры в классическом виде как раз и возникли в процессе изучения того, как описывать эффекты в виде алгебраических структур~\cite{bauer2018algebraic}\footnote{\href{https://www.youtube.com/watch?v=vPVMXLJVylU&list=PLt7hcIEdZLAkebYy70DdBDm2qLrw7ptfp}{(youtube) What is algebraic about algebraic effects and handlers --- Andrej Bauer.}}.
+Notice that the following types are isomorphic: \mintinline{haskell}{Message} $\iso$ \mintinline{haskell}{Free} $\iso$ \mintinline{haskell}{Term}.
+Handlers in the classical form arose precisely in the process of studying how to describe effects as algebraic structures~\cite{bauer2018algebraic}\footnote{\href{https://www.youtube.com/watch?v=vPVMXLJVylU&list=PLt7hcIEdZLAkebYy70DdBDm2qLrw7ptfp}{(youtube) What is algebraic about algebraic effects and handlers --- Andrej Bauer.}}.
 
-Вместо переменных мы будем хранить чистый результат вычисления, а сигнатуры будем записывать в виде $P\times (A \to K)$, где $P$~--- параметр операции, а $A$~--- результат операции, по которому хендлер выбирает нужный подтерм-продолжение для возобновления вычисления:
+Instead of variables we store the pure result of the computation, and signatures are written in the form $P\times (A \to K)$, where $P$ is the operation parameter and $A$ is the operation result, by which the handler selects the needed continuation subtree for resuming the computation:
 \begin{minted}{haskell}
     data Comp effs res = Res res | Op (effs (Comp effs res))
     data Reader env comp = Ask () (env -> comp)
     data State s comp = Get () (s -> comp) | Put s (() -> comp)
 \end{minted}
 
-Реализация \mintinline{haskell}{Monad Comp} будет как раз композировать продолжения для нас в \mintinline{haskell}{do}-нотации:
+The \mintinline{haskell}{Monad Comp} implementation will compose continuations for us in \mintinline{haskell}{do}-notation:
 \begin{minted}{haskell}
     ask = Op (Ask () (\e -> Val e)
     example = do
       x <- ask
       y <- ask
       pure (x + y)
-    -- ?$\alpha\beta$?-эквивалентно
+    -- $\alpha\beta$-equivalent to
     example =
       Op (Ask () (\x ->
       Op (Ask () (\y ->
       Res (x + y)))))
 \end{minted}
 
-Хендлер также просто сворачивает список операций.
-Операции, которые он не умеет обрабатывать, он оставляет в дереве.
-Чтобы пропустить неизвестную операцию и интерпретировать поддерево (продолжение), используется \texttt{fmap}:
+The handler also simply folds the list of operations.
+Operations it cannot handle are left in the tree.
+To skip an unknown operation and interpret the subtree (continuation), \texttt{fmap} is used:
 \begin{minted}{haskell}
     runReader
       :: Functor effs => Comp (Reader env |> effs) res -> env -> Comp effs res
@@ -325,11 +325,11 @@ runReader comp env = loop (run comp)
 \end{minted}
 
 \begin{task}
-    Постройте пример вычисления из \mintinline{haskell}{Reader} и \mintinline{haskell}{State}.
-    Какое дерево получится после интерпретации одного из эффектов?
+    Build an example computation using \mintinline{haskell}{Reader} and \mintinline{haskell}{State}.
+    What tree results after interpreting one of the effects?
 \end{task}
 
-Как обычно, свёртку можно обобщить в виде катаморфизма:
+As usual, the fold can be generalized as a catamorphism:
 \begin{minted}{haskell}
     handle
       :: Functor effs => (res -> d) -> (effs d -> d) -> Comp effs res -> d
@@ -337,7 +337,7 @@ runReader comp env = loop (run comp)
       Pure res -> val res
       Op eff -> alg $ fmap (handle val alg) eff
 \end{minted}
-Теперь в реализации продолжение (поддерево) уже проинтерпретировано в нужный домен:
+Now in the implementation the continuation (subtree) is already interpreted into the desired domain:
 \begin{minted}{haskell}
     runReader
       :: Functor effs => Eff (Reader env |> effs) res -> env -> Eff effs res
@@ -346,10 +346,10 @@ runReader comp env = loop (run comp)
       R other -> \env -> Op (fmap ($ env) other)
 \end{minted}
 
-Когда хендлеры реализуют как built-in возможность в языке, нужно принять дизайн-решение, в предоставляемом продолжении текущий эффект уже проинтерпретирован, или нет.
-Первый вариант называют \vocab{deep handlers}, второй~--- \vocab{shallow handlers}, они выразимы друг через друга~\cite{hillerstrom2018shallow}.
+When handlers are implemented as a built-in language feature, a design decision must be made: in the provided continuation, is the current effect already interpreted or not?
+The first variant is called \vocab{deep handlers}, the second --- \vocab{shallow handlers}; they are expressible in terms of each other~\cite{hillerstrom2018shallow}.
 
-К сожалению, поскольку различные варианты эффектов упорядочены как на уровне термов, так и на уровне типов, нам нужна операция, превращающая вычисление от меньшего количества эффектов в вычисление с большим:
+Unfortunately, since the various effect variants are ordered both at the term level and at the type level, we need an operation that turns a computation with fewer effects into a computation with more:
 \begin{minted}{haskell}
     liftF :: Functor effs => Comp effs res -> Comp (eff |> effs) res
     liftF = \case
@@ -361,80 +361,80 @@ runReader comp env = loop (run comp)
       env <- ask
       liftF (put env)
 \end{minted}
-От порядка можно избавиться с помощью классов типов~\cite{swierstra2008data} (\ref{subsubsec:open-structs}).
+The ordering can be eliminated using type classes~\cite{swierstra2008data} (\ref{subsubsec:open-structs}).
 
-Можно заметить, что помимо большого количества аллокаций, использование \mintinline{haskell}{Monad Free} может приводить к квадратичной сложности кода из-за линейных проходов в каждом bind'е.
-Существуют различные альтернативные схемы кодирования~\cite{ploeg2014reflection, kiselyov2015freer}.
+One can notice that besides a large number of allocations, using \mintinline{haskell}{Monad Free} can lead to quadratic complexity of code due to linear passes in each bind.
+Various alternative encoding schemes exist~\cite{ploeg2014reflection, kiselyov2015freer}.
 
-Свободные монады находят и другие, правда, аналогичные применения: trampolining~\cite{bjarnarson2012stackless} и пайплайны~\cite{kiselyov2012iteratees}~\cite[chapter 14]{bragilevsky-haskell}.
+Free monads find other, albeit analogous, applications: trampolining~\cite{bjarnarson2012stackless} and pipelines~\cite{kiselyov2012iteratees}~\cite[chapter 14]{bragilevsky-haskell}.
 
-\subsubsection{Приложения хендлеров} \label{subsubsec:handler-applications}
+\subsubsection{Applications of handlers} \label{subsubsec:handler-applications}
 
-Рассмотрим хендлеры tail-resumptive операций, обращающиеся с продолжениями тривиальным образом.
-Они нужны для распространения значений и функциональности вниз по стеку.
-Как мы обсуждали ранее~\ref{subsubsec:evidence-passing}, такие хендлеры аналогичны наличию динамических свободных переменных или неявных аргументов функций~\ref{subsubsec:ad-hoc-implicits}, и, вместе с ними, рекордов или анонимных классов~\ref{subsubsec:data-codata}.
+Let us consider handlers of tail-resumptive operations, which treat continuations in a trivial way.
+They are needed for propagating values and functionality down the stack.
+As we discussed earlier~\ref{subsubsec:evidence-passing}, such handlers are analogous to having dynamic free variables or implicit function arguments~\ref{subsubsec:ad-hoc-implicits}, and, along with them, records or anonymous classes~\ref{subsubsec:data-codata}.
 
-Среди нетривиальных сценариев использования продолжений выделим следующие:
+Among non-trivial use cases for continuations, we highlight the following:
 \begin{itemize}
-    \item Продолжение можно не вызвать, так, можно реализовать механизм исключений.
-    Однако, на практике продолжения могут содержать логику финализации ресурсов.
-    В этом случае всё равно нужна какая-то специальная обработка~\footnote{\url{https://koka-lang.github.io/koka/doc/book.html\#sec-resource}}.
-    \item Можно вызвать несколько раз для эмуляции недетерминизма.
-    Это ограничивает использование эффективных мутабельных продолжений~\ref{subsec:efficient-cps}~\cite{leijen2018algebraic}\footnote{\url{https://koka-lang.github.io/koka/doc/book.html\#sec-multi-resume}}, а также требует нетривиальной обработки при работе с ресурсами.
-    \item Можно вызвать не сразу.
-    Это нужно для реализации изменяемого состояния, генераторов и корутин.
-    Для изменяемого состояния это слишком дорого.
-    Генераторы~--- хорошее применение, но built-in реализация генераторов может быть эффективнее за счёт экономии аллокаций продолжений (создаётся сразу \mintinline{kotlin}{Iterator})\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}.
-    Реализация корутин поверх хендлеров даёт возможность пользователям писать собственные планировщики, что самое котируемое применение хендлеров на данный момент~\cite{sivaramakrishnan2021retrofitting, phipps2023continuing}. % todo
+    \item The continuation can be left uninvoked; thus, an exception mechanism can be implemented.
+    However, in practice continuations may contain resource finalization logic.
+    In that case, some special handling is still needed\footnote{\url{https://koka-lang.github.io/koka/doc/book.html\#sec-resource}}.
+    \item It can be invoked multiple times to emulate nondeterminism.
+    This limits the use of efficient mutable continuations~\ref{subsec:efficient-cps}~\cite{leijen2018algebraic}\footnote{\url{https://koka-lang.github.io/koka/doc/book.html\#sec-multi-resume}}, and also requires non-trivial handling when working with resources.
+    \item It can be invoked not immediately.
+    This is needed for implementing mutable state, generators, and coroutines.
+    For mutable state this is too expensive.
+    Generators are a good application, but a built-in generator implementation can be more efficient by saving on continuation allocations (an \mintinline{kotlin}{Iterator} is created directly)\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}.
+    Implementing coroutines on top of handlers gives users the ability to write their own schedulers, which is the most valued application of handlers at the present time~\cite{sivaramakrishnan2021retrofitting, phipps2023continuing}. % todo
 \end{itemize}
 
-\subsubsection{Трансформеры монад} \label{subsubsec:monad-transformers}
+\subsubsection{Monad transformers} \label{subsubsec:monad-transformers}
 
-В классической реализации хендлеров через свободные монады~\ref{subsubsec:free-monad-handlers}, каждый хендлер порождает промежуточное дерево из непроинтерпретированных операций.
-Естественным образом возникает желание дефорестировать~\ref{subsubsec:deforestation-fusion} эти промежуточные деревья.
-Можно пойти до конца и полностью избавиться от свободных монад и функторов сигнатур~\cite{wu2015fusion}.
-Так, мы фактически получим tagless final shallow embedding~\ref{subsec:tagless-final}, другое популярное решение expression (stable denotations) problem~--- \vocab{трансформеры монад}~\cite{liang1995monad,jones1995functional}\footnote{\url{https://hackage.haskell.org/package/mtl}}.
-В целом эти подходы, равносильны по выразительности, однако могут иметь на практике различные особенности встраивания в язык~\cite{schrijvers2019monad}.
-Однако, в отличие от трансформеров, хендлеры можно сделать удобной built-in возможностью языка.
+In the classical implementation of handlers via free monads~\ref{subsubsec:free-monad-handlers}, each handler produces an intermediate tree of uninterpreted operations.
+The desire to deforest~\ref{subsubsec:deforestation-fusion} these intermediate trees arises naturally.
+One can go all the way and completely eliminate free monads and signature functors~\cite{wu2015fusion}.
+In doing so, we effectively obtain the tagless final shallow embedding~\ref{subsec:tagless-final}, another popular solution to the expression (stable denotations) problem --- \vocab{monad transformers}~\cite{liang1995monad,jones1995functional}\footnote{\url{https://hackage.haskell.org/package/mtl}}.
+In general, these approaches are equivalent in expressiveness, but may in practice have different characteristics when embedded in a language~\cite{schrijvers2019monad}.
+However, unlike transformers, handlers can be made a convenient built-in language feature.
 
 % todo show some hint how deforestation gives monad transformers
 % todo lift - monad morphism
 % todo ContT, lift = (>>=)
 
-\subsubsection{Алгебраичность и эффекты высших порядков} \label{subsubsec:algebraicity-higher-order}
+\subsubsection{Algebraicity and higher-order effects} \label{subsubsec:algebraicity-higher-order}
 
-В начале нулевых появилась идея описывать effect-операции не монадами сразу, а алгебраически, с помощью сигнатур и уравнений~\cite{plotkin2002notions, bauer2018algebraic}.
-Эффекты в этом формализме являются композируемыми по построению, как композируемы сигнатуры алгебраических теорий (конкатенация сигнатур~--- сигнатура~\ref{subsubsec:extensible-messages}), так мы имеем расширяемый синтаксис.
-Однако, на операции накладывается ограничение в виде \vocab{свойства алгебраичности}~--- операция коммутирует с продолжением и ``всплывает'' наверх:
+In the early 2000s, the idea emerged of describing effect operations not with monads directly, but algebraically, using signatures and equations~\cite{plotkin2002notions, bauer2018algebraic}.
+Effects in this formalism are composable by construction, just as the signatures of algebraic theories are composable (concatenation of signatures is a signature~\ref{subsubsec:extensible-messages}); thus we have extensible syntax.
+However, a restriction is imposed on operations in the form of the \vocab{algebraicity property} --- an operation commutes with the continuation and ``bubbles up'' to the top:
 \[
     E[op(v, k)] \equiv op(v, \lambda x\ldotp E[k(x)])
 \]
-Соответствующие эффекты называют \vocab{алгебраическими}.
+The corresponding effects are called \vocab{algebraic}.
 
-В нашей реализации (\ref{subsubsec:free-monad-handlers}) ограничение на алгебраичность можно увидеть следующим образом.
-У нас сигнатуры операций являются функторами по своим продолжениям.
-Этим пользуются как монадическое связывание для накапливания продолжений, так и хендлеры для интерпретации продолжений неизвестных операций.
+In our implementation (\ref{subsubsec:free-monad-handlers}), the algebraicity restriction can be seen as follows.
+Our operation signatures are functors in their continuations.
+This is used by both monadic bind for accumulating continuations and handlers for interpreting the continuations of unknown operations.
 
-Многие полезные эффекты являются алгебраическими, но не все.
-Например, поимка исключений \texttt{catch} не является алгебраической операцией, так как её сигнатура запишется следующим образом:
+Many useful effects are algebraic, but not all.
+For example, catching exceptions \texttt{catch} is not an algebraic operation, since its signature would be written as follows:
 \begin{minted}{haskell}
     data Catch e comp = Catch { try :: comp, onExn :: (e -> comp), next :: comp }
 \end{minted}
-В таком случае единственная разумная реализация функтора будет работать, в том числе, и с вложенными продолжениями, и вся программа, в результате работы bind, окажется внутри блока \texttt{try}.
+In this case the only reasonable functor implementation would also work with nested continuations, and the entire program, as a result of bind, would end up inside the \texttt{try} block.
 
-Иначе говоря, \point{алгебраические эффекты не могут принимать другие effectful вычисления в качестве аргументов}.
-Как раз, чтобы моделировать \texttt{catch}, и были оригинально предложены хендлеры~\cite{plotkin2013handling}\footnote{Несмотря на то, что алгебраические эффекты~--- это просто класс ``хороших'' операций, часто при их упоминании подразумевают хендлеры эффектов.}.
-Таким образом, у хендлеров две задачи: ограничивать скоуп некоторой функциональности и интерпретировать эффекты.
-Однако, как мы знаем, порядок хендлеров определяет результирующий домен и, соответственно, семантику.
-В то же время задача ограничения скоупа фиксирует позицию хендлера, что ограничивает выразительность и делает некоторые домены недоступными.
+In other words, \point{algebraic effects cannot accept other effectful computations as arguments}.
+It was precisely to model \texttt{catch} that handlers were originally proposed~\cite{plotkin2013handling}\footnote{Despite the fact that algebraic effects are simply a class of ``well-behaved'' operations, often when they are mentioned, effect handlers are implied.}.
+Thus, handlers have two tasks: delimiting the scope of certain functionality and interpreting effects.
+However, as we know, the order of handlers determines the resulting domain and, accordingly, the semantics.
+At the same time, the task of scope delimitation fixes the handler's position, which limits expressiveness and makes some domains inaccessible.
 
-Операции, не удовлетворяющие свойству алгебраичности, соответствуют \vocab{эффектам высших порядков (higher-order effects)}, которы могут принимать другие effectful вычисления в качестве аргументов.
-Существуют встраивания хендлеров таких эффектов и обширный набор исследований на тему~\cite{wu2014effect}\footnote{\url{https://github.com/fused-effects/fused-effects}}\footnote{\href{https://youtu.be/vfDazZfxlNs?si=3o1zkoL8GsmezMtU}{(youtube) Building Haskell Programs with Fused Effects --- Patrick Thomson}}~\cite{yang2022structured}.
+Operations that do not satisfy the algebraicity property correspond to \vocab{higher-order effects}, which can accept other effectful computations as arguments.
+Embeddings of handlers for such effects exist along with an extensive body of research on the topic~\cite{wu2014effect}\footnote{\url{https://github.com/fused-effects/fused-effects}}\footnote{\href{https://youtu.be/vfDazZfxlNs?si=3o1zkoL8GsmezMtU}{(youtube) Building Haskell Programs with Fused Effects --- Patrick Thomson}}~\cite{yang2022structured}.
 
-Ключ к эффектам высших порядков состоит в возможности исполнять эффекты вычислений-аргументов в контексте тех хендлеров, которые доступны на колсайте эффекта высших порядков~\cite{van2022handling}.
-Это связано с другой идеей, bidirectional effects, позволяющей реализации операции порождать эффекты на своём колсайте (например, бросать там исключения), что крайне необходимая на практике возможность~\cite{zhang2020handling}\footnote{\url{https://effekt-lang.org/docs/concepts/bidirectional}}.
+The key to higher-order effects lies in the ability to execute the effects of argument computations in the context of those handlers that are available at the call site of the higher-order effect~\cite{van2022handling}.
+This is related to another idea, bidirectional effects, which allows the operation's implementation to produce effects at its call site (for example, throw exceptions there), an extremely necessary practical capability~\cite{zhang2020handling}\footnote{\url{https://effekt-lang.org/docs/concepts/bidirectional}}.
 
-% todo больше (впечатляющих) примеров
+% todo more (impressive) examples
 
 % todo how algebraicity of operations powers such instance declarations?
 % todo about MTL n^2 instance problem
@@ -447,24 +447,24 @@ runReader comp env = loop (run comp)
 %    catch :: m a -> (e -> m a) -> (a -> m r) -> m r
 %\end{minted}
 
-% todo неубедительно про смысл алгебраичности (это вроде нужно чтобы индуцировались монады по этому всему)
+% todo unconvincing about the meaning of algebraicity (this is apparently needed so that monads are induced from all this)
 
 
 % todo compare open type families & extensible interpreters
 
 % todo Polymorphic Symmetric Multiple Dispatch with Variance
 % todo \textit{multimethods}
-%    Languages with \textit{multimethods}, like Common Lisp’s CLOS, Dylan, and Julia do support adding both new types and operations easily.
+%    Languages with \textit{multimethods}, like Common Lisp's CLOS, Dylan, and Julia do support adding both new types and operations easily.
 %    What they typically sacrifice is either static type checking, or separate compilation.
 
 % todo ZIO, TS Effect
 
 % todo call-by-push value and how it is related to effects
 
-% todo порядок интерпретаторов и interleaving of effects
+% todo order of interpreters and interleaving of effects
 
-% todo abstracting definitional interpreters, github semantics (в домашку это)
+% todo abstracting definitional interpreters, github semantics (homework)
 
-% todo break и continue в домашку
+% todo break and continue for homework
 
-% todo куда-нибудь про супермонады и скалу
+% todo somewhere about supermonads and Scala

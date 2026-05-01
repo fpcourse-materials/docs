@@ -3,23 +3,23 @@
 % todo http://adam.chlipala.net/cpdt/html/Hoas.html
 % todo Parametric Higher-Order Abstract Syntax for Mechanized Semantics
 
-% todo параметрический полиморфизм в домашку
+% todo parametric polymorphism in homework
 
-Никакое нетривиальное свойство программ не может быть алгоритмически проверено\footnote{\url{https://en.wikipedia.org/wiki/Rice\%27s_theorem}}.
-Чтобы оставаться разрешимыми (в смысле проверки типов и/или вывода), многие системы типов жертвуют полнотой и, помимо некорректных программ, отвергают много корректных.
-В то же время системы типов также стараются предоставлять различные возможности, позволяющие протипизировать как можно больше корректных программ.
-Одна из них --- параметрический полиморфизм.
+No non-trivial property of programs can be checked algorithmically\footnote{\url{https://en.wikipedia.org/wiki/Rice\%27s_theorem}}.
+To remain decidable (in terms of type checking and/or inference), many type systems sacrifice completeness and, besides incorrect programs, reject many correct ones.
+At the same time, type systems also try to provide various capabilities that make it possible to type as many correct programs as possible.
+One of these is parametric polymorphism.
 
-Под \vocab{параметрическим полиморфизмом} мы будем подразумевать возможность кода единообразно работать с произвольными типами данных~\cite{strachey2000fundamental, cardelli1985understanding}, что позволяет во многих случаях избегать дублирования кода.
+By \vocab{parametric polymorphism} we mean the ability of code to work uniformly with arbitrary data types~\cite{strachey2000fundamental, cardelli1985understanding}, which in many cases allows avoiding code duplication.
 
-В этой главе мы рассмотрим, как описывают полиморфизм в самом простом виде --- в типизированном $\lambda$-исчислении.
-Изучим различные формы параметрического полиморфизма и сопутствующие техники безопасного программирования.
-Проанализируем возможные способы эффективной реализации параметрического полиморфизма.
-И в завершение рассмотрим полиморфизм по рантайм-представлению, ``полиморфизм по полиморфизму''.
+In this chapter we will look at how polymorphism is described in its simplest form --- in typed $\lambda$-calculus.
+We will study different forms of parametric polymorphism and the associated safe programming techniques.
+We will analyze possible ways to implement parametric polymorphism efficiently.
+And finally, we will consider runtime representation polymorphism, "polymorphism over polymorphism."
 
-\subsection{Параметрический полиморфизм в языке} \label{subsec:lang-parametric-polumorphism}
+\subsection{Parametric polymorphism in the language} \label{subsec:lang-parametric-polumorphism}
 
-$\lambda$-абстракция позволяет обобщать выражения по значениям, каждая абстракция добавляет стрелку в тип выражения, аппликация же снимает стрелку:
+$\lambda$-abstraction allows generalizing expressions over values; each abstraction adds an arrow to the type of the expression, while application removes an arrow:
 \[
     \begin{array}{cc}
         \infer[Lam]{\Gamma\vdash \lambda x : \tau\ldotp M : \tau\to\sigma}{x : \tau, \Gamma\vdash M : \sigma}
@@ -27,7 +27,7 @@ $\lambda$-абстракция позволяет обобщать выраже�
         \infer[App]{\Gamma\vdash M\ap N : \sigma}{\Gamma\vdash M : \tau\to\sigma & \Gamma\vdash N : \tau}
     \end{array}
 \]
-В то же время $\Lambda$-абстракция позволяет обобщать выражения по типам, добавляя квантор в тип ($\Pi$-абстракцию), а применение терма к типу (\vocab{универсальная аппликация (universal application)}) позволяет выбрать, с каким конкретным типом этот терм планируется использовать~\cite[глава 23]{pierce2002types}:
+At the same time, $\Lambda$-abstraction allows generalizing expressions over types by adding a quantifier to the type (a $\Pi$-abstraction), and term application to a type (\vocab{universal application}) allows choosing which concrete type this term is intended to use~\cite[chapter 23]{pierce2002types}:
 \[
     \begin{array}{cc}
         \infer[TLam]{\Gamma\vdash\Lambda\alpha\ldotp M : \forall\alpha\ldotp\tau}{\Gamma\vdash M : \tau}
@@ -36,7 +36,7 @@ $\lambda$-абстракция позволяет обобщать выраже�
     \end{array}
 \]
 
-Таким образом, например, функция $id$ фактически принимает \point{два аргумента: тип и значение}:
+Thus, for example, the function $id$ actually takes \point{two arguments: a type and a value}:
 \[
     \begin{array}{ll}
         id : \forall\alpha\ldotp\alpha\to\alpha            \\
@@ -46,25 +46,25 @@ $\lambda$-абстракция позволяет обобщать выраже�
     \end{array}
 \]
 
-В Haskell типовые абстракции и аппликации приписываются неявно механизмом вывода типов.
-Однако, есть расширения языка, которые позволяют их написать явно: \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_abstractions.html}{TypeAbstractions}, \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_applications.html}{TypeApplications}.
-Это может помочь, например, когда информации из терма не достаточно, чтобы вывести тип.
-Так, можно явно специализировать \texttt{id} на нужный тип:
+In Haskell, type abstractions and applications are attached implicitly by type inference.
+However, there are language extensions that allow writing them explicitly: \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_abstractions.html}{TypeAbstractions}, \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_applications.html}{TypeApplications}.
+This can help, for example, when the term does not provide enough information to infer the type.
+Thus, you can explicitly specialize \texttt{id} to the desired type:
 \begin{minted}{haskell}
     id :: forall a . a -> a
     ghci> :t id @Int
     id @Int :: Int -> Int
 \end{minted}
 
-Кванторы также приписываются неявно в начале типа, следуя конвенции именования: конкретные типы начинаются с большой буквы, а полиморфные --- с маленькой.
-Аналогично, у пользователя есть возможность явно приписывать \mintinline{haskell}|forall|'ы с помощью расширения \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/explicit_forall.html\#extension-ExplicitForAll}{ExplicitForAll}.
-Это может понадобиться либо за тем, чтобы задать вручную порядок типовых абстракций, либо, чтобы иметь возможность сослаться на абстрагированный тип в теле функции (расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/scoped_type_variables.html#extension-ScopedTypeVariables}{ScopedTypeVariables}).
+Quantifiers are also implicitly attached at the beginning of a type, following a naming convention: concrete types start with an uppercase letter, while polymorphic ones start with a lowercase letter.
+Similarly, the user may explicitly write \mintinline{haskell}|forall|s using the \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/explicit_forall.html\#extension-ExplicitForAll}{ExplicitForAll} extension.
+This may be useful either to manually fix the order of type abstractions, or to refer to the abstracted type inside the body of a function (the \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/scoped_type_variables.html#extension-ScopedTypeVariables}{ScopedTypeVariables} extension).
 
-Полиморфные типы данных задаются с помощью другой конструкции.
-Если ранее мы управляли типом с уровня термов универсальной аппликацией, то теперь мы хотим управлять типом на уровне типов.
-Для этого мы вводим $\lambda$ абстракцию в типах, аппликацию в типах и, соответственно, $\beta$-редукцию.
-Система кайндов (пока) представляет собой простейшую ``систему типов для типов'' и обеспечивает well-formedness типов и строгую нормализуемость\footnote{\vocab{Строгая нормализуемость} --- любой порядок редукций приводит к нормальной форме.}.
-Например, мы можем написать тип пары, абстрагированный от конкретных типов компонент, чтобы пользователь мог выбрать нужные ему:
+Polymorphic data types are expressed by another construct.
+If previously we controlled the type at the term level by universal application, now we want to control it at the type level.
+For this we introduce $\lambda$ abstraction in types, type application, and, accordingly, $\beta$-reduction.
+The kind system (for now) is just the simplest "type system for types" and ensures well-formedness of types and strong normalization\footnote{\vocab{Strong normalization} means any order of reductions leads to a normal form.}.
+For example, we can write the type of a pair, abstracted over the concrete types of its components, so that the user can pick the desired instantiation:
 \begin{align*}
     &Pair : * \rightarrow * \rightarrow * \\
     &Pair = \lambda \tau^*~\sigma^*\ldotp\forall \gamma\ldotp(\tau\rightarrow\sigma\rightarrow\gamma)\to\gamma \\
@@ -74,28 +74,28 @@ $\lambda$-абстракция позволяет обобщать выраже�
     &fst = \Lambda \alpha^*~\beta^*\ldotp\lambda p^{Pair~\alpha~\beta}\ldotp p~\alpha~(\mathbf{K}\ap\alpha\ap\beta)
 \end{align*}
 
-В Haskell вычислительную семантику полиморфных типов можно проследить в синонимах типов:
+In Haskell, the computational semantics of polymorphic types can be traced in type synonyms:
 \begin{minted}{haskell}
     type Pair a b = forall c . (a -> b -> c) -> c
     intPair :: Pair Int Int -- forall c . (Int -> Int -> c) -> c
 \end{minted}
-Обычные конструкторы типов номинативны.
-Например, \mintinline{haskell}{(Int, Int)} или \mintinline{haskell}{Maybe Int} никуда далее не вычисляются.
+Regular type constructors are nominal.
+For example, \mintinline{haskell}{(Int, Int)} or \mintinline{haskell}{Maybe Int} do not further compute.
 
-Haskell не позволяет создавать функции на типах по месту с помощью явной типовой лямбды\footnote{\url{https://stackoverflow.com/questions/4069840/lambda-for-type-expressions-in-haskell}} ввиду проблематичности этой конструкции для вывода типов.
-Однако именованные функции на типах есть, и мы рассмотрим их далее~\ref{subsec:families}.
-В Scala существует нетривиальный трюк\footnote{\href{https://stackoverflow.com/questions/8736164/what-are-type-lambdas-in-scala-and-what-are-their-benefits}{(stackoverflow) Scala type lambdas.}}\footnote{\url{https://stackoverflow.com/questions/9443004/what-does-the-operator-mean-in-scala}}, который позволяет этого добиться.
-Scala3, однако, включила эту возможность непосредственно в язык\footnote{\url{https://docs.scala-lang.org/scala3/reference/new-types/type-lambdas.html}}.
+Haskell does not allow writing functions at the type level in place using an explicit type lambda\footnote{\url{https://stackoverflow.com/questions/4069840/lambda-for-type-expressions-in-haskell}} due to the difficulty of this construct for type inference.
+However, named functions at the type level do exist, and we will examine them later~\ref{subsec:families}.
+Scala has a non-trivial trick\footnote{\href{https://stackoverflow.com/questions/8736164/what-are-type-lambdas-in-scala-and-what-are-their-benefits}{(stackoverflow) Scala type lambdas.}}\footnote{\url{https://stackoverflow.com/questions/9443004/what-does-the-operator-mean-in-scala}}, which makes this possible.
+Scala 3, however, has added this capability directly to the language\footnote{\url{https://docs.scala-lang.org/scala3/reference/new-types/type-lambdas.html}}.
 
-\subsubsection{Эмуляция типовых абстракций и аппликаций (\mintinline{haskell}{Proxy})} \label{subsubsec:proxy}
+\subsubsection{Emulating type abstractions and applications (\mintinline{haskell}{Proxy})} \label{subsubsec:proxy}
 
-В Haskell расширения, позволяющие вручную задавать типовые аппликации и абстракции появились сравнительно недавно\footnote{\href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_applications.html\#extension-TypeApplications}{TypeApplications}, \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_abstractions.html\#extension-TypeAbstractions}{TypeAbstractions}.}.
-До этого пользовались следующей техникой.
+In Haskell, extensions that allow manually writing type applications and abstractions appeared relatively recently\footnote{\href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_applications.html\#extension-TypeApplications}{TypeApplications}, \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_abstractions.html\#extension-TypeAbstractions}{TypeAbstractions}.}.
+Before that, the following technique was used.
 
-В стандартной библиотеке определён тип \mintinline{haskell}|Proxy| с одним параметром.
-Это \vocab{фантомный типовой параметр}~--- значения соответствующего типа не хранятся в структуре данных, он только позволяет размещать дополнительную информацию на уровне типов\footnote{\url{https://wiki.haskell.org/Phantom_type}}.
-Соответственно, неинформативную константу \mintinline{haskell}|Proxy| можно проаннотировать нужным типом и передать в функцию, чтобы специализировать типовой параметр на нужный тип.
-Или можно принять \mintinline{haskell}|Proxy| и воспользоваться \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/scoped_type_variables.html\#pattern-type-signatures}{ScopedTypeVariables} для типовых сигнатур в паттернах\footnote{Типовый параметр на самом деле имеет полиморфные кайнд \mintinline{haskell}{data Proxy (a :: k) = Proxy}, чтобы эта техника работала с типами произвольных кайндов (см. далее\ \ref{subsubsec:promotion}).}.
+The standard library defines the type \mintinline{haskell}|Proxy| with one parameter.
+This is a \vocab{phantom type parameter}~--- values of the corresponding type are not stored in the data structure, it only allows placing additional information at the type level\footnote{\url{https://wiki.haskell.org/Phantom_type}}.
+Consequently, the uninformative constant \mintinline{haskell}|Proxy| can be annotated with the desired type and passed to a function to specialize the type parameter to the required type.
+Or you can accept a \mintinline{haskell}|Proxy| and use \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/scoped_type_variables.html\#pattern-type-signatures}{ScopedTypeVariables} for type signatures in patterns\footnote{The type parameter actually has polymorphic kinds: \mintinline{haskell}{data Proxy (a :: k) = Proxy}, so that this technique works with types of arbitrary kinds (see also \ref{subsubsec:promotion}).}.
 \begin{minted}{haskell}
     data Proxy a = Proxy
 
@@ -106,8 +106,8 @@ Scala3, однако, включила эту возможность непос�
     id (Proxy :: Proxy ?\framebox{a}?) x = (x :: ?\framebox{a}?)
 \end{minted}
 
-Иногда прокси-тип оставляют полиморфным, чтобы не зависеть от \mintinline{haskell}{Data.Proxy}.
-Вместо конкретного значения иногда передают специализированное значение $\bot$, а получатель, не зная тип, не сможет его форсировать (однако, любые вхождения $\bot$ в терм слишком настораживают, поэтому это скорее не очень хорошая практика).
+Sometimes the proxy type is left polymorphic so as not to depend on \mintinline{haskell}{Data.Proxy}.
+Instead of a concrete value, one may pass a specialized value \texttt{undefined}, and the receiver, not knowing the type, cannot force it (however, any occurrence of \texttt{undefined} in a term is too suspicious, so this is not a very good practice).
 \begin{minted}{haskell}
     id :: proxy a -> a -> a
     id (_ :: proxy a) x = (x :: a)
@@ -118,18 +118,18 @@ Scala3, однако, включила эту возможность непос�
 
 \subsubsection{First-class polymorphism} \label{subsubsec:first-class-polymorphism}
 
-Существует возможность писать функции, которые принимают другие полиморфные функции в качестве аргументов.
-Типы таких функций называются \vocab{типами высшего ранга (higher-rank types)}, их можно использовать с расширением \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/rank_polymorphism.html}{RankNTypes}.
-Так, типовой параметр функции \texttt{g} определяет функция \texttt{f}, а не вызывающий функцию \texttt{f}:
+There is the possibility to write functions that accept other polymorphic functions as arguments.
+The types of such functions are called \vocab{higher-rank types}, they can be used with the extension \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/rank_polymorphism.html}{RankNTypes}.
+Thus, the type parameter of function \texttt{g} is determined by the function \texttt{f}, not by the caller of \texttt{f}:
 \begin{minted}{haskell}
     f :: (forall a . a -> a) -> (Int, Char)
-    f g = (g @Int 42, g @Char 'a') -- универсальная аппликация для наглядности
+    f g = (g @Int 42, g @Char 'a') -- universal application for clarity
     ghci> f (\x -> x)
 \end{minted}
 
-Проблема типов высшего ранга в том, что их вывод неразрешим, то есть глобальный вывод типов Haskell в этом случае перестаёт работать.
-Но если типы высшего ранга приписать вручную, остальной вывод будет работать как раньше.
-Например, числа Чёрча имеют высший ранг\footnote{\url{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}}\footnote{Любому интересующемуся языками программирования предлагается провести на сайте Олега Киселёва не один месяц жизни: \url{https://okmij.org/ftp/README.html}.}:
+The problem with higher-rank types is that their inference is undecidable, meaning Haskell's global type inference does not work in this case.
+But if higher-rank types are annotated manually, the rest of the inference works as before.
+For example, Church numerals have higher rank\footnote{\url{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}}\footnote{Anyone interested in programming languages is invited to spend more than a month of their life on Oleg Kiselyov's site: \url{https://okmij.org/ftp/README.html}.}:
 \begin{minted}{haskell}
     suc :: (forall a . (a -> a) -> a -> a) -> (a -> a) -> a -> a
     suc n s z = s (n s z)
@@ -137,17 +137,18 @@ Scala3, однако, включила эту возможность непос�
 
 %! suppress = LineBreak
 \begin{task}
-    Какой ранг имеет тип \mintinline{haskell}|Int -> (forall a . a -> a)|?
+    What rank does the type \mintinline{haskell}|Int -> (forall a . a -> a)|? have?
 \end{task}
 
-От многих проблем сопутствующих типам высших рангов можно избавиться, если создавать для них обёртки.
-Например, для чисел Чёрча можно создать обёртку \mintinline{haskell}{newtype Church}.
-Теперь код, работающий с обёрткой, может быть протипизирован типами первого ранга, только конструктор имеет тип высшего ранга:
+Many problems associated with higher-rank types can be avoided by wrapping them.
+For example, for Church numerals we can define a wrapper \mintinline{haskell}{newtype Church}.
+Now code that works with the wrapper can be typed with first-rank types; only the constructor has a higher-rank type:
 \begin{minted}{haskell}
     newtype Church = Church (forall a . (a -> a) -> a -> a)
     (+) :: Church -> Church -> Church -- rank 1
 \end{minted}
-Аналогичный код можно написать и в Java (Kotlin):
+
+Code like that can also be written in Java (Kotlin):
 \begin{minted}{kotlin}
     interface Church { fun <a> fold(s: (a) -> a, z: a): a }
     fun plus(n: Church, m: Church): Church = object : Church {
@@ -155,16 +156,16 @@ Scala3, однако, включила эту возможность непос�
     }
 \end{minted}
 
-По умолчанию типовые параметры можно специализировать только на конкретные типы.
-Расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/impredicative_types.html}{ImpredicativeTypes} позволяет специализировать типовые параметры на полиморфные типы (включающие \mintinline{haskell}|forall|'ы внутри себя) --- \vocab{импредикативное применение}.
+By default, type parameters can only be instantiated to concrete types.
+The extension \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/impredicative_types.html}{ImpredicativeTypes} allows specializing type parameters to polymorphic types (including \mintinline{haskell}|forall|s inside them) --- \vocab{impredicative application}.
 \begin{minted}{haskell}
     runST :: (forall s. ST s a) -> a
     ($) :: forall a b . (a -> b) -> a -> b
-    foo = runST $ ... -- типизируется только с ImpredicativeTypes
+    foo = runST $ ... -- only typechecks with ImpredicativeTypes
 \end{minted}
 
-Higher-rank типы можно использовать как type-based escape analysis, иначе говоря, не позволять пользователю передавать некоторое значение вовне определённого скоупа.
-Так, например, Haskell предоставляет эффективную монаду \mintinline{haskell}{ST}, позволяющую в рамках ограниченного скоупа работать с мутабельными ячейками памяти~\cite{launchbury1995state}\cite[7.2, ST trick]{maguire-types}:
+Higher-rank types can be used as type-based escape analysis, that is, to prevent the user from passing some value outside a certain scope.
+For example, Haskell provides the efficient \mintinline{haskell}{ST} monad, which within a restricted scope allows working with mutable memory cells~\cite{launchbury1995state}\cite[7.2, ST trick]{maguire-types}:
 \begin{minted}{haskell}
     newtype ST s a = ST (IO a)
     runST :: (forall s. ST s a) -> a
@@ -175,51 +176,51 @@ Higher-rank типы можно использовать как type-based escap
       forM [0..n] \i -> modifySTRef ref (+ i)
       readSTRef ref
 \end{minted}
-Заметим, что если попытаться вернуть из \texttt{runST} ссылку на мутабельную ячейку, то результирующий тип не пройдёт well-formedness проверку, так как будет содержать фантомный параметр \texttt{s}, который не будет нигде связан:
+Notice that if you try to return a reference to a mutable cell from \texttt{runST}, the resulting type will not pass the well-formedness check because it would contain the phantom parameter \texttt{s} that is not bound anywhere:
 \begin{minted}{haskell}
     newSTRef :: a -> ST s (Ref s a)
-    ghci> runST (newSTRef 0) :: Ref s Int -- ошибка
+    ghci> runST (newSTRef 0) :: Ref s Int -- error
 \end{minted}
-На практике, чтобы отличать такие локально связанные типовые переменные, используют концепцию уровней\footnote{\url{https://okmij.org/ftp/ML/generalization.html}}~\cite{peytonjones2019typeinference}.
+In practice, to distinguish such locally bound type variables, one uses the concept of levels\footnote{\url{https://okmij.org/ftp/ML/generalization.html}}~\cite{peytonjones2019typeinference}.
 
-Типы высших рангов вместе с импредикативным применением образуют \vocab{полиморфизм первого класса (first-class polymorphism)}, когда полиморфные типы могут использоваться почти так же свободно, как и любые другие.
-Классический алгоритм глобального вывода Хиндли-Милнера не справляется (и в общем случае задача неразрешима), так что существует большое количество решений, делающих различные компромиссы.
-Можно сделать вывод типов локальным, опирающемся только на соседние ноды AST и вспомогательные типовые аннотации~\cite{pierce2000local, christiansen2013bidirectional, dunfield2019sound}.
-Либо же можно попытаться помочь глобальному выводу дополнительной предобработкой (Quick Look\footnote{\href{https://youtu.be/ZuNMo136QqI?si=qp8PAEeeF-bioCB_}{(youtube) A Quick Look at Impredicativity (Simon Peyton Jones)}}~\cite{serrano2020quick}, реализованный в Haskell с недавнего времени) или дополнительными регулирующими конструкциями (FreezeML~\cite{emrich2020freezeml}).
+Higher-rank types together with impredicative application form \vocab{first-class polymorphism}, when polymorphic types can be used almost as freely as any other.
+The classical Hindley-Milner global inference algorithm cannot handle this (and in general the problem is undecidable), so there is a variety of solutions that make different tradeoffs.
+You can make inference local, relying only on nearby AST nodes and auxiliary type annotations~\cite{pierce2000local, christiansen2013bidirectional, dunfield2019sound}.
+Or you can try to help global inference with additional preprocessing (Quick Look\footnote{\href{https://youtu.be/ZuNMo136QqI?si=qp8PAEeeF-bioCB_}{(youtube) A Quick Look at Impredicativity (Simon Peyton Jones)}}~\cite{serrano2020quick}, recently implemented in Haskell) or with additional controlling constructs (FreezeML~\cite{emrich2020freezeml}).
 
 \subsubsection{Higher-order/kinded polymorphism}
 
-Haskell позволяет также абстрагироваться по типам произвольных кайндов, а не только \mintinline{haskell}|Type|, как в \mintinline{haskell}{data} декларациях (\vocab{higher-order/kinded types (HKT)}\footnote{\url{https://serokell.io/blog/kinds-and-hkts-in-haskell}}), так и в полиморфных функциях.
-Далее мы встретим немало примеров.
-Так, \mintinline{haskell}{Fix} имеет кайнд \mintinline{haskell}{(Type -> Type) -> Type}, а катаморфизм абстрагирован по типу стрелочного кайнда:
+Haskell also allows abstraction over types of arbitrary kinds, not only \mintinline{haskell}{Type}, both in \mintinline{haskell}{data} declarations (\vocab{higher-order/kinded types (HKT)}\footnote{\url{https://serokell.io/blog/kinds-and-hkts-in-haskell}}) and in polymorphic functions.
+We will encounter many examples later.
+For example, \mintinline{haskell}{Fix} has kind \mintinline{haskell}{(Type -> Type) -> Type}, and the catamorphism is abstracted over the arrow kind:
 \begin{minted}{haskell}
     newtype Fix f = Fix (f (Fix f))
     cata :: forall (f :: Type -> Type) a . Functor f => (f a -> a) -> Fix f -> a
 \end{minted}
 
-Далее мы рассмотрим технику, позволяющую типы высших порядков закодировать в языке, их не поддерживающем (см.~\ref{subsubsec:simulating-hkt}).
+Later we will study a technique that allows encoding higher-order kinds in a language that does not support them (see~\ref{subsubsec:simulating-hkt}).
 
 % todo kan extensions
-%Функции, возвращающие значение какого-то такого вида \texttt{m a} --- слишком полиморфные.
-%Код, использующий такие функции может сталкиваться с серьёзными проблемами в производительности, так как компилятор не знает конкретного типа и не может заинлайнить соответствующие вызовы \texttt{fmap}, bind, и т.д.
-%Чтобы обойти эту проблему, рекомендуется пользоваться либо конкретными типами, либо воспользоваться библиотекой kan-extensions\footnote{\url{https://hackage.haskell.org/package/kan-extensions}}\footnote{\url{https://bartoszmilewski.com/2017/04/17/kan-extensions/}}~\cite[13.5]{maguire-types}.
+%Functions that return a value of some form \texttt{m a} are too polymorphic.
+%Code that uses such functions may face serious performance problems because the compiler does not know the concrete type and cannot inline corresponding calls to \texttt{fmap}, bind, etc.
+%To deal with this problem, it is recommended to use either concrete types or the kan-extensions library\\footnote{\\url{https://hackage.haskell.org/package/kan-extensions}}\\footnote{\\url{https://bartoszmilewski.com/2017/04/17/kan-extensions/}}~\\cite[13.5]{maguire-types}.
 
-\subsubsection{Обобщённые алгебраические типы данных (GADTs)} \label{subsubsec:gadts}
+\subsubsection{Generalized algebraic data types (GADTs)} \label{subsubsec:gadts}
 
-Обобщённые алгебраические типы данных (generalized algebraic data types, GADTs) позволяют приписывать данным на уровне типов больше информации.
-В качестве модельного примера возьмём синтаксис крошечного языка программирования.
-Зададимся целью не допустить возможности конструирования в Haskell некорректных с точки зрения типов синтаксических деревьев.
+Generalized algebraic data types (GADTs) allow attaching more information to data at the type level.
+As a model example, consider the syntax of a tiny programming language.
+Our goal is to prevent the construction of ill-typed syntax trees in Haskell.
 \begin{minted}{haskell}
     data Expr = Const Int | IsZero Expr | If Expr Expr Expr
 \end{minted}
 
-Как мы знаем, конструкторы данных в Haskell --- это обычные функции с той лишь разницей, что их реализация генерируется компилятором (аллокация памяти, размещение полей\ldots).
-У функций есть тип.
-Например, \mintinline{haskell}|IsZero :: Expr -> Expr|.
+As we know, data constructors in Haskell are ordinary functions, except that their implementation is generated by the compiler (allocation, field layout, ...).
+Functions have types.
+For example, \mintinline{haskell}{IsZero :: Expr -> Expr}.
 
-В Haskell есть синтаксис определения \mintinline{haskell}|data| через задание типов конструкторов\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/gadt_syntax.html\#gadt-style}}.
-Он совершенно аналогичен рассмотренному ранее, только гораздо более удобен для сложно организованных структур данных.
-Рассмотренный ранее тип термов \mintinline{haskell}|Expr| будет выглядеть следующим образом:
+Haskell has syntax for defining \mintinline{haskell}{data} by explicitly listing constructor types\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/gadt_syntax.html\#gadt-style}}.
+It is completely analogous to the form we saw earlier, only much more convenient for complex data structures.
+The previously considered term type \mintinline{haskell}{Expr} looks like this:
 \begin{minted}{haskell}
     data Expr where
       Const :: Int -> Expr
@@ -227,16 +228,16 @@ Haskell позволяет также абстрагироваться по ти
       If :: Expr -> Expr -> Expr -> Expr
 \end{minted}
 
-Для полиморфных структур данных, на примере списка, используется следующий синтаксис.
-Имя \texttt{elem} нужно исключительно для документации и больше никак его использовать нельзя, оно только маркирует наличие типового параметра и позволяет ему вручную задать кайнд\footnote{Кайд можно не писать. Либо можно не писать имена параметров и просто приписать кайнд типовому конструктору: \mintinline{haskell}{data List :: Type -> Type where ...}.}.
+For polymorphic data structures, the list example uses the following syntax.
+The name \texttt{elem} is needed only for documentation and cannot be used otherwise; it only marks the presence of a type parameter and allows giving it a kind manually\footnote{The kind may be omitted. Alternatively, you can omit parameter names and simply write \mintinline{haskell}{data List :: Type -> Type where ...}.}.
 \begin{minted}{haskell}
     data List (elem :: Type) where
       Nil :: List a
       Cons :: a -> List a -> List a
 \end{minted}
 
-Добавим к \mintinline{haskell}{Expr} фантомный типовой параметр \texttt{ty}, обозначающий тип Haskell, в который должно быть проинтерпретировано данное выражение, и с помощью GADT зададим конкретные значения \texttt{ty} результирующим типам конструкторов.
-Так, мы говорим, что программа сконструированная с помощью \mintinline{haskell}{Const} вычисляется в число, \mintinline{haskell}{IsZero} вычисляется в булево значение, а условное выражение --- в тип веток:
+Let us add a phantom type parameter \texttt{ty} to \mintinline{haskell}{Expr}, indicating the Haskell type into which the expression should be interpreted, and use a GADT to assign concrete \texttt{ty} values to constructor result types.
+Thus we state that a program built with \mintinline{haskell}{Const} evaluates to an integer, \mintinline{haskell}{IsZero} evaluates to a boolean, and a conditional evaluates to the type of its branches.
 \begin{minted}{haskell}
     data Expr ty where
       Const :: Int -> Expr Int
@@ -246,34 +247,34 @@ Haskell позволяет также абстрагироваться по ти
     eval :: Expr ty -> ty
 \end{minted}
 
-Теперь мы можем написать безопасный типизированный интерпретатор.
-Обратите внимание, что при сопоставлении с образцами конструкторов, у нас уточняется информация о типовом параметре:\footnote{Тут используется удобное расширение \href{https://downloads.haskell.org/~ghc/9.0.1/docs/html/users_guide/exts/lambda_case.html}{LambdaCase}, позволяющее не вводить лишние имена.}
+Now we can write a safe typed interpreter.
+Note that when pattern matching on constructors, the information about the type parameter is refined:\footnote{This uses the convenient \href{https://downloads.haskell.org/~ghc/9.0.1/docs/html/users_guide/exts/lambda_case.html}{LambdaCase} extension, which avoids introducing extra names.}
 \begin{minted}{haskell}
     eval :: Expr ty -> ty
     eval = \case
-      Const x  -> x           -- ty ?$\sim$? Int
-      IsZero t -> eval t == 0 -- ty ?$\sim$? Bool
+      Const x  -> x           -- ty ?$\\sim$? Int
+      IsZero t -> eval t == 0 -- ty ?$\\sim$? Bool
       If c t e -> if eval c then eval t else eval e
 \end{minted}
 
-Далее мы рассмотрим как GADT в Haskell выражаются через более базовые механизмы языка~\ref{subsubsec:system-fc}.
+Next we will examine how GADTs in Haskell are expressed through more basic language mechanisms~\ref{subsubsec:system-fc}.
 
-\subsubsection{Структуры на уровне типов, data promotion} \label{subsubsec:promotion}
+\subsubsection{Type-level structures, data promotion} \label{subsubsec:promotion}
 
-Чтобы обрести больший контроль корректности программ, научимся кодировать произвольные структуры данных на уровне типов.
-В качестве модельной задачи зададим структуру данных, моделирующую вектор, но с контролем длины.
+To gain greater control over program correctness, let us learn to encode arbitrary data structures at the type level.
+As a model task, we will define a vector with length information.
 
-Для начала определим натуральные числа на уровне типов в стиле Пеано:
+First, define Peano-style natural numbers at the type level:
 \begin{minted}{haskell}
     data Zero
     data Suc n
 \end{minted}
 
 \begin{task}
-    Сколько обитателей типа \mintinline{haskell}|Suc (Suc Zero)|?
+    How many inhabitants does the type \mintinline{haskell}|Suc (Suc Zero)| have?
 \end{task}
 
-Теперь мы можем задать тип вектора, содержащий информацию о длине:
+Now we can define a vector type that carries length information:
 \begin{minted}{haskell}
     data Vec (size :: Type) (elem :: Type) where
       VNil :: Vec Zero a
@@ -283,31 +284,31 @@ Haskell позволяет также абстрагироваться по ти
     example = VCons 1 (VCons 2 VNil)
 \end{minted}
 
-Для такого типа, например, можно написать безопасную функцию \mintinline{haskell}|zip|, работающую только на векторах одинаковой длины:
+For such a type, for example, one can write a safe \mintinline{haskell}|vzip| function that only works on vectors of the same length:
 \begin{minted}{haskell}
     vzip :: Vec n a -> Vec n b -> Vec n (a, b)
-    vzip VNil VNil = VNil                                      -- n ?$\sim$? Zero
-    vzip (VCons x xs) (VCons y ys) = VCons (x, y) (vzip xs ys) -- n ?$\sim$? Suc n'
+    vzip VNil VNil = VNil                                      -- n ?$\\sim$? Zero
+    vzip (VCons x xs) (VCons y ys) = VCons (x, y) (vzip xs ys) -- n ?$\\sim$? Suc n'
 \end{minted}
 
-Заметьте, что в остальных ветках \mintinline{haskell}|vzip| должны возникнуть эквивалентности, начинающиеся с различных конструкторов, например, \mintinline{haskell}|Zero ?$\sim$? Suc n|.
-Поскольку невозможно построить такие аргументы функции, Haskell позволяет соответствующие ветки не рассматривать.
+Note that in the other branches of \mintinline{haskell}|vzip|, equalities must arise that begin with different constructors, for example \mintinline{haskell}|Zero ?$\\sim$? Suc n|.
+Since it is impossible to construct such function arguments, Haskell allows the corresponding branches to be omitted.
 
 \begin{task}
-    Напишите функцию добавления в конец элемента вектора.
-    Двигайтесь последовательно, заполняя типовые дыры и отслеживая возникающие эквивалентности.
+    Write a function that appends an element to the end of a vector.
+    Proceed step by step, filling in type holes and tracking the equalities that arise.
 \end{task}
 
-Сейчас язык кайндов, который должен контролировать типы, слишком беден.
-Действительно, кайнд \mintinline{haskell}|Suc| --- \mintinline{haskell}|Suc :: Type -> Type|, соответственно ничто не мешает написать, например, \mintinline{haskell}|Suc (Maybe Int)|.
-В то же время он слишком ограничивающий, поскольку не поддерживает полиморфизм, что дало начало большому количеству дублирований а ля \\ \mintinline{haskell}|Typeable (ty :: Type)|, \mintinline{haskell}|Typeable1 (ty :: Type -> Type)|\ldots
+Currently the kind language that should control types is too poor.
+Indeed, the kind \mintinline{haskell}|Suc| is \mintinline{haskell}|Suc :: Type -> Type|, so nothing prevents writing, for example, \mintinline{haskell}|Suc (Maybe Int)|.
+At the same time it is too restrictive because it does not support polymorphism, which led to a lot of duplication like \mintinline{haskell}|Typeable (ty :: Type)|, \mintinline{haskell}|Typeable1 (ty :: Type -> Type)|, ...
 
-Современный Haskell имеет расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_data.html#extension-TypeData}{TypeData}, позволяющее объявлять новые типы и кайнды подобно тому, как \mintinline{haskell}{data} позволяет объявлять новые типы.
+Modern Haskell has the \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_data.html#extension-TypeData}{TypeData} extension, which allows declaring new types and kinds similarly to how \mintinline{haskell}{data} allows declaring new types.
 \begin{minted}{haskell}
     type data Nat = Zero | Suc Nat
 \end{minted}
 
-Теперь вектору можно приписать более точный кайнд:
+Now the vector can be given a more precise kind:
 \begin{minted}{haskell}
     data Vec (size :: Nat) (elem :: Type) where
       VNil :: Vec Zero a
@@ -315,32 +316,32 @@ Haskell позволяет также абстрагироваться по ти
 \end{minted}
 
 \begin{task}
-    Что выведет \mintinline{haskell}|ghci> :k Vec|?
+    What does \mintinline{haskell}|ghci> :k Vec| print?
 \end{task}
 
-Другим вариантом добиться того же самого является использование \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/data_kinds.html#extension-DataKinds}{DataKinds}~\cite{yorgey2012giving}.
-Это расширение автоматически продвигает (promotion) все \mintinline{haskell}|data| декларации на уровень выше.
-А именно: любой конструктор типа также становится кайндом, а конструктор данных --- конструктором типа.
-Так, в примере с числами, мы можем задекларировать натуральные числа как обычно и использовать на уровне типов:
+Another way to achieve the same result is using \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/data_kinds.html#extension-DataKinds}{DataKinds}~\cite{yorgey2012giving}.
+This extension automatically promotes all \mintinline{haskell}|data| declarations one level higher.
+Specifically: any type constructor also becomes a kind, and any data constructor becomes a type constructor.
+Thus, in the example with natural numbers, we can declare them normally and use them at the type level:
 \begin{minted}{haskell}
     data Nat = Zero | Suc Nat
-    ghci> :k Suc :: Nat -> Nat -- тут понятно что Suc используется как тип
+    ghci> :k Suc :: Nat -> Nat -- here it is clear that Suc is used as a type
 \end{minted}
 
-Поскольку типы и термы в Haskell живут в разных пространствах имён, можно называть конструкторы типов и данных одинаково.
-Однако если продвинуть такой тип данных, возникнет неоднозначность: мы имеем в виду тип или продвинутый конструктор.
-Haskell позволяет указать явно, что речь идёт о продвинутом конструкторе с помощью одинарной кавычки.
+Because types and terms live in different namespaces in Haskell, one can name type constructors and data constructors identically.
+However, if such a data type is promoted, ambiguity arises: do we mean the type or the promoted constructor?
+Haskell allows explicitly indicating that we mean the promoted constructor with a leading apostrophe.
 \begin{minted}{haskell}
     data T = T Nat
     ghci> :k T
-    T :: Type      -- про конструктор типа
+    T :: Type      -- about the type constructor
     ghci> :k 'T
-    'T :: Nat -> T -- про продвинутый конструктор данных
+    'T :: Nat -> T -- about the promoted data constructor
 \end{minted}
 
-Не любые \mintinline{haskell}|data| декларации подходят для продвижения, в то же время \mintinline{haskell}|type data| декларации позволяют явно запросить структуру уровня типов и получить внятные ошибки, если декларация написана неправильно.
+Not every \mintinline{haskell}|data| declaration is suitable for promotion, while \mintinline{haskell}|type data| declarations allow explicitly requesting a type-level structure and getting sensible errors if the declaration is written incorrectly.
 
-В случае продвижения полиморфного типа, мы получаем полиморфные кайнды (\href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/poly_kinds.html}{PolyKinds}):
+In the case of promoting a polymorphic type, we obtain polymorphic kinds (\href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/poly_kinds.html}{PolyKinds}):
 \begin{minted}{haskell}
     data [a] = [] | (:) a [a]
     ghci> :k '(:)
@@ -365,13 +366,13 @@ Haskell позволяет указать явно, что речь идёт о 
         & \mintinline{haskell}|'(:)|                      & \mintinline{haskell}|forall k. k -> [k] -> [k]| \\
         \hline
     \end{tabular}
-    \caption{Пример продвижений в Haskell.}
+    \caption{An example of promotions in Haskell.}
     \label{fig:universes}
 \end{figure}
 
-Примеры продвижения различных конструкций можно увидеть в таблице~\ref{fig:universes}.
+Examples of promotions for various constructions can be seen in Table~\ref{fig:universes}.
 
-В качестве примера, зададим гетерогенный список, индексированный типами элементов:
+As an example, let us define a heterogeneous list indexed by the types of its elements:
 \begin{minted}{haskell}
     data HList (tys :: [Type]) where
       HNil :: HList '[]
@@ -381,9 +382,9 @@ Haskell позволяет указать явно, что речь идёт о 
     example = HCons 42 $ HCons True $ HCons 12.5 HNil
 \end{minted}
 
-Структуры данных тоже могут быть полиморфными по кайндам.
-Рассмотрим тип \href{https://hackage.haskell.org/package/tagged-0.8.8/docs/Data-Tagged.html#t:Tagged}{\mintinline{haskell}|Tagged|}, позволяющий дополнить тип значения дополнительным типовым тегом.
-Кайнд тега может быть произвольным, поэтому, например, можем использовать встроенные в систему типов константы \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_literals.html}{TypeLits} (другой пример использования полиморфных кайндов мы видели ранее\ \ref{subsubsec:proxy}):
+Data structures can also be kind-polymorphic.
+Consider the type \href{https://hackage.haskell.org/package/tagged-0.8.8/docs/Data-Tagged.html#t:Tagged}{\mintinline{haskell}|Tagged|}, which allows attaching an additional type tag to the value type.
+The kind of the tag may be arbitrary, so for example we can use type-level constants from \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_literals.html}{TypeLits} (another example of polykind usage we saw earlier in \ref{subsubsec:proxy}):
 \begin{minted}{haskell}
     newtype Tagged (tag :: k) (a :: Type) = Tagged a
     ghci> :t Tagged
@@ -393,112 +394,112 @@ Haskell позволяет указать явно, что речь идёт о 
     example = Tagged 42
 \end{minted}
 
-Современный Haskell в итоге пришёл к тому, что система типов не делает различий между типами и кайндами (рис.~\ref{fig:types-eq-kinds}).
-В частности, \mintinline{haskell}|Type :: Type|.
-Это нужно для расширения возможностей Haskell в сторону программирования с зависимыми типами путём добавления несинтаксических эквивалентностей для кайндов (\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/poly_kinds.html#extension-TypeInType}{TypeInType}).
-$System~FC$ была представлена в работе~\cite{weirich2013system}\footnote{\href{https://www.youtube.com/watch?v=ISGENChlA4M&list=PLvPsfYrGz3wufQguebnCduYgQQ9UMeJRt}{(youtube) Мини-курс на русском языке про развитие Haskell в сторону зависимой типизации.}}\footnote{\href{https://www.youtube.com/watch?v=_HYI7zjkrEs&list=PLvPsfYrGz3wuVAGhNf6-i7uafXg56oqM5&index=1}{(youtube) Мини-курс на русском языке --- система вывода типов Haskell.}}. % todo при чём тут FC
+Modern Haskell has ultimately arrived at the point where the type system does not distinguish between types and kinds (Fig.~\ref{fig:types-eq-kinds}).
+In particular, \mintinline{haskell}|Type :: Type|.
+This is required to extend Haskell in the direction of dependent-type programming by adding non-syntactic equivalences for kinds (\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/poly_kinds.html#extension-TypeInType}{TypeInType}).
+$System~FC$ was presented in the work~\cite{weirich2013system}\footnote{\href{https://www.youtube.com/watch?v=ISGENChlA4M&list=PLvPsfYrGz3wufQguebnCduYgQQ9UMeJRt}{(youtube) Mini-course in Russian on the development of Haskell toward dependent typing.}}\footnote{\href{https://www.youtube.com/watch?v=_HYI7zjkrEs&list=PLvPsfYrGz3wuVAGhNf6-i7uafXg56oqM5&index=1}{(youtube) Mini-course in Russian --- Haskell type inference system.}}.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.99\textwidth]{figs/types-eq-kinds}
-    \caption{Типы и кайнды --- одно (\cite{bragilevsky-haskell}).}
+    \caption{Types and kinds are the same thing (\cite{bragilevsky-haskell}).}
     \label{fig:types-eq-kinds}
 \end{figure}
 
-\subsection{Реализация параметрического полиморфизма}
+\subsection{Implementation of parametric polymorphism}
 
-\vocab{Конвенция вызова}\footnote{\url{https://en.wikipedia.org/wiki/Calling_convention}} представляет собой набор соглашений между тем как функция компилируется и как должна вызываться.
-Например, функция принимает два аргумента, каждый размером в машинное слово, и возвращает один результат размером в машинное слово.
-Тогда сгенерированный низкоуровневый код этой функции может, например, ожидать, что оба аргумента передаются через специальную пару регистров, а складывать результат он будет в третий.
-В таком случае вызывающий код обязан предоставить аргументы в правильных регистрах и ожидать результата в некотором третьем, заранее оговоренном регистре.
+A \vocab{calling convention}\footnote{\url{https://en.wikipedia.org/wiki/Calling_convention}} is a set of agreements between how a function is compiled and how it must be called.
+For example, a function takes two word-sized arguments and returns one word-sized result.
+Then the generated low-level code may, for example, expect both arguments to be passed through a specific pair of registers and place the result in a third register.
+In that case, the caller must provide the arguments in the correct registers and expect the result in a predetermined register.
 
-В общем случае, конвенция вызова функции зависит от типов аргументов и результата.
-Нужно знать как минимум их размер, чтобы понять, размещать их в регистрах или на стеке.
-Нужно знать, это указатель (\vocab{reference type}) или значение само по себе (\vocab{value type}), чтобы понимать, как с ним работать.
-В структурах данных нужно знать смещения полей.
+In general, the calling convention of a function depends on the types of its arguments and result.
+You need to know at least their size to decide whether to place them in registers or on the stack.
+You need to know whether it is a pointer (\vocab{reference type}) or a value itself (\vocab{value type}) to understand how to handle it.
+For data structures, you need to know field offsets.
 
-Таким образом, реализация параметрического полиморфизма в языке --- это не тривиальная задача.
-Разные языки используют различные подходы, все со своими достоинствами и недостатками.
+Thus, implementing parametric polymorphism in a language is not a trivial task.
+Different languages use different approaches, each with its own strengths and weaknesses.
 
-\subsubsection{Mономорфизация} \label{subsubsec:monomorphization}
+\subsubsection{Monomorphization} \label{subsubsec:monomorphization}
 
-\vocab{Mономорфизация} --- самый прямолинейный подход, компилируем полиморфные функции и структуры для каждого набора типовых аргументов.
-Так, если различных наборов типовых аргументов, с которыми эта функция вызывается, например, 100 (что запросто может быть), то её код будет компилироваться сто раз и занимать в бинарнике в сто раз больше места.
-Так делают, например, C++ и Rust.
+\vocab{Monomorphization} is the most straightforward approach: compile polymorphic functions and structures for each set of type arguments.
+Thus, if there are 100 different sets of type arguments with which a function is called, then its code will be compiled 100 times and occupy 100 times more space in the binary.
+This is what C++ and Rust do, for example.
 
-На самом деле всё ещё хуже.
-Если проект многомодульный и состоит из множества единиц компиляции (кусков, которые компилируются отдельно), то одна и та же специализация функции на типовые аргументы будет компилироваться заново во всех единицах компиляции, где такая специализация нужна.
-А затем, линкер будет заниматься удалением дубликатов, что тоже не самый быстрый и эффективный процесс.
+In fact it is even worse.
+If the project is multi-module and consists of many compilation units (pieces that are compiled separately), the same specialization of the function for type arguments will be compiled again in every compilation unit where it is needed.
+Then the linker will remove duplicates, which is also not the fastest or most efficient process.
 
 \begin{itemize}
-    \item[\positive] Порождаемый код максимально эффективен для каждого типа;
-    \item[\positive] Легко на этапе компиляции отрабатывают \texttt{is}-проверки значений на принадлежность определённому типу (в остальных подходах с этим всё сложно);
-    \item[\negative] Время компиляции крайне велико;
-    \item[\negative] Существенно увеличивается размер результирующего бинарного файла, что может быть критично для некоторых приложений;
-    \item[\negative] Может неэффективно работать из-за засорения кеша кода в процессоре;
-    \item[\negative] В интерфейсах не может быть полиморфных методов, так как мы не знаем в месте вызова, к какому именно наследнику относится вызываемый метод, и какой код нужно специализировать (аналогично, не работает higher-rank полиморфзм);
-    \item[\negative] К полиморфным функциям нельзя динамически линковаться (у них нет кода до специализации);
-    \item[\negative] В общем случае нельзя поддержать variance, потому что код компилируется для конкретного типа и в общем случае не может работать для произвольного подтипа или супертипа (если reference и value типы могут находиться в одной иерархии подтипизации).
+    \item[\positive] Generated code is maximally efficient for each type;
+    \item[\positive] \texttt{is}-style runtime type checks are easy to implement at compile time (in other approaches this is difficult);
+    \item[\negative] Compilation time becomes very large;
+    \item[\negative] The resulting binary size increases significantly, which may be critical for some applications;
+    \item[\negative] It may work inefficiently due to instruction cache pollution;
+    \item[\negative] Polymorphic methods cannot exist in interfaces, because at the call site we do not know which concrete implementation should be specialized (similarly, higher-rank polymorphism does not work);
+    \item[\negative] Polymorphic functions cannot be dynamically linked in general (they have no code before specialization);
+    \item[\negative] In general, variance cannot be supported because the code is compiled for a concrete type and cannot in general work for an arbitrary subtype or supertype (if reference and value types may live in the same subtyping hierarchy).
 \end{itemize}
 
-Некоторые языки (например, C++ и Zig) не делают инстанциацию скрытой деталью реализации языка, а предоставляют её как инструмент пользователям.
-Это даёт следующие возможности:
+Some languages (for example, C++ and Zig) do not treat instantiation as a hidden implementation detail of the language, but provide it as a tool for users.
+This provides the following possibilities:
 \begin{itemize}
-    \item Если разрешить использовать значения в типах, инстанциация может использоваться как механизм вычислений на этапе компиляции.
-    \item Если отложить проверку ошибок на стадию инстанциирования, то мы получим своего рода статическую утиную типизацию.
-    Это позволит не описывать сложные сигнатуры полиморфных функций.
-    Однако тогда функции для тестирования придётся вручную инстанциировать против всевозможных типов, иначе нельзя понять статически, компилируется ли она хотя бы против этих типов или нет.
+    \item If values are allowed in types, instantiation can be used as a compile-time computation mechanism.
+    \item If error checking is deferred to instantiation time, we get a kind of static duck typing.
+    This allows not describing complex signatures of polymorphic functions.
+    However, then functions for testing must be manually instantiated against all possible types, otherwise it is impossible to determine statically whether they compile for those types.
 \end{itemize}
 
 % todo The Simple Essence of Monomorphization
 
-\subsubsection{Стирание типа} \label{subsubsec:type-erasure}
+\subsubsection{Type erasure} \label{subsubsec:type-erasure}
 
-Можно всё сделать наоборот, унифицировав значения, которые приходят на вход полиморфным функциям и хранятся в полиморфных структурах данных, вместо того, чтобы компилировать код под каждый тип.
+One can do the opposite: unify the values that arrive at polymorphic functions and are stored in polymorphic data structures, instead of compiling code for each type.
 
-Пусть каждое значение будет аллоцировано в куче и передаваться по указателю.
-Тогда мы сможем переиспользовать один и тот же код для разных типовых аргументов --- он просто будет ожидать указатели.
-
-\begin{itemize}
-    \item[\positive] Каждая функция компилируется ровно один раз --- быстро;
-    \item[\positive] Можно динамически загружать новые полиморфные функции и типы и использовать их друг с другом;
-    \item[\positive] Гибкость --- вариантность, полиморфные методы в интерфейсах, higher-rank types и т.д. просто работают;
-    \item[\negative] Аллокация в куче и разыменование указателя может очень сильно замедлить код;
-    \item[\negative] Поскольку информация о типах стирается, нельзя ничего сделать с типовым аргументом, не имея его обитателей (например, запросить рефлексией информацию или сделать \texttt{is} проверку).
-\end{itemize}
-
-Такого подхода придерживаются JVM, Haskell и, как правило, другие функциональные языки ввиду его гибкости и скорости компиляции.
-
-Особую проблему вызывает работа с примитивами и другими value-типами, потому что каждое значение приходится сначала боксить (переносить в кучу), а потом уже использовать в полиморфном контексте.
-Поэтому языки борются с этим как могут.
-Некоторые языки урезают диапазоны значений примитивов, чтобы зарезервировать бит, определяющий, это указатель или значение.
-Код консультируется с этим битом для работы (похоже на~\ref{subsubsec:swift-generics}).
-Так делают, например, OCaml и \href{https://koka-lang.github.io/koka/doc/book.html#sec-value-types}{Koka}.
-Агрессивный инлайнинг вместе с другими оптимизациями тоже помогают~\cite{blanchet1999escape}.
-Java, например, также пытается аккуратно двигаться в сторону возможности мономорфизации\footnote{\href{https://youtu.be/JI09cs2yUgY?si=MLkRs31mN1koXIu1}{Type Specialization of Java Generics - What If Casts Have Teeth?}}\footnote{\url{https://cr.openjdk.org/~jrose/values/parametric-vm.html}}.
-
-\subsubsection{Гибридный подход} \label{subsubsec:hybrid}
-
-С\# реализует гибридный подход\footnote{\href{https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/generics/generics-in-the-run-time}{Generics in the runtime (C\# programming guide).}}.
-Они различают значения, хранимые в куче --- reference types, и значения, хранимые на стеке --- value types.
-Для первых они генерируют одну специализацию, работающую с указателями.
-Для каждого набора value-типов они генерируют лениво, в рантайме, специализации.
-
-То есть следы дженериков в таком подходе есть и промежуточном представлении CIL, и в рантайме.
+Suppose each value is allocated on the heap and passed by pointer.
+Then we can reuse the same code for different type arguments --- it will simply expect pointers.
 
 \begin{itemize}
-    \item[\positive] value-типы хранятся и передаются as-is без боксинга;
-    \item[\positive] Доступна рефлексия по дженерикам;
-    \item[\positive] Небольшое время компиляции;
-    \item[\negative] Инстанциация в рантайме замедляет исполнение;
-    \item[\negative] Variance работает только для reference types (что странно --- есть ``правильная'' подтипизация, а есть ``неправильная'').
+    \item[\positive] Each function is compiled exactly once --- fast;
+    \item[\positive] It is possible to dynamically load new polymorphic functions and types and use them together;
+    \item[\positive] Flexibility --- variance, polymorphic methods in interfaces, higher-rank types, etc. just work;
+    \item[\negative] Heap allocation and pointer dereferencing can significantly slow down code;
+    \item[\negative] Since type information is erased, one cannot do anything with a type argument without having its inhabitants (for example, query reflection information or perform an \texttt{is} check).
 \end{itemize}
 
-\subsubsection{Использование виртуальной таблицы свойств типов} \label{subsubsec:swift-generics}
+This approach is followed by the JVM, Haskell, and generally other functional languages due to its flexibility and compile-time speed.
 
-Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube) 2017 LLVM Developers’ Meeting: ``Implementing Swift Generics''}} вместе с каждым типовым параметром передаёт value witness table (рис.~\ref{fig:swift-witness-table}).
-Это таблица со всей необходимой информацией о типе: размер и выравнивание, что нужно сделать при копировании и перемещении объекта (например, инкрементировать счётчик ссылок).
-Таким образом, скомпилированный код постоянно обращается к этой таблице и делает виртуальные вызовы функций из неё (рис.~\ref{fig:swift-generated-code}).
+The special problem is working with primitives and other value types, because each value has to be boxed first and then used in a polymorphic context.
+Therefore languages fight this problem as best they can.
+Some languages reduce the range of primitive values to reserve a bit that indicates whether it is a pointer or a value.
+Code consults this bit to operate (similar to~\ref{subsubsec:swift-generics}).
+This is done, for example, by OCaml and \href{https://koka-lang.github.io/koka/doc/book.html#sec-value-types}{Koka}.
+Aggressive inlining together with other optimizations also helps~\cite{blanchet1999escape}.
+Java, for example, is also trying to move carefully toward the possibility of monomorphization\footnote{\href{https://youtu.be/JI09cs2yUgY?si=MLkRs31mN1koXIu1}{Type Specialization of Java Generics - What If Casts Have Teeth?}}\footnote{\url{https://cr.openjdk.org/~jrose/values/parametric-vm.html}}.
+
+\subsubsection{Hybrid approach} \label{subsubsec:hybrid}
+
+C\# implements a hybrid approach\footnote{\href{https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/generics/generics-in-the-run-time}{Generics in the runtime (C\# programming guide).}}.
+It distinguishes values stored on the heap --- reference types --- from values stored on the stack --- value types.
+For the former it generates one specialization that works with pointers.
+For each set of value types it lazily generates specializations at runtime.
+
+Thus, traces of generics exist both in the CIL intermediate representation and in the runtime.
+
+\begin{itemize}
+    \item[\positive] Value types are stored and passed as-is without boxing;
+    \item[\positive] Reflection over generics is available;
+    \item[\positive] Compilation time is small;
+    \item[\negative] Runtime instantiation slows execution;
+    \item[\negative] Variance works only for reference types (which is odd --- there is ``correct'' subtyping and ``incorrect'' subtyping).
+\end{itemize}
+
+\subsubsection{Using a value witness table for types} \label{subsubsec:swift-generics}
+
+Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube) 2017 LLVM Developers’ Meeting: "Implementing Swift Generics"}} passes with each type parameter a value witness table (Fig.~\ref{fig:swift-witness-table}).
+This is a table with all the necessary information about the type: size and alignment, what to do when copying and moving the object (for example, incrementing a reference count).
+Thus, the generated code constantly consults this table and makes virtual calls to functions from it (Fig.~\ref{fig:swift-generated-code}).
 \begin{figure}
     \centering
     \includegraphics[width=0.7\textwidth]{figs/swift-witness-table}
@@ -508,74 +509,74 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
 \begin{figure}
     \centering
     \includegraphics[width=0.5\textwidth]{figs/swift-generated-code}
-    \caption{Код полиморфной функции, порождаемый компилятором Swift.}
+    \caption{Code generated by the Swift compiler for a polymorphic function.}
     \label{fig:swift-generated-code}
 \end{figure}
 
 \begin{itemize}
-    \item[\positive] Небольшое время компиляции;
-    \item[\positive] Предсказуемая эффективность (не приводит к неожиданным паузам в рантайме);
-    \item[\positive] Эффективная работа с value-значениями;
-    \item[\positive] Высокая гибкость;
-    \item[\positive] Информация о типах не стирается;
-    \item[\negative] Серьёзный константный оверхед на динамические вызовы через таблицу, эффективность очень сильно зависит от компиляторных оптимизаций.
+    \item[\positive] Compilation time is small;
+    \item[\positive] The performance behavior is predictable (it does not lead to surprising runtime pauses);
+    \item[\positive] Efficient work with value values;
+    \item[\positive] High flexibility;
+    \item[\positive] Type information is not erased;
+    \item[\negative] A significant constant overhead from virtual calls through the table, and performance strongly depends on compiler optimizations.
 \end{itemize}
 
-Своего рода реализация параметрического полиморфизма через специальный.
+This is a kind of implementation of parametric polymorphism through a special ...
 
-\subsection{Полиморфизм по конвенции вызова} \label{subsec:representation-polymorphism}
+\subsection{Representation polymorphism} \label{subsec:representation-polymorphism}
 
-Как мы уже обсуждали выше~\ref{subsubsec:type-erasure}, параметрический полиморфизм в Haskell реализуется следующим образом: все значения хранятся в куче и передаются в полиморфные функции по указателю.
-Однако, если для вычислительного кода важна производительность, такой подход не годится ввиду большой нагрузки на подсистему управления памятью и множества индирекций.
-Поэтому Haskell позволяет также писать код с использованием unboxed значений.
-А если конвенция вызова не принципиальна, можно по ней абстрагироваться и писать один код для boxed и unboxed значений~\cite{eisenberg2017levity}.
+As we already discussed above~\ref{subsubsec:type-erasure}, parametric polymorphism in Haskell is implemented as follows: all values are stored on the heap and passed to polymorphic functions by pointer.
+However, if performance is important for computational code, that approach is not suitable because of the heavy load on the memory management subsystem and many indirections.
+Therefore Haskell also allows writing code using unboxed values.
+And if the calling convention is not essential, one can abstract over it and write one code path for both boxed and unboxed values~\cite{eisenberg2017levity}.
 
-\subsubsection{Разновидности runtime представлений в Haskell}
+\subsubsection{Varieties of runtime representations in Haskell}
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.5\textwidth]{figs/haskell-value-kinds}
-    \caption{Виды значений в Haskell с примерами~\cite{eisenberg2017levity}.}
+    \caption{Kinds of values in Haskell with examples~\cite{eisenberg2017levity}.}
     \label{fig:haskell-value-kinds}
 \end{figure}
 
-На рисунке~\ref{fig:haskell-value-kinds} можно увидеть классификацию значений в Haskell с примерами типов.
-\vocab{Unboxed типы} --- их значения удерживаются и передаются по значению.
-\vocab{Boxed}, соответственно, наоборот, передаются по указателю и хранятся в куче.
-Обычный \mintinline{haskell}|Int| является просто декларацией следующего вида, где \mintinline{haskell}|I#| --- это обычный конструктор с необычным именем, содержащий unboxed значение.
+Figure~\ref{fig:haskell-value-kinds} shows the classification of values in Haskell with examples of types.
+\vocab{Unboxed types} are held and passed by value.
+\vocab{Boxed types}, conversely, are passed by pointer and stored on the heap.
+The ordinary \mintinline{haskell}|Int| is just a declaration of the following form, where \mintinline{haskell}|I#| is an ordinary constructor with an unusual name that contains an unboxed value.
 \begin{minted}{haskell}
     data Int = I# Int#
 \end{minted}
 
-\vocab{Lifted типы} --- содержат $\bot$ в качестве значения.
-Иначе говоря, могут содержать отложенные вычисления (это для них специальным образом обеспечивают компилятор и рантайм).
-\vocab{Unlifted типы} --- наоборот, не могут быть отложенными.
-Операции, производящие значения unlifted типов всегда энергичные.
-Свойство lifted/unlifted называют \vocab{levity}.
-Чтобы распространить дальнейшее изложение на энергичные языки, можно levity заменить на boxity и всё останется справедливым.
+\vocab{Lifted types} may contain $\bot$ as a value.
+In other words, they may represent suspended computations (the compiler and runtime provide this specially).
+\vocab{Unlifted types}, in contrast, cannot be suspended.
+Operations producing values of unlifted types are always strict.
+The property lifted/unlifted is called \vocab{levity}.
+To extend the exposition to eager languages, one can replace levity with boxity and everything remains valid.
 
-\# в именах типов и функций --- это конвенция, показывающая, что где-то рядом происходит работа с unlifted значениями\footnote{Нужно подключить расширение \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/magic_hash.html}{MagicHash}, чтобы пользоваться \# в идентификаторах.}.
+A hash sign in type and function names is a convention that indicates that unlifted values are involved nearby\footnote{You need to enable the \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/magic_hash.html}{MagicHash} extension to use \# in identifiers.}.
 
-Также в Haskell есть unboxed кортежи, которых не существует на этапе исполнения.
-Например, следующая функция как бы возвращает пару значений, но в действительности компилятор может их разместить, например, в паре регистров.
-Соответственно, паттерн-матчинг по таким кортежам, просто позволяет сослаться на каждое из этих значений.
+Haskell also has unboxed tuples, which do not exist as runtime objects.
+For example, the following function appears to return a pair of values, but in fact the compiler may place them, for example, in a pair of registers.
+Accordingly, pattern matching on such tuples simply allows referring to each of those values.
 \begin{minted}{haskell}
     divMod# :: Int -> Int -> (# Int, Int #)
     case divMod# n k of (# quot, rem #) -> ...
 \end{minted}
-Соответственно, нет никакого различия между по-разному вложенными unboxed кортежами:
+Consequently, there is no distinction between differently nested unboxed tuples:
 \begin{minted}{haskell}
-    (# A, (# B, C #)) ?$\equiv$? (# #( A, B #), C #) ?$\equiv$? (# A, B, C #)
+    (# A, (# B, C #)) ?$\\equiv$? (# #( A, B #), C #) ?$\\equiv$? (# A, B, C #)
 \end{minted}
 
-\subsubsection{Классификация значений по runtime представлению}
+\subsubsection{Classification of values by runtime representation}
 
-Значения различных типов могут быть на этапе исполнения устроены по-разному.
-То есть нам нужна некоторая система классификации типов.
-Но такая система в Haskell уж есть --- кайнды.
-Опишем в виде структур данных предметную область, а потом продвинем на нужный уровень с помощью DataKinds~\ref{subsubsec:promotion}.
+Values of different types may be arranged differently at runtime.
+That is, we need some system for classifying types.
+But such a system already exists in Haskell --- kinds.
+We describe the domain as data structures and then promote it to the required level using DataKinds~\ref{subsubsec:promotion}.
 
-Стандартная библиотека Haskell \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/representation_polymorphism.html}{предоставляет} следующие типы данных:
+The standard Haskell library \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/representation_polymorphism.html}{provides} the following data types:
 \begin{minted}{haskell}
     TYPE :: RuntimeRep -> Type
 
@@ -592,19 +593,19 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
     type Type = TYPE LiftedRep
 \end{minted}
 
-\mintinline{haskell}|TYPE| --- это магический тип, определённый в компиляторе.
-Он параметризован runtime-представлением значений.
-Теперь привычный \mintinline{haskell}|Type| --- это частный случай с boxed lifted значениями.
+\mintinline{haskell}|TYPE| is a magic type defined in the compiler.
+It is parameterized by the runtime representation of values.
+Now the familiar \mintinline{haskell}|Type| is simply a special case with boxed lifted values.
 
 %! suppress = Quote
 \begin{itemize}
-    \item \mintinline{haskell}|Int :: TYPE (BoxedRep Lifted)| или \mintinline{haskell}|:: Type|
-    \item \mintinline{haskell}|IntRep| и \mintinline{haskell}|DoubleRep| соответствуют представлению численных констант (в зависимости от архитектуры процессора, целые числа и числа с плавающей запятой может быть необходимо располагать в различных специальных регистрах)\\ \mintinline{haskell}|Int# :: TYPE IntRep|
+    \item \mintinline{haskell}|Int :: TYPE (BoxedRep Lifted)| or \mintinline{haskell}|:: Type|
+    \item \mintinline{haskell}|IntRep| and \mintinline{haskell}|DoubleRep| correspond to the runtime representation of numeric constants (depending on the processor architecture, integers and floating-point numbers may need to be placed in different special registers)\\ \mintinline{haskell}|Int# :: TYPE IntRep|
     \item \mintinline{haskell}|Maybe Int :: Type|
     \item \mintinline{haskell}|Maybe :: Type -> Type|
-    \item \mintinline{haskell}|TupleRep| и \mintinline{haskell}|SumRep| --- unboxed алгебраические типы, представления параметризованы представлениями хранимых значений\\
+    \item \mintinline{haskell}|TupleRep| and \mintinline{haskell}|SumRep| are unboxed algebraic representations, parameterized by the representations of their stored values\\
     \mintinline{haskell}|(# Int, Bool #) :: TYPE (TupleRep '[LiftedRep, LiftedRep])|
-    \item Для простоты, типы вложенных кортежей не унифицируются
+    \item For simplicity, nested tuple types are not unified
     \begin{minted}{haskell}
         (# Int#, (# Int, Double# #) #)
           :: TYPE (TupleRep '[IntRep, TupleRep '[LiftedRep, DoubleRep]])
@@ -613,35 +614,35 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
 
 \subsubsection{Representation polymorphism}
 
-Выставив runtime-представление в структуре кайндов, мы теперь можем параметризоваться по ним.
-Например, кайнд функциональной стрелки выглядит следующим образом\footnote{Выключить упрощения: \mintinline{haskell}|ghci> :set -fprint-explicit-foralls -fprint-explicit-runtime-reps|}:
+Having exposed the runtime representation in the kind structure, we can now parameterize over it.
+For example, the kind of the function arrow looks as follows\footnote{Disable simplifications: \mintinline{haskell}|ghci> :set -fprint-explicit-foralls -fprint-explicit-runtime-reps|}:
 \begin{minted}{haskell}
     ghci> :k (->)
     (->) :: forall {q :: RuntimeRep} {r :: RuntimeRep}. TYPE q -> TYPE r -> Type
 \end{minted}
 
 \begin{task}
-    Подумайте, почему функция имеет boxed тип.
-    Может ли быть иначе?
-    Может ли это быть полезным?
+    Think about why the function has a boxed type.
+    Can it be different?
+    Could that be useful?
 \end{task}
 
-К сожалению, Haskell выставляет довольно строгое ограничение: связыватели не могут иметь тип, полиморфный по runtime представлению.
-Можно легко предположить, почему,~--- нельзя сгенерировать код функции для работы с параметром произвольного рантайм-представления.
-Это можно решить только мономорфизацией~\ref{subsubsec:monomorphization}, но Haskell избегает этого подхода\footnote{\url{https://gitlab.haskell.org/ghc/ghc/-/issues/14917}}.
-Сообщество также пытается найти другие решения\footnote{\url{https://mail.haskell.org/pipermail/haskell-cafe/2023-January/135770.html}} (что-то вроде~\ref{subsubsec:swift-generics}).
+Unfortunately, Haskell imposes a rather strict restriction: binders cannot have a type that is polymorphic over runtime representation.
+One can easily guess why --- it is impossible to generate code for a function that works with a parameter of an arbitrary runtime representation.
+This can only be solved by monomorphization~\ref{subsubsec:monomorphization}, but Haskell avoids that approach\footnote{\url{https://gitlab.haskell.org/ghc/ghc/-/issues/14917}}.
+The community is also trying to find other solutions\footnote{\url{https://mail.haskell.org/pipermail/haskell-cafe/2023-January/135770.html}} (something like~\ref{subsubsec:swift-generics}).
 
-Например, изначально оператор аппликации был обобщён только по возвращаемому типу.
-Это не порождает проблем, так как вызывающий код сможет вывести представление и сгенерировать подходящий код:
+For example, initially the application operator was generalized only over the result type.
+This does not cause problems, because the caller can infer the representation and generate the appropriate code:
 \begin{minted}{haskell}
     ($) :: forall r a (b :: TYPE r). (a -> b) -> a -> b
     f $ ?\framebox{x}? = f x
 \end{minted}
-Однако, было замечено, что для оператора аппликации можно получить другую реализацию, не использующую levity-полиморфное связывание\footnote{\url{https://gitlab.haskell.org/ghc/ghc/-/merge_requests/10131}}:
+However, it was noticed that for the application operator one can obtain another implementation that does not use a levity-polymorphic binder\footnote{\url{https://gitlab.haskell.org/ghc/ghc/-/merge_requests/10131}}:
 \begin{minted}{haskell}
     ($) :: forall ra rb (a :: TYPE ra) (b :: TYPE rb). (a -> b) -> a -> b
     ($) f = f
 \end{minted}
 
-Таким образом, в Haskell полиморфизм по представлениям несколько вырожден и помогает лишь в небольшом количестве случаев, однако немаловажных.
-Если позволить мономорфизацию по \mintinline{haskell}{RuntimeRep} параметрам, получится система аналогичная гибридной реализации параметрического полиморфизма~\ref{subsubsec:hybrid}, только с большим контролем со стороны программиста над мономорфизацией.
+Thus, in Haskell representation polymorphism is somewhat degenerate and helps only in a small number of cases, but not unimportant ones.
+If one allows monomorphization over \mintinline{haskell}{RuntimeRep} parameters, one gets a system similar to the hybrid implementation of parametric polymorphism~\ref{subsubsec:hybrid}, only with greater programmer control over monomorphization.

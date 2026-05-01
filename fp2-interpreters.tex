@@ -1,41 +1,41 @@
 %! suppress = MissingLabel
 %! suppress = EscapeAmpersand
 
-Искусство программирования во многом состоит в умении управлять сложностью, и в рамках данного курса основным инструментом для этого мы будем рассматривать построение языков и интерпретаторов.
+The art of programming largely consists of the ability to manage complexity, and within this course we will consider building languages and interpreters as the primary tool for this.
 
-\subsection{Интерпретаторы как основа основ} \label{subsec:interpreters-rules}
+\subsection{Interpreters as the foundation} \label{subsec:interpreters-rules}
 
-Мы начнём с обзора роли интерпретаторов в программировании.
+We begin with an overview of the role of interpreters in programming.
 
-\subsubsection{Башня интерпретаторов} \label{subsubsec:interpreters-tower}
+\subsubsection{The tower of interpreters} \label{subsubsec:interpreters-tower}
 
-Самым базовым интерпретатором является процессор, он воплощён физически в железе.
-Ему на вход подаётся программа на некотором языке, например, x86, он зачитывает команды и превращает их в действия над памятью.
-Однако, человеку сложно программировать на этом языке, нужен новый язык, инкапсулирующий часть сложности и скрывающий лишние детали.
+The most basic interpreter is the processor, physically embodied in hardware.
+It receives a program in some language, such as x86, reads instructions, and turns them into actions on memory.
+However, it is difficult for a human to program in this language; a new language is needed that encapsulates part of the complexity and hides unnecessary details.
 
-Чтобы получить новый язык, мы строим программный интерпретатор.
-\vocab{Программный интерпретатор} $U_M^N$ --- это программа на языке $M$\footnote{Под языком мы тут понимаем множество программ на этом языке, иначе говоря, множество деревьев определённого вида.}, получающая на вход программу на языке $N$ и вход для неё --- данные из $D$, и возвращающая результат выполнения этой программы на этих данных: \[U_M^N : N\times D\to D\]
+To obtain a new language, we build a software interpreter.
+A \vocab{software interpreter} $U_M^N$ is a program in language $M$\footnote{By a language we mean the set of programs in that language, in other words, the set of trees of a certain form.} that takes as input a program in language $N$ and its input --- data from $D$, and returns the result of executing that program on that data: \[U_M^N : N\times D\to D\]
 
-Язык реализации интерпретатора $M$ мы будем называть \vocab{мета-языком}, а $L$ --- \vocab{определяемым}.
-Про интерпретатор можно интуитивно думать следующим образом: это понятное мета-языку объяснение того, что значат конструкции определяемого языка.
-Иными словами, какие инструкции мета-языка нужно исполнить, чтобы получить нужную семантику инструкций определяемого языка.
+We will call the implementation language of the interpreter $M$ the \vocab{meta-language}, and $L$ the \vocab{object language}.
+One can intuitively think of an interpreter as follows: it is an explanation, understandable to the meta-language, of what the constructs of the object language mean.
+In other words, which meta-language instructions need to be executed to obtain the desired semantics of the object language instructions.
 
-Например, у нас есть программа $p_N$ и данные для неё $d_{in}$, результат исполнения этой программы $d_{out}$ можно получить как \[d_{out} = U_M^N\left( \underbrace{\langle p_N, d_{in} \rangle}_{\in N\times D} \right)\]
+For example, given a program $p_N$ and its input data $d_{in}$, the result of executing this program $d_{out}$ can be obtained as \[d_{out} = U_M^N\left( \underbrace{\langle p_N, d_{in} \rangle}_{\in N\times D} \right)\]
 
-Но интерпретатор это тоже программа.
-Как её запустить?
-Возьмём наш базовый интерпретатор $U^{x86}$, у него нет языка реализации, так как он реализован в железе, а не программно.
-Возьмём интерпретатор языка ассемблера, реализованный в кодах x86, $U_{x86}^{Asm}$, программу на ассемблере $p_{Asm}$ и вход для неё $d_{in}$.
-Вспомним, что программа --- это тоже данные, просто в некотором специальном формате.
-Тогда результат применения $p_{Asm}$ на данных мы получим следующим образом:
+But an interpreter is also a program.
+How do we run it?
+Take our basic interpreter $U^{x86}$; it has no implementation language since it is implemented in hardware, not software.
+Take an assembly language interpreter implemented in x86 codes, $U_{x86}^{Asm}$, an assembly program $p_{Asm}$, and its input $d_{in}$.
+Recall that a program is also data, just in a special format.
+Then we obtain the result of applying $p_{Asm}$ to the data as follows:
 \[
     d_{out} = U^{x86}\left(\left<\underbrace{U_{x86}^{Asm}}_{\in x86}, \underbrace{\overbrace{\langle p_{Asm}}^{\in Asm}, \overbrace{d_{in} \rangle}^{\in D}}_{\in D} \right>\right)
 \]
 
-Но язык ассемблера, тоже не очень приятен для программирования.
-Однако, на нем можно уже написать интерпретатор языка посложнее.
-И так далее.
-Получаем \point{башню интерпретаторов}, на вершине находится язык, на котором мы хотим уже решать непосредственно нашу задачу:
+But assembly language is also not very pleasant for programming.
+However, in it one can already write an interpreter for a more complex language.
+And so on.
+We obtain a \point{tower of interpreters}, at the top of which is the language in which we want to solve our actual problem:
 \[
     d_{out} =
     U^{x86}\left(\left<
@@ -45,23 +45,23 @@
                 \right>\right>\right>\right>\right)
 \]
 
-На практике часто язык задают через трансляцию (компиляцию) в другой.
-Однако, далее мы будем фокусироваться на встроенных языках и понятие интерпретатора будет нам полезнее.
-Кроме того, существуют универсальные теоретические способы построения компилятора по интерпретатору\footnote{\url{https://en.wikipedia.org/wiki/Partial_evaluation}} (см.\ далее\ \ref{sec:datatype-generic}), так что для нас они схожи.
+In practice, a language is often defined via translation (compilation) into another.
+However, we will focus on embedded languages going forward, and the notion of an interpreter will be more useful to us.
+Moreover, there exist universal theoretical methods for deriving a compiler from an interpreter\footnote{\url{https://en.wikipedia.org/wiki/Partial_evaluation}} (see~\ref{sec:datatype-generic}), so for us they are similar.
 
-\subsubsection{Интерпретаторы повсюду} \label{subsubsec:interpreters-everywhere}
+\subsubsection{Interpreters everywhere} \label{subsubsec:interpreters-everywhere}
 
-Хорошо, мы пришли к языку нашего сердца (Хаскеллу), почему же мы продолжаем говорить об интерпретаторах?
-Потому что для решения конкретных бизнес-задач прикладные языки всё ещё слишком церемониальны~--- программисту приходится думать о большом количестве вещей, нерелевантных его предметной области и решаемой задаче.
-Сложность~--- главный враг программиста, потому что ресурсы человеческого мозга несопоставимы со сложностью реальности, которую приходится описываться в программах.
-Таким образом, в работе постоянно приходится описывать новые языки, наиболее подходящие для решения конкретных прикладных задач.
-А новые языки мы задаём с помощью интерпретаторов.
+Very well, we have arrived at the language of our heart (Haskell); why do we continue talking about interpreters?
+Because for solving concrete business problems, general-purpose languages are still too ceremonious --- the programmer has to think about a large number of things irrelevant to their domain and the problem at hand.
+Complexity is the programmer's main enemy, because the human brain's resources are no match for the complexity of the reality our programs must describe.
+Thus, in practice one constantly has to describe new languages most suited for solving specific applied problems.
+And new languages are defined using interpreters.
 
-Как выглядит классический рекурсивный интерпретатор?
-Он получает программу в виде некоторого дерева и рекурсивно обходит его, считая результаты поддеревьев.
-Когда он посещает вершину дерева, он определяет её тип и понимает, какие действия нужно исполнить.
-То есть тип вершины диспатчит, навигирует, исполнение интерпретатора на нужный код.
-Так, интерпретатор простой языка выражений имеет следующий вид:
+What does a classical recursive interpreter look like?
+It receives a program in the form of some tree and recursively traverses it, computing the results of subtrees.
+When it visits a tree node, it determines its type and understands what actions need to be performed.
+That is, the node type dispatches, navigates, the interpreter's execution to the appropriate code.
+Thus, an interpreter for a simple expression language looks as follows:
 \begin{minted}{haskell}
     eval :: Expr -> Int
     eval prog = case prog of
@@ -69,54 +69,54 @@
       Plus l r -> eval l + eval r
 \end{minted}
 
-Видно, что это похоже, например, на работу утилиты командной строки~--- разбираем аргументы, определяем, что и как нужно сделать, делаем.
-Как ни странно, философия Unix, в частности, заключается в построении маленьких языков (утилит с текстовым API), решающих хорошо одну задачу~\cite{bentley1986little}.
-Ещё это похоже на обработку запроса web-сервером~--- определяем роут на которую пришел запрос, выполняем соответствующее действие.
-То есть не так редко мы в реальной жизни пишем интерпретаторы.
-Мы просто не видим, что то, что мы пишем --- это на самом деле интерпретатор некоторого языка.
-В общем случае, свёртку структуры данных уже можно рассматривать как интерпретацию~\cite{gibbons2014folding}.
+One can see that this resembles, for example, a command-line utility --- we parse arguments, determine what needs to be done and how, and do it.
+Surprisingly, the Unix philosophy, in particular, consists of building small languages (utilities with a text API) that solve one problem well~\cite{bentley1986little}.
+It also resembles handling a request by a web server --- determining the route the request arrived at and performing the corresponding action.
+That is, we write interpreters in real life more often than we think.
+We simply do not see that what we write is actually an interpreter for some language.
+In general, folding a data structure can already be considered as interpretation~\cite{gibbons2014folding}.
 
-Более того, как мы убедимся в дальнейшем~\ref{subsec:tagless-final}, написание любой функции~--- это уже задание нового языка.
-Вот был язык, в котором нельзя было добавить пользователя в приложение.
-Написали функцию \texttt{registerUser}~--- появилась новая команда в языке~--- добавить пользователя.
-Далее мы формально покажем, то такой способ эквивалентен добавлению новой ноды в синтаксическое дерево языка (\ref{subsubsec:shallow-embedding}).
-Использование функций является примером встраивания языка, когда мы вместо того, чтобы делать новый отдельный язык, его реализуем как библиотеку для уже существующего языка~\cite{gibbons2013functional}.
+Moreover, as we will see later~\ref{subsec:tagless-final}, writing any function is already defining a new language.
+There was a language in which one could not add a user to an application.
+We wrote a function \texttt{registerUser} --- a new command appeared in the language --- add a user.
+Below we will formally show that this approach is equivalent to adding a new node to the language's syntax tree (\ref{subsubsec:shallow-embedding}).
+Using functions is an example of language embedding, when instead of creating a new separate language, we implement it as a library for an already existing language~\cite{gibbons2013functional}.
 
-Как мы убедимся в течение курса, многие задачи можно рассматривать как придумывание языка и реализацию интерпретатора.
-Значит, если мы научимся хорошо писать интерпретаторы, мы научимся делать сразу кучу всего!
-И основные наши усилия будут направлены на изучение средств построения интерпретаторов встроенных языков.
+As we will see throughout the course, many problems can be viewed as inventing a language and implementing an interpreter.
+This means that if we learn to write interpreters well, we will learn to do a lot of things at once!
+And our main efforts will be directed at studying the tools for building interpreters of embedded languages.
 
-Во время повествования мы часто пользуемся приёмом Hutton's Razor, который подразумевает рассмотрение до смешного маленького языка для изучения сложных концепций.
-Утверждается, что для изучения большинства вопросов можно сконструировать такой язык, делающий всё важное максимально наглядным.
+During the exposition we frequently use the Hutton's Razor technique, which involves considering a ridiculously small language for studying complex concepts.
+It is argued that for studying most questions one can construct such a language that makes everything important maximally clear.
 
-\subsubsection{Интерпретаторы и семантика языков программирования} \label{subsubsec:semantics}
+\subsubsection{Interpreters and programming language semantics} \label{subsubsec:semantics}
 
-Семантика языков программирования\footnote{\url{https://en.wikipedia.org/wiki/Semantics_(computer_science)}\label{note:sema-wiki}}~--- это наука, изучающая свойства языков и смысл программ, его свойства и способы описания.
-Отличным введением может послужить серия книг Software Foundations\footnote{\url{https://coq.vercel.app/ext/sf/}}~\cite{pierce2010software}.
-Существует много различных стилей описания семантики программ, для нас важнейшим будет денотационная семантика.
+Programming language semantics\footnote{\url{https://en.wikipedia.org/wiki/Semantics_(computer_science)}\label{note:sema-wiki}} is a discipline studying the properties of languages and the meaning of programs, its properties, and methods of description.
+An excellent introduction is the Software Foundations book series\footnote{\url{https://coq.vercel.app/ext/sf/}}~\cite{pierce2010software}.
+There are many different styles of describing program semantics; the most important for us will be denotational semantics.
 
-\vocab{Денотационная семантика}\footnote{\url{https://en.wikipedia.org/wiki/Denotational_semantics}}\footnote{\url{https://en.wikibooks.org/wiki/Haskell/Denotational_semantics}}\footnote{\href{https://youtu.be/pQyH0p-XJzE?si=TUEzrpHhJZfO7dTF}{(youtube) The Lost Art of Denotational Semantics --- Eric Meyer.}\label{foot:the-lost-art-of-denotations}} описывает смысл программ путём сопоставления им объектов некоторого множества, \vocab{семантического домена}.
-Иначе говоря, денотационная семантика языка $L$ --- это тотальная функция из программы на этом языке в элемент домена $D$:
+\vocab{Denotational semantics}\footnote{\url{https://en.wikipedia.org/wiki/Denotational_semantics}}\footnote{\url{https://en.wikibooks.org/wiki/Haskell/Denotational_semantics}}\footnote{\href{https://youtu.be/pQyH0p-XJzE?si=TUEzrpHhJZfO7dTF}{(youtube) The Lost Art of Denotational Semantics --- Eric Meyer.}\label{foot:the-lost-art-of-denotations}} describes the meaning of programs by associating them with objects of some set, the \vocab{semantic domain}.
+In other words, the denotational semantics of a language $L$ is a total function from a program in that language to an element of the domain $D$:
 \[
     \sembr{\bullet} : L \mapsto D
 \]
 
-Домен выбирается исходя из языка и информации, которую хочется извлекать из программ.
-Например, чтобы узнать размер программы (тут, выражения со сложением), в качестве домена можно взять натуральные числа:
+The domain is chosen based on the language and the information one wants to extract from programs.
+For example, to find out the size of a program (here, expressions with addition), one can take natural numbers as the domain:
 \[
     \begin{array}{lcl}
         \sembr{n}     & = & 1                                \\
         \sembr{l + r} & = & 1 + \max{(\sembr{l}, \sembr{r})}
     \end{array}
 \]
-Если нас интересует конечный результат, можно посчитать его:
+If we are interested in the final result, we can compute it:
 \[
     \begin{array}{lcl}
         \sembr{n}     & = & n                     \\
         \sembr{l + r} & = & \sembr{l} + \sembr{r}
     \end{array}
 \]
-Если у программы есть вход, доменом будет функция $\mathbb{N}\to\mathbb{N}$:
+If the program has input, the domain will be a function $\mathbb{N}\to\mathbb{N}$:
 \[
     \begin{array}{lcl}
         \sembr{n}(m)     & = & n                           \\
@@ -125,26 +125,26 @@
     \end{array}
 \]
 
-Таким образом, \point{программа является лишь синтаксической записью для некоторого элемента семантического домена}.
-Вариантов доменов много, это могут быть даже игры\footnote{\url{https://en.wikipedia.org/wiki/Game_semantics}}. % todo domain theory
+Thus, \point{a program is merely a syntactic notation for some element of the semantic domain}.
+There are many possible domains; they can even be games\footnote{\url{https://en.wikipedia.org/wiki/Game_semantics}}. % todo domain theory
 
 \begin{task}
-    В какой домен разумно проинтерпретировать программы на языке с целочисленными мутабельными переменными?
-    А на недетерминированном языке?
+    Into which domain is it reasonable to interpret programs in a language with mutable integer variables?
+    And in a nondeterministic language?
 \end{task}
 
-Легко заметить, что денотационная семантика языка --- это просто интерпретатор, только написанный на языке математики.
-Такие интерпретаторы ставят в основу башни интерпретаторов, когда цель исследовать свойства языков и программ, а не исполнять их.
+It is easy to see that the denotational semantics of a language is simply an interpreter, only written in the language of mathematics.
+Such interpreters are placed at the base of the tower of interpreters when the goal is to study properties of languages and programs rather than to execute them.
 
-Также, можем реализовывать интерпретатор на каком-нибудь реальном языке и он тоже будет задавать семантику определяемого языка.
-Однако формальность такого определения будет зависеть от формальности описания семантики мета-языка.
-Такие интерпретаторы называют \vocab{определяющими}, они задают семантику языка, как правило, жертвуя эффективностью ради наглядности.
-Взаимоотношения определяемого языка и мета-языка изучаются в классических статьях~\cite{reynolds1972definitional,reynolds1998definitional}\footnote{Активно используемое автором понятие продолжения будет рассмотрено далее в этом курсе (раздел \ref{sec:continuations}).}.
+Also, we can implement an interpreter in some real language, and it too will define the semantics of the object language.
+However, the formality of such a definition will depend on the formality of the meta-language's semantics description.
+Such interpreters are called \vocab{definitional}; they define the semantics of a language, typically sacrificing efficiency for clarity.
+The relationships between the object language and the meta-language are studied in the classical papers~\cite{reynolds1972definitional,reynolds1998definitional}\footnote{The notion of continuation, actively used by the author, will be considered later in this course (section \ref{sec:continuations}).}.
 
-Мы будем использовать определяющие интерпретаторы для задания семантики новых языков и в качестве мета-языка будем использовать Haskell.
-А в качестве доменов будем брать типы Haskell.
-И интерпретировать программу не в множество функций между натуральными числами, а, скажем, в тип \mintinline{haskell}|Nat -> Nat| в языке Haskell\footnote{\url{https://okmij.org/ftp/Denotational.html}}.
-Так, денотационная семантика языка сумм с входом будет записываться следующим образом:
+We will use definitional interpreters to define the semantics of new languages, using Haskell as the meta-language.
+And as domains we will take Haskell types.
+And we will interpret programs not into the set of functions between natural numbers, but, say, into the type \mintinline{haskell}|Nat -> Nat| in Haskell\footnote{\url{https://okmij.org/ftp/Denotational.html}}.
+Thus, the denotational semantics of the language of sums with input will be written as follows:
 \begin{minted}{haskell}
     eval :: Prog -> (Nat -> Nat)
     eval = \case
@@ -153,60 +153,60 @@
       Input -> \m -> m
 \end{minted}
 
-Семантика называется \vocab{композиционной (compositional)}, если смысл конструкций зависит только от смысла подконструкций.
-Иначе говоря, если денотационная семантика представляет собой свёртку программы (рис.\ \ref{fig:eval-prog}) и может быть записана в терминах катаморфизма~\ref{subsubsec:recursion-schemas}.
+A semantics is called \vocab{compositional} if the meaning of constructs depends only on the meaning of subconstructs.
+In other words, if the denotational semantics is a fold over the program (Fig.\ \ref{fig:eval-prog}) and can be written in terms of a catamorphism~\ref{subsubsec:recursion-schemas}.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.6\textwidth]{figs/eval-prog}
-    \caption{Денотационная семантика определяет смысл синтаксических конструкций через операции над доменом~\cite{hutton1998fold}.}
+    \caption{Denotational semantics defines the meaning of syntactic constructs through operations on the domain~\cite{hutton1998fold}.}
     \label{fig:eval-prog}
 \end{figure}
 
-Другим популярным стилем описания семантики является \vocab{операционная семантика}, которая представляет смысл программы в виде последовательности шагов вычислений.
-Это может быть как последовательное переписывание самого выражения, так и переписывание состояния некоторой абстрактной машины.
-Операционная семантика, в свою очередь, задаётся как развёртка (или анаморфизм~\ref{subsubsec:recursion-schemas}) последовательности шагов вычисления из программы.
-Тут отчётливо видна некоторая двойственность между денотационной и операционной семантиками~\cite{hutton1998fold}.
+Another popular style of describing semantics is \vocab{operational semantics}, which represents the meaning of a program as a sequence of computation steps.
+This can be either sequential rewriting of the expression itself, or rewriting the state of some abstract machine.
+Operational semantics, in turn, is defined as an unfold (or anamorphism~\ref{subsubsec:recursion-schemas}) of the sequence of computation steps from the program.
+Here one can clearly see a certain duality between denotational and operational semantics~\cite{hutton1998fold}.
 
-\subsubsection{Встроенные доменно-специфичные языки (eDSL)} \label{subsubsec:edsl}
+\subsubsection{Embedded domain-specific languages (eDSL)} \label{subsubsec:edsl}
 
-Под \vocab{доменно-специфичными языками (domain specific languages, DSL)}\footnote{\url{https://en.wikipedia.org/wiki/Domain-specific_language}} часто понимают специализированные языки для конкретных предметных областей, например, запросов к БД или форматирования документов.
-Как правило, такие языки не являются полными по Тьюрингу.
+By \vocab{domain-specific languages (DSL)}\footnote{\url{https://en.wikipedia.org/wiki/Domain-specific_language}} one often means specialized languages for specific domains, such as database queries or document formatting.
+As a rule, such languages are not Turing-complete.
 
-В этом курсе, однако, мы будем считать доменно-специфичным языком любую доменно-специфичную специализацию языка общего назначения\footnote{\url{https://en.wikipedia.org/wiki/Language-oriented_programming}, на русскоязычную страницу тоже следует заглянуть.}.
-Это следует из того соображения, что код должен читаться как грамотная проза с уместным словоупотреблением, предоставляющая читателю только необходимое количество подробностей, скрывая несущественное за умолчаниями и терминологией.
+In this course, however, we will consider any domain-specific specialization of a general-purpose language to be a domain-specific language\footnote{\url{https://en.wikipedia.org/wiki/Language-oriented_programming}.}.
+This follows from the consideration that code should read like well-written prose with appropriate word usage, providing the reader with only the necessary amount of detail, hiding the inessential behind conventions and terminology.
 
-\vocab{Самостоятельные доменно-специфичные языки (standalone domain specific languages)} --- языки, имеющие свой собственный конкретный синтаксис, а так же инструменты программирования (IDE, исполняющая среда\ldots).
-Примеры: SQL, AWK, Antlr\ldots\footnote{Есть отличная прикладная книга~\cite{nystrom2021crafting}, рассказывающая о построении интерпретаторов и простых виртуальных машин.
-В то же время она покрывает сознание полноценного языка во всех его аспектах, от синтаксического анализа до управления памятью.}
+\vocab{Standalone domain-specific languages} are languages that have their own concrete syntax as well as programming tools (IDE, runtime\ldots).
+Examples: SQL, AWK, Antlr\ldots\footnote{There is an excellent practical book~\cite{nystrom2021crafting} that covers building interpreters and simple virtual machines.
+At the same time it covers the creation of a full-fledged language in all its aspects, from parsing to memory management.}
 
-\vocab{Встроенные доменно-специфичные языки (embedded domain specific languages, eDSL)} --- языки, пользующиеся поддержкой инфраструктуры других языков.
-Обычно реализуются как библиотеки для программ на уже существующем языке общего назначения.
-Не имеют полностью собственного конкретного синтаксиса.
-Примеры: ORM, функции обработки строк, библиотека парсер-комбинаторов\ldots
+\vocab{Embedded domain-specific languages (eDSL)} are languages that leverage the infrastructure of other languages.
+They are usually implemented as libraries for programs in an already existing general-purpose language.
+They do not have a fully independent concrete syntax.
+Examples: ORM, string processing functions, parser combinator libraries\ldots
 
-\vocab{Deep eDSL} --- термы на таком языке строят дерево абстрактного синтаксиса для дальнейшей интерпретации:
+\vocab{Deep eDSL} --- terms in such a language build an abstract syntax tree for further interpretation:
 \begin{minted}{haskell}
     f :: Int -> Int
     f = eval $ Const 1 `Plus` Input
 \end{minted}
 
-Интерпретаторы, которые принимают деревья на вход и интерпретируют их в семантический домен, называют \vocab{инициальными}\footnote{Тип синтаксиса заданный с помощью \mintinline{haskell}{data} является инициальным объектом категории интерпретаций.}, мы их также будем называть ``классическими''.
-С них мы и будем начинать.
-Классические интерпретаторы полезны, например, как для реализации ``последнего языка''~--- интерфейса программы во внешний мир, и как фундамент для наших дальнейших построений.
+Interpreters that take trees as input and interpret them into a semantic domain are called \vocab{initial}\footnote{The syntax type defined using \mintinline{haskell}{data} is the initial object of the category of interpretations.}; we will also call them ``classical.''
+We will start with them.
+Classical interpreters are useful, for example, for implementing the ``last language'' --- the program's interface to the outside world, and as a foundation for our further constructions.
 
-%Например, можно построить встроенный язык для работы с изменяемым состоянием.
-%Теперь можем писать императивно в Haskell без единой монады!
+%For example, one can build an embedded language for working with mutable state.
+%Now we can write imperatively in Haskell without a single monad!
 %\begin{minted}{haskell}
 %    fac :: Int -> Int
 %    fac = eval $
 %
 %\end{minted}
 
-Однако, можно заметить, что промежуточное дерево, которое получается, нас, как правило, не интересует.
-Нам важно только получить элемент домена, которым мы уже умеем пользоваться непосредственно.
-\vocab{Shallow eDSL} минуют стадию построения дерева и сразу строят значение в семантическом домене.
-Такие интерпретаторы мы будем называть \vocab{финальными}. % todo verify \footnote{Такой способ задания интерпретаторов называют финальным по историческим причинам. Казалось, что соответствующие программы соответствуют терминальному (финальному) объекту категории интерпретаций. Однако, как оказалось, с категорной точки зрения, это тоже инициальный объект.}
+However, one can notice that the intermediate tree that is produced typically does not interest us.
+We only care about obtaining the domain element, which we already know how to use directly.
+\vocab{Shallow eDSL} skip the tree construction stage and directly build the value in the semantic domain.
+We will call such interpreters \vocab{final}. % todo verify
 \begin{minted}{haskell}
     cnst :: Int -> (Int -> Int)
     cnst x _ = x
@@ -221,17 +221,17 @@
     f = cnst 1 `plus` input
 \end{minted}
 
-Интерпретаторы часто называют \vocab{наблюдателями (observers)}, которые анализируют термы и дают им некоторый смысл~\cite{gibbons2013functional}.
-Можно заметить, что для deep eDSL можно написать сколь угодно много различных наблюдателей.
-Однако в случае shallow embedding наблюдатели всегда \texttt{id}.
-Мы будем обсуждать возможные решения этой проблемы далее в разделе~\ref{subsubsec:shallow-embedding}.
+Interpreters are often called \vocab{observers}, which analyze terms and give them some meaning~\cite{gibbons2013functional}.
+One can notice that for deep eDSL one can write arbitrarily many different observers.
+However, in the case of shallow embedding, observers are always \texttt{id}.
+We will discuss possible solutions to this problem later in section~\ref{subsubsec:shallow-embedding}.
 
-Обсуждение терминологии и сравнение подходов к построению DSL можно найти в~\cite{gibbons2013functional}.
-Краткое описание терминов --- в конспекте курса Language Engineering~\cite{languageEngineering}.
+A discussion of terminology and comparison of approaches to DSL construction can be found in~\cite{gibbons2013functional}.
+A brief description of terms is in the Language Engineering course notes~\cite{languageEngineering}.
 
-Введём ещё одно важное понятие.
-\vocab{Meta-circular интерпретатор}\footnote{\url{https://en.wikipedia.org/wiki/Meta-circular_evaluator}}~--- это интерпретатор, определяющий конструкции определяемого языка через конструкции мета-языка~\cite{reynolds1972definitional}.
-Например:
+Let us introduce one more important concept.
+A \vocab{meta-circular interpreter}\footnote{\url{https://en.wikipedia.org/wiki/Meta-circular_evaluator}} is an interpreter that defines constructs of the object language through constructs of the meta-language~\cite{reynolds1972definitional}.
+For example:
 \begin{minted}{haskell}
     interpret term = case term of
       App f t -> (interpret f) (interpret t)
@@ -239,45 +239,45 @@
       ...
 \end{minted}
 
-Свойства мета-языка в таком случае во многом определяют свойства объектного~\cite{reynolds1972definitional,reynolds1998definitional}.
-Мы будем в этом курсе стремиться как можно более переиспользовать возможности мета-языка.
+The properties of the meta-language in this case largely determine the properties of the object language~\cite{reynolds1972definitional,reynolds1998definitional}.
+In this course we will strive to reuse the capabilities of the meta-language as much as possible.
 
 \begin{task}
-    Предположите, какие свойства наследует определяемый язык из примера выше.
+    Guess which properties the object language from the example above inherits.
 \end{task}
 
-\subsubsection{Пример: библиотека Accelerate}
+\subsubsection{Example: the Accelerate library}
 
-Интересным примером встроенного языка, находящегося где-то между deep и shallow является библиотека Accelerate\footnote{\url{https://hackage.haskell.org/package/accelerate}}~\cite[глава 6]{marlow2011parallel}.
-Она позволяет на Haskell описать вычисления, которые будут исполняться на GPU\footnote{Другой подход: \href{https://youtu.be/6c0DB2kwF_Q?si=-nB7AkCsDWB_Q-hy}{Java code reflection}, чтобы в рантайме извлекать модель кода. Однако, такой подход не предоставляет статически гарантий программисту и требует глубогоко внедрения в мета-язык.}.
+An interesting example of an embedded language that lies somewhere between deep and shallow is the Accelerate library\footnote{\url{https://hackage.haskell.org/package/accelerate}}~\cite[chapter 6]{marlow2011parallel}.
+It allows describing computations in Haskell that will be executed on a GPU\footnote{Another approach: \href{https://youtu.be/6c0DB2kwF_Q?si=-nB7AkCsDWB_Q-hy}{Java code reflection}, to extract a model of the code at runtime. However, such an approach does not provide static guarantees to the programmer and requires deep integration into the meta-language.}.
 
-Чтобы исполнить что-то на GPU, нужно породить и скомпилировать код на Cuda.
-Таким образом, язык Accelerate должен быть deep embedding, чтобы иметь дерево вычисления для трансляции в Cuda наиболее эффективным образом.
+To execute something on a GPU, one needs to generate and compile Cuda code.
+Thus, the Accelerate language must be a deep embedding in order to have the computation tree for translation into Cuda in the most efficient manner.
 
-В то же время описывать численные вычисления как дерево крайне неудобно.
-Неплохо было бы иметь привычные операторы и функции высших порядков для работы с массивами на GPU\@.
-Поэтому Accelerate предоставляет на самом деле shallow интерфейс для построения деревьев.
-Так, для деревьев выражений определена реализация численных классов типов, например, \mintinline{haskell}|Num|, где операции просто достраивают дерево:
+At the same time, describing numerical computations as a tree is extremely inconvenient.
+It would be nice to have familiar operators and higher-order functions for working with arrays on the GPU\@.
+Therefore, Accelerate actually provides a shallow interface for building trees.
+Thus, for expression trees, implementations of numeric type classes are defined, e.g. \mintinline{haskell}|Num|, where operations simply extend the tree:
 \begin{minted}{haskell}
     example :: Acc (Vector Int) -> Acc (Vector Int) -> Acc (Vector Int)
     example xs ys = A.zipWith (+) xs ys
 \end{minted}
 
-\subsection{Типы значений}
+\subsection{Value types}
 
-Рассмотрим, какие есть способы реализации языков, значения в которых могут иметь различные типы.
+Let us consider the possible ways to implement languages whose values can have different types.
 
 \subsubsection{Untyped tagless interpreters}
 
-Для начала рассмотрим некоторый тривиальный нетипизироватный язык.
-Под нетипизированностью понимаем отсутствие проверки типов как до исполнения программы, так и во время.
-Абстрактный синтаксис этого языка зададим следующим образом:
+First, let us consider a trivial untyped language.
+By untyped we mean the absence of type checking both before and during program execution.
+We define the abstract syntax of this language as follows:
 \begin{minted}{haskell}
     data Expr = Const Int | IsZero Expr | If Expr Expr Expr
 \end{minted}
 
-Значения, возникающие во время исполнения программ на этом языке будем представлять значениями типов \mintinline{haskell}|Bool| и \mintinline{haskell}|Int| языка Haskell.
-Соответственно, семантическим доменом программы на этом языке является либо \mintinline{haskell}|Bool|, либо \mintinline{haskell}|Int|, в зависимости от самой программы.
+Values arising during the execution of programs in this language will be represented by values of types \mintinline{haskell}|Bool| and \mintinline{haskell}|Int| of the Haskell language.
+Accordingly, the semantic domain of a program in this language is either \mintinline{haskell}|Bool| or \mintinline{haskell}|Int|, depending on the program itself.
 \begin{minted}{haskell}
     evalUnsafe :: Expr -> forall res . res
     evalUnsafe = \case
@@ -286,19 +286,19 @@
       If c t e -> if evalUnsafe c then evalUnsafe t else evalUnsafe e
 \end{minted}
 
-Здесь \texttt{unsafeCoerce} используется, чтобы обмануть статическую систему типов Haskell и просто исполнять программы на нашем нетипизированном языке.
-Мы имеем право так делать, поскольку \mintinline{haskell}{Int} и \mintinline{haskell}{Bool} в Haskell имеют одинаковый размер.
-Неверное написание программы на этом языке или выбор неправильного домена интерпретации приводят к падению.
+Here \texttt{unsafeCoerce} is used to circumvent Haskell's static type system and simply execute programs in our untyped language.
+We are entitled to do this because \mintinline{haskell}{Int} and \mintinline{haskell}{Bool} in Haskell have the same size.
+Writing an incorrect program in this language or choosing the wrong interpretation domain leads to a crash.
 
 \subsubsection{Typed tagged interpreters}
 
-Чтобы добиться некоторой безопасности исполнения, будем приписывать значениям теги, которые будут доступны во время исполнения.
-Заведём следующий алгебраический тип:
+To achieve some safety during execution, we will attach tags to values that will be available at runtime.
+We introduce the following algebraic type:
 \begin{minted}{haskell}
     data RtValue = RtBool Bool | RtInt Int
 \end{minted}
 
-Теперь семантическим доменов у нас будет тип \mintinline{haskell}|RtValue|, а интерпретатор сможет проверять типы во время исполнения:
+Now the semantic domain will be the type \mintinline{haskell}|RtValue|, and the interpreter can check types at runtime:
 \begin{minted}{haskell}
     evalRt :: Expr -> RtValue
     evalRt (IsZero expr) = case evalRt expr of
@@ -307,13 +307,13 @@
     -- ...
 \end{minted}
 
-Ситуация с безопасностью программы определённо стала лучше, однако проверка типов во время исполнения~--- это уже поздно: требует дополнительных расходов производительности и удорожает тестирование.
+The safety situation has definitely improved, but type checking at runtime is already too late: it requires additional performance overhead and makes testing more expensive.
 
-Этот подход часто называют \vocab{динамической типизацей}, когда мы атрибутируем значения некоторой типовой информацией для использования во время исполнения (см.\ также\ \ref{subsubsec:type-reflection}).
+This approach is often called \vocab{dynamic typing}, when we attribute values with some type information for use at runtime (see also\ \ref{subsubsec:type-reflection}).
 
 \subsubsection{Typed tagless interpreters} \label{subsubsec:typed-tagless-initial}
 
-Опишем систему типов нашего маленького языка.
+Let us describe the type system of our small language.
 %! suppress = EscapeAmpersand
 \begin{equation*}{}
     \infer[Const]{Const~n : int}{n : Int}
@@ -322,10 +322,10 @@
     \quad
     \infer[If]{If~c~t~e : \tau}{c : bool & t : \tau & e : \tau}
 \end{equation*}
-Можем в качестве типовых тегов переиспользовать типы Haskell: \[int \rightsquigarrow Int, bool \rightsquigarrow Bool\]
+We can reuse Haskell types as type tags: \[int \rightsquigarrow Int, bool \rightsquigarrow Bool\]
 
-Заметим, что с помощью обобщённого алгебраического типа данных \mintinline{haskell}|Expr ty| (\ref{subsubsec:gadts}), мы как раз закодировали эти правила вывода.
-Иначе говоря, мы получили статически типизированный язык программирования, переиспользовав систему типов Haskell.
+Notice that with the help of a generalized algebraic data type \mintinline{haskell}|Expr ty| (\ref{subsubsec:gadts}), we have precisely encoded these typing rules.
+In other words, we have obtained a statically typed programming language by reusing Haskell's type system.
 \begin{minted}{haskell}
     data Expr ty where
       Const :: Int -> Expr Int
@@ -339,27 +339,27 @@
       If c t e -> if eval c then eval t else eval e
 \end{minted}
 
-Благодаря статической типизации, мы можем отказаться от тегирования значений во время интерпретации без потери безопасности.
+Thanks to static typing, we can dispense with tagging values during interpretation without losing safety.
 
-\subsection{Связывания и функции первого класса} \label{subsec:first-class-functions}
+\subsection{Bindings and first-class functions} \label{subsec:first-class-functions}
 
-В этом параграфе мы рассмотрим техники и понятия, относящиеся к реализации функций первого класса и связываний в общем.
-Поскольку эта функциональность уже, как правило, реализована в мета-языке, мы будем стремиться её максимально переиспользовать.
+In this section we consider techniques and concepts related to implementing first-class functions and bindings in general.
+Since this functionality is typically already implemented in the meta-language, we will strive to reuse it as much as possible.
 
-\mintinline{haskell}|let|-связывания можно представить через функции первого класса следующим образом:
+\mintinline{haskell}|let|-bindings can be represented through first-class functions as follows:
 \[
     \term{let} \ap x \termdef N \ap \term{in} \ap M \equiv (\lambda x\ldotp M) \ap N
 \]
 
-Напомним, что от функций первого класса можно избавиться с помощью дефункционализации, рассмотренной ранее~\ref{subsubsec:defunctionalization}.
+Recall that first-class functions can be eliminated using defunctionalization, considered earlier~\ref{subsubsec:defunctionalization}.
 
-\subsubsection{Семантика имён} \label{subsubsec:name-bindings}
+\subsubsection{Name semantics} \label{subsubsec:name-bindings}
 
-Существует несколько способов задания семантики идентификаторам.
+There are several ways to assign semantics to identifiers.
 
-\vocab{Динамическое связывание (dynamic scoping)} --- значение свободных переменных функции зависит от области видимости в месте вызова.
-То есть разрешение имени происходит в момент обращения к переменной.
-Например, следующий код напечатает \texttt{42}:
+\vocab{Dynamic scoping} --- the values of free variables of a function depend on the scope at the call site.
+That is, name resolution happens at the moment the variable is accessed.
+For example, the following code prints \texttt{42}:
 \begin{minted}{scala}
     val x = 4
     val f = () => x + 1
@@ -367,26 +367,26 @@
     println(f())
 \end{minted}
 
-Этот подход проще в реализации и использовался в ранних версиях Lisp'ов, например.
-Однако в таком случае функции не являются надежным барьером абстракции, по-хорошему все свободные переменные должны являться частью сигнатуры (вернёмся в этому в главе про системы эффектов~\ref{sec:effect-systems}).
+This approach is simpler to implement and was used in early versions of Lisps, for example.
+However, in this case functions are not a reliable abstraction barrier; ideally all free variables should be part of the signature (we will return to this in the chapter on effect systems~\ref{sec:effect-systems}).
 
-\vocab{Лексическое/статическое связывание (lexical/static scoping)} --- переменные связываются со значениями в момент объявления функции, в момент вызова результат зависит только от параметров (по модулю изменяемого состояния\footnote{Например, в Kotlin в лямбды можно захватывать изменяемые переменные. Изменения снаружи наблюдаемы внутри лямбды, и наоборот. Иногда это может быть очень удобно, однако нередко приводит к очень неочевидному поведению.}).
-Слово ``лексический'' часто употребляется в языках, когда мы что-то можем понять из исходного кода без запуска программы.
-Так, код из примера выше напечатает 5.
+\vocab{Lexical/static scoping} --- variables are bound to values at the point of function declaration; at the point of invocation the result depends only on the parameters (modulo mutable state\footnote{For example, in Kotlin, mutable variables can be captured in lambdas. Changes outside are observable inside the lambda, and vice versa. This can sometimes be very convenient, but often leads to very non-obvious behavior.}).
+The word ``lexical'' is often used in languages when we can determine something from the source code without running the program.
+Thus, the code from the example above would print 5.
 
-Далее в этом разделе мы будем говорить о различных способах реализации функций первого класса со статическим связыванием переменных, которых, на самом деле, великое множество\footnote{\url{https://jesper.cx/posts/1001-syntax-representations.html}}.
+In the rest of this section we will discuss various ways of implementing first-class functions with static variable scoping, of which there are, in fact, a great many\footnote{\url{https://jesper.cx/posts/1001-syntax-representations.html}}.
 
-\subsubsection{Подстановки} \label{subsubsec:substitutions}
+\subsubsection{Substitutions} \label{subsubsec:substitutions}
 
-Как можно заметить, в классическом лямбда-исчислении подстановки от бета-редукции (вспоминали в разделе~\ref{subsec:terms-reduction}) обеспечивают статическое связывание.
-Действительно, аргумент немедленно подставляется во все вхождения переменной, соответственно она не остаётся свободной, а просто исчезает.
+As one can notice, in classical lambda calculus, substitutions from beta-reduction (recalled in section~\ref{subsec:terms-reduction}) provide static scoping.
+Indeed, the argument is immediately substituted into all occurrences of the variable, so it does not remain free but simply disappears.
 \[
     (\lambda x\ldotp (\lambda x\ldotp \lambda y\ldotp x + y) \ap 4) \ap 41 \rightsquigarrow (\lambda x\ldotp (\lambda y\ldotp 4 + y)) \ap 41
 \]
 
-Такой подход не является самым эффективным, потому что на каждую аппликацию требуется переписывать код функции целиком (!).
-В то же время его довольно просто реализовать для некоторых представлений лямбда-термов.
-Рассмотрим пример такого представления --- \vocab{locally nameless}~\cite{chargueraud2012locally}.
+This approach is not the most efficient, because each application requires rewriting the entire function body (!).
+At the same time, it is fairly simple to implement for certain representations of lambda terms.
+Let us consider an example of such a representation --- \vocab{locally nameless}~\cite{chargueraud2012locally}.
 
 \begin{minted}{haskell}
     data Term var
@@ -395,12 +395,12 @@
       | Lam (Term (Maybe var))
 \end{minted}
 
-В этом представлении можно выбирать любой тип для именования свободных переменных:
+In this representation one can choose any type for naming free variables:
 \begin{minted}{haskell}
     example :: Term String
     example = Var "x" `App` Var "y" -- x y
 \end{minted}
-Добавление каждой связанной переменной добавляет типу переменных нового обитателя \mintinline{haskell}|Nothing| для обращения к ближайшей связанной переменной:
+Adding each bound variable adds a new inhabitant \mintinline{haskell}|Nothing| to the variable type for referring to the nearest bound variable:
 \begin{minted}{haskell}
     -- ?$\lambda x\ldotp x \ap y$?
     example1 = Lam $ Nothing `App` Just "y"
@@ -408,7 +408,7 @@
     example2 = Lam $ Lam $ Just Nothing `App` Nothing `App` Just (Just "z")
 \end{minted}
 
-Монадический bind является реализацией подстановки для таких термов:
+Monadic bind is the implementation of substitution for such terms:
 \begin{minted}{haskell}
     instance Monad Term where
       (>>=) :: Term var -> (var -> Term var') -> Term var'
@@ -420,10 +420,10 @@
 \end{minted}
 
 \begin{task}
-    Подумайте, зачем нужен \texttt{fmap Just} в последней строчке.
+    Think about why \texttt{fmap Just} is needed in the last line.
 \end{task}
 
-Соответственно, call-by-name интерпретатор такого лямбда-исчисления будет выглядеть следующим образом:\footnote{Поскольку мы рассматриваем классическое $\lambda$-исчисление, в качестве результирующего значения мы получаем тоже терм, но в нормальной форме.}
+Accordingly, a call-by-name interpreter for this lambda calculus will look as follows:\footnote{Since we are considering classical $\lambda$-calculus, the resulting value is also a term, but in normal form.}
 
 \begin{minted}{haskell}
     eval :: Term var -> Term var
@@ -435,10 +435,10 @@
       Lam t -> Lam (eval t)
 \end{minted}
 
-\subsubsection{Окружение}
+\subsubsection{Environment}
 
-Можно делать подстановку значений переменных лениво, распространяя окружение, которое ставит в соответствие свободным переменным термы.
-Лучше, в целом, пока не стало, но мы получили композиционную семантику из некомпозиционной путём эксплицирования контекстных зависимостей (подробнее далее~\ref{subsubsec:recover-compositionality}).
+One can perform substitution of variable values lazily, propagating an environment that maps free variables to terms.
+Things have not yet improved much overall, but we have obtained compositional semantics from non-compositional semantics by making context dependencies explicit (more on this later~\ref{subsubsec:recover-compositionality}).
 
 \begin{minted}{haskell}
     data Term1 = Var1 String | App1 Term1 Term1 | Lam1 String Term1
@@ -456,20 +456,20 @@
 \end{minted}
 
 \begin{task}
-    Объясните, зачем окружение модифицируется на строчке~10?
+    Explain why the environment is modified on line~10?
 \end{task}
 
-Если ветка \mintinline{haskell}|Lam1| не будет рекурсивно обходить подтерм и подставлять значения переменных, информация о значениях свободных переменных в нём потеряется и мы получим динамическое связывание вместо статического.
-Чтобы восстановить статическое связывание, ветка \mintinline{haskell}|Lam1| интерпретатора должна конструировать замыкание, включающее текущее окружение (см.\ далее~\ref{subsubsec:closures}).
+If the \mintinline{haskell}|Lam1| branch does not recursively traverse the subterm and substitute variable values, the information about free variable values in it will be lost and we will get dynamic scoping instead of static scoping.
+To restore static scoping, the \mintinline{haskell}|Lam1| branch of the interpreter must construct a closure that includes the current environment (see~\ref{subsubsec:closures}).
 
-\subsubsection{Замыкания} \label{subsubsec:closures}
+\subsubsection{Closures} \label{subsubsec:closures}
 
-Чтобы не делать энергично подстановку в тела функций и сохранить при этом статическое связывание, добавим ещё одну конструкцию, \vocab{замыкание (closure)}\footnote{\url{https://en.wikipedia.org/wiki/Closure_(computer_programming)}}\footnote{Термин closure был предложен Piter Landin, вместе с кучей других вещей.}~\cite[глава 11]{nystrom2021crafting}.
-Оно будет хранить контекст, в котором должен исполняться соответствующий терм.
+To avoid eagerly performing substitution into function bodies while preserving static scoping, we add one more construct, a \vocab{closure}\footnote{\url{https://en.wikipedia.org/wiki/Closure_(computer_programming)}}\footnote{The term closure was proposed by Peter Landin, along with a bunch of other things.}~\cite[chapter 11]{nystrom2021crafting}.
+It will store the context in which the corresponding term should be executed.
 
 \begin{minted}{haskell}
     data Term1 = Var1 String | App1 Term1 Term1 | Lam1 String Term1
-               | Closure Env String Term1 -- только для вычислений
+               | Closure Env String Term1 -- only for computations
     type Env = Map String Term1
 
     eval1 :: Term1 -> Env -> Term1
@@ -483,34 +483,34 @@
       Lam1 name body -> Closure env name body
 \end{minted}
 
-Замыкания обычно и используют в промышленных языках как представление времени исполнения функций высших порядков.
-Во время компиляции сначала производят \vocab{closure conversion}~--- функции высших порядков представляют как пару из окружения и указателя на функцию, принимающую окружение дополнительным аргументом.
-Теперь, когда функция не содержит свободных переменных, делают \vocab{lambda lifting}\footnote{\url{https://en.wikipedia.org/wiki/Lambda_lifting}}~--- поднимают её на верхний уровень.
-Подробные примеры можно посмотреть в гарвардских слайдах~\cite{closures-slides}.
+Closures are typically used in industrial languages as the runtime representation of higher-order functions.
+During compilation, \vocab{closure conversion} is performed first --- higher-order functions are represented as a pair of an environment and a pointer to a function that takes the environment as an extra argument.
+Now that the function contains no free variables, \vocab{lambda lifting}\footnote{\url{https://en.wikipedia.org/wiki/Lambda_lifting}} is done --- it is lifted to the top level.
+Detailed examples can be found in the Harvard slides~\cite{closures-slides}.
 
-\subsubsection{Типизированный контекст} \label{subsubsec:typed-env}
+\subsubsection{Typed context} \label{subsubsec:typed-env}
 
-Рассмотрим кодирование, описанное, например, в~\cite{kiselyov2012typed}.
+Let us consider the encoding described, for example, in~\cite{kiselyov2012typed}.
 
-Для начала научимся с помощью системы типов Haskell проверять валидность обращения к окружению.
-Представим окружение как список типов, закодированный с помощью вложенных пар:
+First, let us learn to use Haskell's type system to check the validity of environment lookups.
+We represent the environment as a list of types encoded using nested pairs:
 \begin{minted}{haskell}
     (4, (4.0, "hello")) :: (Int, (Double, String))
 \end{minted}
 
-Обращение к окружению будем кодировать числом в унарной записи.
-Тип числа (типизированной ссылки внутрь контекста) пусть задаёт множество окружений \texttt{env}, из которых на данной позиции можно извлечь тип \texttt{ty}.
+Environment lookups will be encoded as numbers in unary notation.
+The type of the number (a typed reference into the context) specifies the set of environments \texttt{env} from which a value of type \texttt{ty} can be extracted at the given position.
 \begin{minted}{haskell}
     data Ref env ty where
       Here :: Ref (ty, env) ty
       There :: Ref env ty -> Ref (ty', env) ty
 \end{minted}
-Например, тип числа 1 утверждает, что с его помощью можно извлечь значение типа \texttt{ty} из контекста, в котором значение соответствующего типа находится на первой позиции (нумерация с нуля):
+For example, the type of the number 1 asserts that it can be used to extract a value of type \texttt{ty} from a context where a value of the corresponding type is at position one (zero-indexed):
 \begin{minted}{haskell}
     There Here :: Ref (ty', (ty, env)) ty
 \end{minted}
 
-Теперь мы можем закодировать типизированное безопасное обращение к контексту:
+Now we can encode a typed safe lookup into the context:
 \begin{minted}{haskell}
     envLookup :: env -> Ref env ty -> ty
     envLookup env ref = case (ref, env) of
@@ -519,17 +519,17 @@
 \end{minted}
 
 \begin{task}
-    Можно ли разобрать пару сразу на строчке 2?
-    Поясните.
+    Can the pair be deconstructed directly on line 2?
+    Explain.
 \end{task}
 
-\subsubsection{Meta-circular интерпретация} \label{subsubsec:meta-circular-initial}
+\subsubsection{Meta-circular interpretation} \label{subsubsec:meta-circular-initial}
 
-Крайне не хотелось бы для eDSL самостоятельно реализовывать связывания и функции первого класса.
-Построим meta-circular интерпретатор (см.~\ref{subsubsec:edsl}), который будет переиспользовать функции первого класса мета-языка для реализации их в определяемом языке.
+It would be extremely undesirable to implement bindings and first-class functions for an eDSL by ourselves.
+Let us build a meta-circular interpreter (see~\ref{subsubsec:edsl}) that will reuse the meta-language's first-class functions to implement them in the object language.
 
-Термы теперь будут не только аннотированы результирующими типами, но и типами необходимых для интерпретации окружений, рассмотренных ранее~\ref{subsubsec:typed-env}.
-Абстрагированному терму доступно большее окружение.
+Terms will now be annotated not only with resulting types but also with the types of environments needed for interpretation, considered earlier~\ref{subsubsec:typed-env}.
+An abstracted term has access to a larger environment.
 
 \begin{minted}{haskell}
     data Term2 env ty where
@@ -538,7 +538,7 @@
       Lam2 :: Term2 (arg, env) res -> Term2 env (arg -> res)
 \end{minted}
 
-Теперь абстракцию можем проинтерпретировать в функцию Haskell, а аппликацию --- в аппликацию:
+Now we can interpret abstraction as a Haskell function and application as application:
 \begin{minted}{haskell}
     eval2 :: Term2 env ty -> env -> ty
     eval2 term env = case term of
@@ -548,21 +548,21 @@
 \end{minted}
 
 \begin{task}
-    Как так получилось, что в последней строчке нужно принять ещё один аргумент?
+    How did it happen that an extra argument needs to be accepted in the last line?
 \end{task}
 
 \begin{task}
-    Это call-by-value интерпретатор или call-by-name?
-    От чего это зависит?
+    Is this a call-by-value interpreter or call-by-name?
+    What does this depend on?
 \end{task}
 
 \begin{task}
-    Подумайте, какое решение должно быть более производительно, это или предыдущее?
+    Think about which solution should be more performant, this one or the previous?
 \end{task}
 
-Обратите внимание, что теперь функции определяемого языка во время исполнения --- это просто функции мета-языка.
-А значит, в программах на определяемом языке мы \point{можем полностью переиспользовать мета-язык}!
-Добавим для этого конструкцию, позволяющую сохранить произвольное значение мета-языка в дереве:
+Note that now the functions of the object language at runtime are simply functions of the meta-language.
+This means that in programs in the object language we \point{can fully reuse the meta-language}!
+Let us add a construct that allows storing an arbitrary meta-language value in the tree:
 \begin{minted}{haskell}
     data Term2 env ty where
       Val2 :: ty -> Term2 env ty
@@ -577,11 +577,11 @@
     example = Lam (Val2 (+) `App2` Val2 1 `App2` Var2 Here)
 \end{minted}
 
-\subsubsection{Синтаксис высшего порядка} \label{subsubsec:h-syntax}
+\subsubsection{Higher-order abstract syntax} \label{subsubsec:h-syntax}
 
-Ещё чем мы ещё занимаемся вручную --- определяем связыватели (да ещё и в унарной записи).
-Хотим переиспользовать их из мета-языка.
-Для это мы будем прямо в дереве синтаксиса хранить функции мета-языка~--- использовать \vocab{синтаксис высшего порядка (higher order abstract syntax)}\footnote{\url{https://en.wikipedia.org/wiki/Higher-order_abstract_syntax}}\footnote{\href{https://cstheory.stackexchange.com/questions/20071/what-is-higher-order-in-higher-order-abstract-syntax}{What is higher-order in higher-order abstract syntax?}}~\cite{pfenning1988higher}:
+Another thing we are still doing manually is defining binders (and in unary notation, no less).
+We want to reuse them from the meta-language.
+For this, we will store meta-language functions directly in the syntax tree --- use \vocab{higher-order abstract syntax (HOAS)}\footnote{\url{https://en.wikipedia.org/wiki/Higher-order_abstract_syntax}}\footnote{\href{https://cstheory.stackexchange.com/questions/20071/what-is-higher-order-in-higher-order-abstract-syntax}{What is higher-order in higher-order abstract syntax?}}~\cite{pfenning1988higher}:
 \begin{minted}{haskell}
     data Term3 ty where
       Val3 :: ty -> Term3 ty
@@ -593,7 +593,7 @@
     example3 = (Lam3 \x -> x `Plus` Val3 41) `App3` Val3 1
 \end{minted}
 
-Интерпретация очень простая и абсолютно meta-circular:
+The interpretation is very simple and completely meta-circular:
 \begin{minted}{haskell}
     eval3 :: Term3 ty -> ty
     eval3 term = case term of
@@ -604,30 +604,30 @@
 \end{minted}
 
 \begin{task}
-    Можно ли было объявить \mintinline{haskell}|Lam3| следующим образом?
+    Could \mintinline{haskell}|Lam3| have been declared as follows?
     \begin{minted}{haskell}
         Lam3 :: (arg -> Term3 res) -> Term3 (arg -> res)
     \end{minted}
 \end{task}
 
-\subsubsection{Сериализация функций}
+\subsubsection{Serialization of functions}
 
-В этом разделе мы говорили о возможных реализациях функций первого класса, то есть функций, которые можно использовать так же гибко, как и данные.
-Возникает закономерный вопрос: можем ли мы сериализовать функцию первого класса и послать исполняться на другую машину?
+In this section we discussed possible implementations of first-class functions, i.e. functions that can be used as flexibly as data.
+A natural question arises: can we serialize a first-class function and send it for execution on another machine?
 
-Функция состоит из кода и захваченных свободных переменных в случае статического связывания.
-Соответственно, если код представлен в сериализуемом виде (например, позиционно-независимый байт-код), то его в принципе можно переслать по сети и исполнить на другом инстансе виртуальной машины.
-Так, например, делает Erlang.
-Однако, такой подход неэффективный, так как байт-код нужно интерпретировать или предварительно компилировать.
-Таким образом, Erlang жертвует скоростью исполнения ради горизонтальной масштабируемости.
+A function consists of code and captured free variables in the case of static scoping.
+Accordingly, if the code is in a serializable form (e.g. position-independent bytecode), it can in principle be sent over the network and executed on another virtual machine instance.
+This is what Erlang does, for example.
+However, this approach is inefficient, since the bytecode needs to be interpreted or pre-compiled.
+Thus, Erlang sacrifices execution speed for horizontal scalability.
 
-Если мы гарантируем, что на различных узлах кластера исполняется один и тот же код, как обычно и бывает на практике, можно добиться более эффективной реализации.
-Например, используя дефункционализацию~(см.~\ref{subsubsec:defunctionalization}), мы можем сериализовать только объекты алгебраического типа, кодирующие функции.
-Поскольку на другом узле кластера исполняется такой же код, мы там можем десериализовать объект и исполнить его с помощью \texttt{apply}.
-Однако этот подход не очень поддерживает модульность (сложно один алгебраический тип разбить на много), а так же \texttt{apply} каждый раз производит декодирование перед исполнением кода (чем, в прочем, можно пренебречь, учитывая работу с сетью).
+If we guarantee that the same code runs on different cluster nodes, as is usually the case in practice, a more efficient implementation can be achieved.
+For example, using defunctionalization~(see~\ref{subsubsec:defunctionalization}), we can serialize only the algebraic type objects encoding functions.
+Since the same code runs on the other cluster node, we can deserialize the object there and execute it using \texttt{apply}.
+However, this approach does not support modularity well (it is hard to split one algebraic type into many), and \texttt{apply} performs decoding before executing the code each time (which, admittedly, can be neglected given network overhead).
 
-Подход, реализованный в Haskell\footnote{\url{https://blog.ocharles.org.uk/blog/guest-posts/2014-12-23-static-pointers.html}}\footnote{\url{https://hackage.haskell.org/package/distributed-closure}} позволяет наделить каждую функцию без свободных переменных некоторым статически известным адресом, одинаковым для всех инстансов приложения.
-Далее можно сконструировать сериализуемое замыкание путём последовательности частичных применений:
+The approach implemented in Haskell\footnote{\url{https://blog.ocharles.org.uk/blog/guest-posts/2014-12-23-static-pointers.html}}\footnote{\url{https://hackage.haskell.org/package/distributed-closure}} allows assigning each function without free variables a statically known address, the same for all application instances.
+Then one can construct a serializable closure through a sequence of partial applications:
 \begin{minted}{haskell}
     data Closure a where
       StaticPtr :: StaticPtr b -> Closure b
@@ -638,41 +638,41 @@
       closure (static factorial) `closureAp` closurePure 10
 \end{minted}
 
-Подробнее можно прочитать в основополагающей статье про облачный Haskell~\cite{epstein2011towards}.
-С практической точки зрения --- в книжке~\cite[глава 16]{marlow2011parallel}.
+More details can be found in the foundational paper on Cloud Haskell~\cite{epstein2011towards}.
+From a practical perspective --- in the book~\cite[chapter 16]{marlow2011parallel}.
 
 \begin{task}
-    Нужно ли явно добавлять в замыкание свободную переменную \texttt{(*)} (оператор умножения) в реализации факториала?
+    Is it necessary to explicitly add the free variable \texttt{(*)} (the multiplication operator) to the closure in the factorial implementation?
 \end{task}
 
-\subsection{Tagless final интерпретаторы} \label{subsec:tagless-final}
+\subsection{Tagless final interpreters} \label{subsec:tagless-final}
 
-Как мы убедились ранее (\ref{subsubsec:interpreters-everywhere}), программирование состоит из написания новых и новых интерпретаторов поверх друг друга.
-Интерпретаторы задают семантику новых языков (\ref{subsubsec:semantics}).
-В классическом виде язык задаётся как множество деревьев, а интерпретатор отправляет деревья в объект мета-языка.
-Если язык встроенный, то такой подход называют deep embedding (см.~\ref{subsubsec:edsl}), а соответствующий интерпретатор инициальным.
+As we established earlier (\ref{subsubsec:interpreters-everywhere}), programming consists of writing interpreters on top of each other.
+Interpreters define the semantics of new languages (\ref{subsubsec:semantics}).
+In the classical form, a language is defined as a set of trees, and an interpreter maps trees to meta-language objects.
+If the language is embedded, this approach is called deep embedding (see~\ref{subsubsec:edsl}), and the corresponding interpreter is initial.
 \[
     \sembr{\bullet} : L \to D
 \]
 
-Можно заметить, что в конечном итоге мы используем только элемент домена, в который интерпретатор отображает программу.
-Сама программа же представляет собой лишь удобную синтаксическую запись элемента домена и является промежуточным шагом, а не самоцелью.
-В то же время доменом в случае встроенных языков, заданных интерпретаторами, являются объекты мета-языка.
-Можем ли мы миновать стадию интерпретации собственного синтаксиса и сразу строить объект домена в синтаксисе мета-языка?
-Да, такое встраивание называется shallow embedding (\ref{subsubsec:edsl}), о нём эта глава.
+One can notice that ultimately we only use the domain element to which the interpreter maps the program.
+The program itself is merely a convenient syntactic notation for a domain element and is an intermediate step, not an end in itself.
+At the same time, the domain for embedded languages defined by interpreters consists of meta-language objects.
+Can we bypass the stage of interpreting our own syntax and directly build the domain object in the meta-language syntax?
+Yes, such an embedding is called shallow embedding (\ref{subsubsec:edsl}); this chapter is about it.
 
-\subsubsection{Разные интерпретации для shallow embedding} \label{subsubsec:shallow-embedding}
+\subsubsection{Different interpretations for shallow embedding} \label{subsubsec:shallow-embedding}
 
-Как мы узнали ранее (\ref{subsec:all-folds}), любую структуру данных можно представить свёрткой.
-И, более того, в итоге можно обойтись без единого конструктора данных (как в списке Чёрча, например): алгебра представляется набором функций, каждая из которых отвечает за сворачивание определённого конструктора.
+As we learned earlier (\ref{subsec:all-folds}), any data structure can be represented as a fold.
+And, moreover, in the end one can do without a single data constructor (as in Church lists, for example): the algebra is represented by a set of functions, each responsible for folding a particular constructor.
 \begin{minted}{haskell}
     Fix f ?$\iso$? forall a . (f a -> a) -> a
     List e ?$\iso$? forall a . (e -> a -> a) -> a -> a
 \end{minted}
 
-Таким образом, вместо того, чтобы конструировать дерево языка, а затем его интерпретировать (сворачивать), мы можем сразу сконструировать терм типа \mintinline{haskell}{?$\forall$?a . (f a -> a) -> a}.
-Предоставив ему тип домена \texttt{a} и алгебру \texttt{f a -> a} (либо в виде пачки функций), мы немедленно получим элемент нужного домена.
-Чтобы задать другую интерпретацию, нужно передать другой тип домена и алгебру:
+Thus, instead of constructing a language tree and then interpreting (folding) it, we can directly construct a term of type \mintinline{haskell}{?$\forall$?a . (f a -> a) -> a}.
+By providing it with a domain type \texttt{a} and an algebra \texttt{f a -> a} (or as a bundle of functions), we immediately obtain an element of the desired domain.
+To specify a different interpretation, one needs to pass a different domain type and algebra:
 \begin{minted}{haskell}
     example :: (Int -> a) -> (a -> a -> a) -> a
     example cnst plus = cnst 1 `plus` cnst 41
@@ -681,45 +681,45 @@
     "1 + 41"
 \end{minted}
 
-Если зафиксировать интерпретацию, то функции-аргументы можно реализовать статически и просто ссылаться на них в терме.
-Таким образом, про объявление функций можно думать как про расширение некоторого встроенного предметного языка.
-Общие рассуждения про shallow embeddings, свёртки и библиотеки можно почитать в~\cite{gibbons2013functional, gibbons2014folding}.
-Сравните:
+If we fix the interpretation, the argument functions can be implemented statically and simply referenced in the term.
+Thus, declaring functions can be thought of as extending some embedded domain-specific language.
+General discussions about shallow embeddings, folds, and libraries can be found in~\cite{gibbons2013functional, gibbons2014folding}.
+Compare:
 \begin{figure}[h]
     \centering
     \begin{tabular}{|p{0.45\linewidth}|p{0.45\linewidth}|}
         \hline
         Deep                                                                                                                                 & Shallow                                                                              \\
         \hline
-        Синтаксис языка задаётся набором допустимых нод дерева                                                                               & Декларация функции задаёт новую ноду дерева: вызов этой функции                      \\
+        The language syntax is defined by the set of valid tree nodes                                                                        & A function declaration defines a new tree node: a call to that function               \\
         \hline
-        Интерпретатор при виде каждой ноды выполняет соответствующий код на мета-языке (ветку паттерн-матчинга) после вычисления поддеревьев & Интерпретатор при виде вызова выполняет код тела функции после вычисления аргументов \\
+        The interpreter, upon encountering each node, executes the corresponding meta-language code (a pattern-match branch) after computing subtrees & The interpreter, upon encountering a call, executes the function body code after computing arguments \\
         \hline
     \end{tabular}
 \end{figure}
 
-\subsubsection{Дойти до конца}
+\subsubsection{Going all the way}
 
-Вернёмся к некаррированной версии свёрток: теперь это тип, принимающий кортеж функций.
-А кортеж функций можно заменить на класс типов.
-Тогда декларация класса будет задавать синтаксис встроенного языка, а инстансы для доменов~--- реализацию.
-Этот подход называется \vocab{tagless final encoding}\footnote{\url{https://okmij.org/ftp/tagless-final/}} и фактически это кодирование данных по Чёрчу с классами типов и набором трюков~\cite{carette2007finally, kiselyov2012typed}.
+Let us return to the uncurried version of folds: this is now a type accepting a tuple of functions.
+And a tuple of functions can be replaced by a type class.
+Then the class declaration will define the syntax of the embedded language, and instances for domains --- the implementation.
+This approach is called \vocab{tagless final encoding}\footnote{\url{https://okmij.org/ftp/tagless-final/}} and is effectively Church encoding of data with type classes and a set of tricks~\cite{carette2007finally, kiselyov2012typed}.
 
-Снова рассмотрим язык со сложением:
+Let us again consider the language with addition:
 \begin{minted}{haskell}
     data Expr = Const Int | Plus Expr Expr
 
     eval :: Expr -> Int
     eval = \case Const x -> x; Plus l r -> eval l + eval r
 \end{minted}
-Или через катаморфизм:
+Or via catamorphism:
 \begin{minted}{haskell}
     data ExprF rec = Const Int | Plus rec rec
 
     eval :: Fix ExprF -> Int
     eval = cata \case Const x -> x; Plus l r -> l + r
 \end{minted}
-Соответствующее tagless final кодирование будет выглядеть следующим образом:
+The corresponding tagless final encoding will look as follows:
 \begin{minted}{haskell}
     class Expr domain where
       cnst :: Int -> domain
@@ -730,7 +730,7 @@
       plus l r = l + r
 \end{minted}
 
-Теперь мы можем сконструировать обычный терм Haskell, задать домен, и машинерия классов типов подставит нужную алгебру самостоятельно:
+Now we can construct an ordinary Haskell term, specify the domain, and the type class machinery will supply the appropriate algebra automatically:
 \begin{minted}{haskell}
     example :: forall domain . Expr domain => domain
     example = cnst 1 `plus` cnst 41
@@ -739,7 +739,7 @@
     42
 \end{minted}
 
-Чтобы добавить ещё интерпретацию, реализуем инстанс для другого домена:
+To add another interpretation, we implement an instance for a different domain:
 \begin{minted}{haskell}
     instance Expr String where
       cnst x = show x
@@ -749,14 +749,14 @@
     "1 + 41"
 \end{minted}
 
-\subsubsection{Восстановление композиционности семантики} \label{subsubsec:recover-compositionality}
+\subsubsection{Recovering compositionality of semantics} \label{subsubsec:recover-compositionality}
 
-\vocab{Семантика} называется \vocab{композиционной}, если семантика конструкций зависит только от семантик подконструкций (см.~\ref{subsubsec:semantics}).
-Иначе говоря, она может быть задана катаморфизмом и, соответственно, инстансом класса типов в tagless final.
-То есть, чтобы уметь для любой семантики построить tagless final реализацию, нужно уметь универсальным образом превращать некомпозиционные семантики в композиционные.
+A \vocab{semantics} is called \vocab{compositional} if the semantics of constructs depends only on the semantics of subconstructs (see~\ref{subsubsec:semantics}).
+In other words, it can be defined by a catamorphism and, accordingly, by a type class instance in tagless final.
+That is, to be able to build a tagless final implementation for any semantics, one needs to be able to universally turn non-compositional semantics into compositional ones.
 
-Всякие преобразования кода, как правило, не композиционные.
-Для примера рассмотрим протаскивание унарных отрицаний:
+Various code transformations are typically not compositional.
+As an example, consider pushing through unary negations:
 \begin{minted}{haskell}
     data Expr1 = Lit Int | Add Expr1 Expr1 | Neg Expr1
 
@@ -764,11 +764,11 @@
     transform1 = \case
       Lit x -> Lit x
       Add l r -> Add (transform1 l) (transform1 r)
-      Neg (Lit x) -> Lit (-x)                                        -- проблема
-      Neg (Neg e) -> transform1 e                                    -- проблема
-      Neg (Add l r) -> Add (transform1 (Neg l)) (transform1 (Neg r)) -- проблема
+      Neg (Lit x) -> Lit (-x)                                        -- problem
+      Neg (Neg e) -> transform1 e                                    -- problem
+      Neg (Add l r) -> Add (transform1 (Neg l)) (transform1 (Neg r)) -- problem
 \end{minted}
-Чтобы восстановить композиционность семантики, нужно экплицировать контекстные зависимости с помощью стрелочного домена~\cite{kiselyov2012typed}:
+To recover compositional semantics, one needs to make context dependencies explicit using an arrow domain~\cite{kiselyov2012typed}:
 \begin{minted}{haskell}
     data Ctx = CtxPos | CtxNeg
     flipCtx = \case CtxPos -> CtxNeg; CtxNeg -> CtxPos
@@ -779,7 +779,7 @@
       Neg e -> \ctx -> transform1' e (flipCtx ctx)
       Add l r -> \ctx -> Add (transform1' l ctx) (transform1' r ctx)
 \end{minted}
-Отсюда можно получить tagless final версию:
+From here one can obtain the tagless final version:
 \begin{minted}{haskell}
     class Expr2 d where
       lit :: Int -> d
@@ -794,7 +794,7 @@
 
 \subsubsection{Typed tagless final interpreter}
 
-Рассмотрим наш пример tagless initial encoding~\ref{subsubsec:typed-tagless-initial}:
+Let us consider our example of tagless initial encoding~\ref{subsubsec:typed-tagless-initial}:
 \begin{minted}{haskell}
     data Expr ty where
       Const :: Int -> Expr Int
@@ -807,7 +807,7 @@
       IsZero t -> eval == 0
       If c t e -> if eval c then eval t else eval e
 \end{minted}
-Чтобы получить final encoding, параметризуем домен результирующим типом выражения:
+To obtain a final encoding, we parameterize the domain by the resulting type of the expression:
 \begin{minted}{haskell}
     class Expr (domain :: Type -> Type) where
       cnst :: Int -> domain Int
@@ -821,13 +821,13 @@
 \end{minted}
 
 \begin{task}
-    Какой домен подойдёт для печати выражения?
+    Which domain would be suitable for printing expressions?
 \end{task}
 
-\subsubsection{Встречаем старых друзей: \mintinline{haskell}{Applicative}, \mintinline{haskell}{Monad}}
+\subsubsection{Meeting old friends: \mintinline{haskell}{Applicative}, \mintinline{haskell}{Monad}}
 
-Рассмотрим следующий язык в initial encoding с higher order abstract syntax (см.~\ref{subsubsec:meta-circular-initial}, ~\ref{subsubsec:h-syntax}).
-Справа перепишем в tagless final, выбирая подходящие имена для кусков синтаксиса.
+Consider the following language in initial encoding with higher-order abstract syntax (see~\ref{subsubsec:meta-circular-initial}, ~\ref{subsubsec:h-syntax}).
+On the right we rewrite it in tagless final, choosing appropriate names for pieces of syntax.
 
 \begin{tabular}{p{8cm}p{8cm}}
     \begin{minted}[numberblanklines=true]{haskell}
@@ -866,7 +866,7 @@
 \end{tabular}
 \vspace{1em}
 
-Реализуем функцию, модифицирующую значение в нашем новом языке:
+We implement a function that modifies a value in our new language:
 
 \begin{tabular}{p{8cm}p{8cm}}
     \begin{minted}[numberblanklines=true]{haskell}
@@ -889,7 +889,7 @@
 \end{tabular}
 \vspace{1em}
 
-И до боли знакомую интерпретацию:
+And the painfully familiar interpretation:
 
 \begin{tabular}{p{8cm}p{8cm}}
     \begin{minted}[numberblanklines=true]{haskell}
@@ -936,10 +936,10 @@
 \end{tabular}
 \vspace{1em}
 
-Таким образом, \point{аппликативные функторы --- meta-circular язык с аппликацией}, а \point{монадический bind --- это фактически let-in в higher-order синтаксисе}.
+Thus, \point{applicative functors are a meta-circular language with application}, and \point{monadic bind is essentially let-in in higher-order syntax}.
 
-Если вспомнить, что $\text{let } x = M \text{ in } N \equiv (\lambda x\ldotp N)\ap M \equiv \subst{N}{x}{M}$, то мы поймём, что монадическое связывание~--- это подстановка \texttt{a -> m b} вычисления \texttt{m b} вместо результатов типа \texttt{a} в вычислении \texttt{m a}.
-Либо, если в качестве \texttt{m} взять дерево выражения, то связывание будет подстановкой поддеревьев вместо переменных:
+If we recall that $\text{let } x = M \text{ in } N \equiv (\lambda x\ldotp N)\ap M \equiv \subst{N}{x}{M}$, then we understand that monadic bind is the substitution \texttt{a -> m b} of the computation \texttt{m b} in place of results of type \texttt{a} in the computation \texttt{m a}.
+Or, if we take an expression tree as \texttt{m}, then bind is the substitution of subtrees in place of variables:
 \begin{minted}{haskell}
     data Expr var = Var var | Empty | Append (Expr var) (Expr var)
     instance Monad Expr where
@@ -949,22 +949,22 @@
       Append l r >>= subst = Append (l >>= subst) (r >>= subst)
 \end{minted}
 
-Изначально использовать теор-категорное понятие монады\footnote{\url{https://ncatlab.org/nlab/show/monad+(in+computer+science)}} в $\lambda$-исчислении было предложено в~\cite{moggi1988computational}, чтобы удобнее записывать денотационную семантику\footnote{Часто сопутствующее монадам понятие эффекта мы рассмотрим далее~\ref{sec:effects}.}.
-Это оказалось настолько удобно в моменте, что их стали использовать повсеместно в функциональном программировании, чтобы расширять простые функциональные языки различными могущественными возможностями без изменения самих языков~\cite{wadler1990comprehending, wadler1992essence}.
-Был сформулирован Moggi's principle:
+The idea to use the category-theoretic notion of a monad\footnote{\url{https://ncatlab.org/nlab/show/monad+(in+computer+science)}} in $\lambda$-calculus was originally proposed in~\cite{moggi1988computational} for more conveniently writing denotational semantics\footnote{The notion of effect, often accompanying monads, will be considered later~\ref{sec:effects}.}.
+This turned out to be so convenient at the time that monads began to be used ubiquitously in functional programming to extend simple functional languages with various powerful capabilities without changing the languages themselves~\cite{wadler1990comprehending, wadler1992essence}.
+Moggi's principle was formulated:
 \begin{center}
-    <<Computations of type $\alpha$ correspond to values of type $f\ap\alpha$>>
+    ``Computations of type $\alpha$ correspond to values of type $f\ap\alpha$.''
 \end{center}
 
-Использовать аппликативные функторы предложили существенно позже, чтобы избежать именования промежуточных шагов вычислений, когда в этом нет необходимости~\cite{mcbride2008applicative}.
-Таким образом, аппликативы дают встроенный язык выражений, а монады~--- язык стейтментов.
+The use of applicative functors was proposed significantly later, to avoid naming intermediate computation steps when this is unnecessary~\cite{mcbride2008applicative}.
+Thus, applicatives provide an embedded language of expressions, while monads provide a language of statements.
 
 %\subsubsection{Bytecode vs threaded code} \label{subsubsec:threaded-code}
 %
-%Рассмотрим два классических представления линейных кодов, популярной разновидности промежуточных представлений программ для виртуальных машин.
+%Let us consider two classical representations of linear codes, a popular variety of intermediate program representations for virtual machines.
 %
-%Байтовый код\footnote{\url{https://en.wikipedia.org/wiki/Bytecode}} представляет собой список инструкций с операндами.
-%Интерпретация байтового кода --- это цикл по инструкциям и \texttt{switch}:
+%Bytecode\footnote{\url{https://en.wikipedia.org/wiki/Bytecode}} is a list of instructions with operands.
+%Bytecode interpretation is a loop over instructions and a \texttt{switch}:
 %\begin{minted}{cpp}
 %    for (;;) {
 %        switch (*instructionPointer++) {
@@ -973,8 +973,8 @@
 %    }
 %\end{minted}
 %
-%Шитый код\footnote{\url{https://en.wikipedia.org/wiki/Threaded_code}} вместо списка инструкций представлен списком адресов функций, каждая из которых отвечает за исполнение кода, соответствующего этой инструкции.
-%Теперь интерпретатор только итерируется по адресам и вызывает их:
+%Threaded code\footnote{\url{https://en.wikipedia.org/wiki/Threaded_code}}, instead of a list of instructions, is a list of function addresses, each responsible for executing the code corresponding to that instruction.
+%Now the interpreter only iterates over addresses and calls them:
 %\begin{minted}{cpp}
 %    for (;;) {
 %        (*instructionPointer++)()
@@ -983,16 +983,16 @@
 
 \subsection{Expression problem} \label{subsec:expression-problem}
 
-\vocab{Expression problem}\footnote{\url{https://en.wikipedia.org/wiki/Expression_problem}} или \vocab{проблема выразительности} --- это некоторый критерий выразительности языка программирования, сформулированный Wadler'ом в 1998\footnote{\url{https://homepages.inf.ed.ac.uk/wadler/papers/expression/expression.txt}}.
-Ставится вопрос: насколько легко расширять синтаксис встроенного языка и добавлять новые интерпретации?
-Иначе говоря, насколько легко добавлять новые разновидности данных и методы обработки.
+The \vocab{expression problem}\footnote{\url{https://en.wikipedia.org/wiki/Expression_problem}} is a criterion for the expressiveness of a programming language, formulated by Wadler in 1998\footnote{\url{https://homepages.inf.ed.ac.uk/wadler/papers/expression/expression.txt}}.
+The question is: how easy is it to extend the syntax of an embedded language and add new interpretations?
+In other words, how easy is it to add new kinds of data and processing methods.
 
-Под ``легкостью'' подразумевается локальность: нужно ли править различные куски кода для этого.
-Например, если синтаксис языка задан обычным алгебраическим типом данных, то добавить новую интерпретацию ``легко''~--- просто добавить новую рекурсивную функцию, а добавить новую синтаксическую конструкцию~--- ``сложно''~--- нужно изменить все интерпретаторы:
+By ``easy'' we mean locality: does one need to modify various pieces of code for this?
+For example, if the language syntax is defined by an ordinary algebraic data type, then adding a new interpretation is ``easy'' --- just add a new recursive function, but adding a new syntactic construct is ``hard'' --- all interpreters must be changed:
 \begin{minted}{haskell}
     data Expr
       = Const Int
-      | Plus Expr Expr -- добавляем
+      | Plus Expr Expr -- adding
 
     eval :: Expr -> Int
     eval = \case Const x -> x; Plus l r -> eval l + eval r
@@ -1001,7 +1001,7 @@
     show = \case Const x -> show x; Plus l r -> show l ++ " + " ++ show r
 \end{minted}
 
-Если язык задан, например, с помощью наследования, то, наоборот, расширить синтаксис легко --- добавить новый класс, а добавить интерпретацию сложно --- добавить реализацию метода в каждом классе:
+If the language is defined, for example, using inheritance, then conversely, extending the syntax is easy --- add a new class, but adding an interpretation is hard --- add a method implementation in each class:
 \begin{minted}{kotlin}
     interface Lang {
         fun eval(): Int
@@ -1017,23 +1017,23 @@
     }
 \end{minted}
 
-Оказывается, существуют подходы, позволяющие добиться ``лёгкости'' по обоим измерениям.
-Мы уделим им много внимания в этом курсе.
+It turns out there exist approaches that achieve ``ease'' along both dimensions.
+We will devote much attention to them in this course.
 
-Действительно, как мы обсуждали ранее~\ref{subsubsec:interpreters-tower}, программы представляют собой серию интерпретаторов.
-Для всё той же борьбы со сложностью, важно уметь описывать эти интерпретаторы модульно --- задавать части языков отдельно друг от друга, и собирать нужные языки по месту из готовых блоков.
-Это помогает составлять программы из простых переиспользуемых компонент, каждая из которых имеет чёткую зону ответственности.
+Indeed, as we discussed earlier~\ref{subsubsec:interpreters-tower}, programs are a series of interpreters.
+For the same fight against complexity, it is important to be able to describe these interpreters modularly --- defining parts of languages independently of each other and assembling the needed languages on the spot from ready-made blocks.
+This helps compose programs from simple reusable components, each with a clear area of responsibility.
 
-Expression problem возникала и решалась много раз: expression problem, stable denotations, extensible (modular) interpreters.
-Прошло немало времени, пока не возникло понимание, что всё это об одном и том же\footnote{\url{https://okmij.org/ftp/Computation/having-effect.html}}.
+The expression problem has arisen and been solved many times: expression problem, stable denotations, extensible (modular) interpreters.
+It took a long time before the understanding emerged that all of these are about the same thing\footnote{\url{https://okmij.org/ftp/Computation/having-effect.html}}.
 
 % todo Independently Extensible Solutions to the Expression Problem
 % todo Extensibility for the Masses: Practical Extensibility with Object Algebras
 
-\subsubsection{Копроизведение функторов} \label{subsubsec:functor-coprod}
+\subsubsection{Coproduct of functors} \label{subsubsec:functor-coprod}
 
-Воспользуемся представлением данных как неподвижной точки функтора (см.~\ref{subsubsec:functor-fixpoint}).
-В качестве модельного языка возьмём язык выражений со сложением:
+Let us use the representation of data as a fixed point of a functor (see~\ref{subsubsec:functor-fixpoint}).
+As a model language we take the expression language with addition:
 \begin{minted}{haskell}
     data Basic rec = Const Int | Plus rec rec
 
@@ -1044,7 +1044,7 @@ Expression problem возникала и решалась много раз: exp
     evalBasic = cata algBasic
 \end{minted}
 
-Заметим, что сумма (копроизведение) функторов формы даёт функтор формы, алгебра для которого получается из алгебр компонент\footnote{Пользуемся расширением \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_operators.html}{TypeOperators}.}:
+Note that the sum (coproduct) of shape functors gives a shape functor whose algebra is obtained from the algebras of the components\footnote{We use the \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_operators.html}{TypeOperators} extension.}:
 \begin{minted}{haskell}
     data (l :+: r) rec = L (l rec) | R (r rec)
 
@@ -1052,8 +1052,8 @@ Expression problem возникала и решалась много раз: exp
     phi \/ psi = \case L l -> phi l; R r -> psi r
 \end{minted}
 
-Расширим наш язык чтением числа из окружения.
-Следуя рассмотренной ранее денотационной семантике~\ref{subsubsec:semantics}, выберем функцию \mintinline{haskell}{Int -> Int} в качестве домена:
+Let us extend our language with reading a number from the environment.
+Following the denotational semantics considered earlier~\ref{subsubsec:semantics}, we choose the function \mintinline{haskell}{Int -> Int} as the domain:
 \begin{minted}{haskell}
     data Basic rec = Const Int | Plus rec rec
     data Input rec = Input
@@ -1065,24 +1065,24 @@ Expression problem возникала и решалась много раз: exp
     algInput = \case Input -> \env -> env
 \end{minted}
 
-Таким образом, мы добились возможности отдельно определять куски синтаксиса и семантики языка, и собирать нужный язык по месту.
-Напишем программу на нашем языке с неявным иммутабельным состоянием:
+Thus, we have achieved the ability to separately define parts of the syntax and semantics of a language and assemble the needed language on the spot.
+Let us write a program in our language with implicit immutable state:
 \begin{minted}{haskell}
     f :: Int -> Int
     f = cata (algBasic' \/ algInput) $
       In (L (Plus (In (L (Const 1))) (In (R Input)))) -- 1 + input
 \end{minted}
 
-Однако заметим, что пока мы не решили проблему полностью, так как интерпретация новой конструкции \mintinline{haskell}{Input} потребовала более сложный домен и нам пришлось переписывать интерпретацию старой для него: из \mintinline{haskell}{algBasic} в \mintinline{haskell}{algBasic'}.
-Теперь мы понимаем, почему stable denotations~--- это ещё одно название для expression problem~\ref{subsec:expression-problem}.
-Далее мы дополним это решение до полноценного~\ref{sec:effects}.
+However, note that we have not yet fully solved the problem, since interpreting the new construct \mintinline{haskell}{Input} required a more complex domain and we had to rewrite the interpretation of the old one: from \mintinline{haskell}{algBasic} to \mintinline{haskell}{algBasic'}.
+Now we understand why stable denotations is another name for the expression problem~\ref{subsec:expression-problem}.
+We will complete this solution later~\ref{sec:effects}.
 
-%Полученный терм на встроенном языке пока имеет несколько чудовищную запись, но далее мы рассмотрим, как сделать термы встроенных языков неотличимыми от обычного кода мета-языка.
+%The resulting term in the embedded language has a somewhat monstrous notation for now, but later we will see how to make terms of embedded languages indistinguishable from ordinary meta-language code.
 
-\subsubsection{Произведение алгебр} \label{subsubsec:prod-algebras}
+\subsubsection{Product of algebras} \label{subsubsec:prod-algebras}
 
-Построим tagless final представление для интерпретатора из предыдущего параграфа.
-Теперь синтаксис задаётся классами типов:
+Let us build a tagless final representation for the interpreter from the previous section.
+Now the syntax is defined by type classes:
 \begin{minted}{haskell}
     class Basic domain where
       cnst :: Int -> domain
@@ -1092,7 +1092,7 @@ Expression problem возникала и решалась много раз: exp
       input :: domain
 \end{minted}
 
-В качестве домена, как и ранее возьмём функции \mintinline{haskell}{Int -> Int} и реализуем интерпретацию:
+As before, we take functions \mintinline{haskell}{Int -> Int} as the domain and implement the interpretation:
 \begin{minted}{haskell}
     instance Basic (Int -> Int) where
       cnst value = \_ -> value
@@ -1102,7 +1102,7 @@ Expression problem возникала и решалась много раз: exp
       input = \env -> env
 \end{minted}
 
-Теперь, чтобы собрать язык по месту, можно просто воспользоваться композируемостью контекстов классов типов, всю остальную работу:
+Now, to assemble the language on the spot, one can simply take advantage of the composability of type class contexts; all the rest of the work:
 \begin{minted}{haskell}
     example :: forall domain . (Basic domain, Input domain) => domain
     example = cnst 1 `plus` input

@@ -2,111 +2,111 @@
 
  % todo https://reasonablypolymorphic.com/blog/code-lenses/
 
-В функциональном программировании принято персистентно работать с данными.
-В этой главе мы рассмотрим, когда и почему это важно.
-А так же~--- функциональную оптику~--- набор абстракций для удобной работы с данными.
+In functional programming it is common to work with data persistently.
+In this chapter we consider when and why this is important.
+As well as functional optics --- a set of abstractions for convenient work with data.
 
-\subsection{Персистентные структуры данных}
+\subsection{Persistent data structures}
 
-Структуры данных разделяют на \vocab{изменяемые (mutable)} и \vocab{неизменяемые (immutable)}.
-Это классификация лишь по внутренней реализации, используются изменяемые ячейки памяти или нет.
+Data structures are divided into \vocab{mutable} and \vocab{immutable}.
+This is a classification solely by internal implementation --- whether mutable memory cells are used or not.
 
-По использованию выделают \vocab{эфемерные} и \vocab{персистентные} структуры данных. % todo verify
-Изменения эфемерной структуры данных можно наблюдать по той же ссылке:
+By usage, one distinguishes \vocab{ephemeral} and \vocab{persistent} data structures. % todo verify
+Changes to an ephemeral data structure can be observed through the same reference:
 \begin{minted}{Swift}
     let xs = MutableList<Int>.empty()
     xs.add(42)
     print(xs)
 \end{minted}
-В то время как изменение персистентной порождает каждый раз новые ссылки, а по старым остаются доступны предыдущие версии структуры:
+Whereas modifying a persistent one produces new references each time, while the previous versions of the structure remain accessible through the old ones:
 \begin{minted}{haskell}
     let xs = []
     let xs' = 42 : xs
     print xs
 \end{minted}
 
-Может показаться, что эфемерные являются изменяемыми, а персистентные --- неизменяемыми.
-На самом деле это более-менее ортогональные классификации.
-Так, с помощью копирования можно к изменяемой структуре данных предоставить персистентный интерфейс, а неизменяемой --- эфемерный (с помощью монады \mintinline{haskell}|State|).
+It might seem that ephemeral structures are mutable and persistent ones are immutable.
+In reality these are more or less orthogonal classifications.
+For instance, one can provide a persistent interface to a mutable data structure via copying, and an ephemeral interface to an immutable one (using the \mintinline{haskell}|State| monad).
 
-В речи, когда говорят о персистентных структурах данных, часто имеют в виду структуры данных с персистентным интерфейсом, специально оптимизированные для него (не требуют полного копирования на каждую операцию).
-Такие структуры данных бывают на удивление оптимальными и разнообразными~\cite{okasaki1999purely}.
+In practice, when people talk about persistent data structures, they often mean data structures with a persistent interface that are specially optimized for it (not requiring a full copy on every operation).
+Such data structures can be surprisingly optimal and diverse~\cite{okasaki1999purely}.
 
-Например, можно реализовать эффективный персистентный массив с логарифмической сложностью всех операций.
-В Haskell такой структурой данных является \mintinline{haskell}|Seq|\footnote{\url{https://hackage.haskell.org/package/containers-0.7/docs/Data-Sequence.html}}\footnote{\url{http://www.staff.city.ac.uk/~ross/papers/FingerTree.html}}.
-Если в вершинах хранить небольшие массивы, которые современные аритектуры процессоров могут эффективно копировать, можно существенно уменьшить высоту дерева и алгоритмическую сложность операций (e.g. \mintinline{scala}|scala.immutable.Vector|).
+For example, one can implement an efficient persistent array with logarithmic complexity for all operations.
+In Haskell, such a data structure is \mintinline{haskell}|Seq|\footnote{\url{https://hackage.haskell.org/package/containers-0.7/docs/Data-Sequence.html}}\footnote{\url{http://www.staff.city.ac.uk/~ross/papers/FingerTree.html}}.
+If small arrays are stored in the nodes, which modern processor architectures can efficiently copy, one can substantially reduce the tree height and the algorithmic complexity of operations (e.g.\ \mintinline{scala}|scala.immutable.Vector|).
 
 \begin{task}
-    Реализуйте не Haskell персистентное декартово дерево по неявному ключу.
-    Какие особенности Haskell усложняют использование этой структуры?
+    Implement a persistent implicit-key treap in a non-Haskell language.
+    Which features of Haskell complicate the use of this structure?
 \end{task}
 
-Когда использовать эфемерные, а когда персистентные структуры данных?
-Если сравнивать, то можно обнаружить, что эфемерные можно реализовывать эффективнее во многих случаях: кеши процессоров лучше работают с локальными данными, меньше аллокаций и индирекций.
-В то же время персистентные структуры обречены быть деревьями, чтобы реаллоцировать не структуру целиком, а только путь до корня.
+When should one use ephemeral, and when persistent data structures?
+Comparing the two, one can find that ephemeral structures can be implemented more efficiently in many cases: processor caches work better with local data, fewer allocations and indirections.
+At the same time, persistent structures are bound to be trees, in order to reallocate not the entire structure but only the path to the root.
 
-Персистентные структуры же позволяют писать более модульный и безопасный с точки зрения многопоточности код, который может не учитывать возможность изменения структуры по ссылке.
-В то время как работа с эфемерной структурой не является чистым кодом, а включает в себя порождение наблюдаемых побочных эффектов.
-Также объединение персистентных результатов разных вызовов может быть дешевле, как, например, конкатенация персистентных массивов дешевле конкатенации эфемерных (логарифмическая сложность против линейной).
+Persistent structures, on the other hand, allow writing more modular and thread-safe code that need not account for the possibility of the structure being modified through a reference.
+Whereas working with an ephemeral structure is not pure code but involves producing observable side effects.
+Also, combining persistent results of different calls can be cheaper; for example, concatenation of persistent arrays is cheaper than concatenation of ephemeral ones (logarithmic complexity versus linear).
 
-Таким образом, в рамках ограниченного, легко обозреваемого скоупа лучше использовать эфемерные структуры ввиду их эффективности (например, чтобы изначально заполнить коллекцию элементами).
-Однако, через границы абстракции лучше пропускать только персистентные структуры (или же положиться на систему эффектов, см.~\ref{sec:effect-systems}).
-То есть каждая структура данных должна поддерживать две фазы своей жизни.
-Например, так сделано в Scala, где у многих персистентных коллекций есть \mintinline{scala}|Builder| версия.
+Thus, within a limited, easily surveyable scope it is better to use ephemeral structures due to their efficiency (for example, to initially populate a collection with elements).
+However, across abstraction boundaries it is better to pass only persistent structures (or rely on an effect system, see~\ref{sec:effect-systems}).
+That is, each data structure should support two phases of its life.
+For example, this is how it is done in Scala, where many persistent collections have a \mintinline{scala}|Builder| version.
 
-\subsection{Идея оптики}
+\subsection{The idea of optics}
 
-\vocab{Функциональная оптика} позволяет строить функциональные ссылки, фокусирующиеся на определённых свойствах структур данных.
-В дальнейшем, с помощью элиминирующих функций, можно по функциональной ссылке и объекту прочитать свойство или персистентно обновить его.
-Например, мы можем сфокусироваться на первой компоненте пары с помощью ссылки \texttt{\_1} и прочитать первую компоненту:
+\vocab{Functional optics} allows building functional references that focus on certain properties of data structures.
+Subsequently, using eliminating functions, one can read a property or persistently update it given a functional reference and an object.
+For example, we can focus on the first component of a pair using the reference \texttt{\_1} and read the first component:
 \begin{minted}{haskell}
     ghci> view _1 (42, 43)
     42
 \end{minted}
-Или можем сфокусироваться на свойстве наличия в множестве определённого элемента \texttt{member}, выставить свойство в \mintinline{haskell}{True} и получить новое множество с нужным элементом:
+Or we can focus on the property of membership of a certain element in a set \texttt{member}, set the property to \mintinline{haskell}{True}, and obtain a new set with the desired element:
 \begin{minted}{haskell}
     ghci> set (member 42) (Set.fromList [1, 2]) True
     Set.fromList [1, 2, 42]
 \end{minted}
 
-Функциональные ссылки композируются (тут, с помощью \texttt{\%}).
-Так, если множество будет в первой компоненте пары, мы всё ещё можем добавить в него элемент:
+Functional references compose (here, using \texttt{\%}).
+So, if the set is in the first component of a pair, we can still add an element to it:
 \begin{minted}{haskell}
     ghci> set (_1 % member 42) (Set.fromList [1, 2], 3) True
     (Set.fromList [1, 2, 42], 3)
 \end{minted}
 
-Важно заметить, что функциональные ссылки, в отличие от обычных указателей, с одной стороны более абстрактны и не обязательно просто ссылаются на область памяти, а с другой~--- отделены от конкретного объекта, чем скорее напоминают указатели на методы в C++.
+It is important to note that functional references, unlike ordinary pointers, are on the one hand more abstract and do not necessarily simply refer to a memory region, and on the other hand are detached from a particular object, thus more closely resembling pointers to methods in C++.
 
-Таким образом, оптика помогает приблизить удобство программирования с персистентными структурами данных к удобству программирования с мутабельными.
-Это важно, поскольку хорошие практики программирования должны быть как минимум так же доступны, как и менее оптимальные.
+Thus, optics helps bring the convenience of programming with persistent data structures closer to that of programming with mutable ones.
+This is important because good programming practices should be at least as accessible as less optimal ones.
 
-Функциональные ссылки могут предоставлять различные интерфейсы использования, которые называют \vocab{оптическими девайсами}.
-Девайсы образуют иерархию (рис.~\ref{fig:optics-hierarchy}): при композиции двух девайсов, результирующий является ближайшим общим предком с функциональностью пересечения функциональностей исходных.
+Functional references can provide various usage interfaces, which are called \vocab{optical devices}.
+Devices form a hierarchy (Fig.~\ref{fig:optics-hierarchy}): when composing two devices, the result is the nearest common ancestor with functionality equal to the intersection of the functionalities of the originals.
 
 \begin{figure}
     \centering
     \includegraphics[width=\textwidth]{figs/optics-hierarchy}
-    \caption{Иерархия оптических девайсов библиотеки \texttt{optics}.}
+    \caption{Hierarchy of optical devices of the \texttt{optics} library.}
     \label{fig:optics-hierarchy}
 \end{figure}
 
-Обе ссылки выше являются оптическим девайсом \vocab{линза}, который исторически появился первым.
-Изначально линзы были предложены как решение проблемы view-update в базах данных~\cite{bohannon2006relational, foster2008quotient}.
-А именно --- как нужно изменить реальную базу при изменении view.
-Или как восстанавливать целое после извлечения и изменения части.
-Линзы тут являются средством двустороннего программирования --- позволяют одновременно описывать как view, так и способ обновления.
-Параллельно\footnote{\url{https://github.com/ekmett/lens/wiki/History-of-Lenses}}, линзы упоминаются в серии блог-постов, описывающих попытку удобнее работать с изменяемым состоянием при написании игр\footnote{\href{https://web.archive.org/web/20140402193032/https://lukepalmer.wordpress.com/2007/07/26/making-haskell-nicer-for-game-programming/}{(post) Making Haskell nicer for game programming}}\footnote{\href{https://web.archive.org/web/20120303223802/https://lukepalmer.wordpress.com/2007/08/05/haskell-state-accessors-second-attempt-composability/}{(post) Haskell State Accessors (second attempt: Composability)}} (линзы в играх продолжают радовать\footnote{\url{http://www.timphilipwilliams.com/posts/2019-07-25-minecraft.html}}).
+Both references above are the optical device \vocab{lens}, which historically appeared first.
+Initially, lenses were proposed as a solution to the view-update problem in databases~\cite{bohannon2006relational, foster2008quotient}.
+Namely --- how should the actual database be changed when the view is changed.
+Or how to reconstruct the whole after extracting and modifying a part.
+Lenses here serve as a means of bidirectional programming --- they allow simultaneously describing both the view and the way to update.
+In parallel\footnote{\url{https://github.com/ekmett/lens/wiki/History-of-Lenses}}, lenses are mentioned in a series of blog posts describing an attempt to work more conveniently with mutable state when writing games\footnote{\href{https://web.archive.org/web/20140402193032/https://lukepalmer.wordpress.com/2007/07/26/making-haskell-nicer-for-game-programming/}{(post) Making Haskell nicer for game programming}}\footnote{\href{https://web.archive.org/web/20120303223802/https://lukepalmer.wordpress.com/2007/08/05/haskell-state-accessors-second-attempt-composability/}{(post) Haskell State Accessors (second attempt: Composability)}} (lenses in games continue to delight\footnote{\url{http://www.timphilipwilliams.com/posts/2019-07-25-minecraft.html}}).
 
-Существует множество библиотек оптики как для Haskell\footnote{\url{https://hackage.haskell.org/package/optics-0.1/docs/Optics.html}}\footnote{\url{http://lens.github.io/}}\footnote{\url{https://github.com/marcosh/existential-optics/tree/main}}, так и для других языков: Kotlin\footnote{\url{https://arrow-kt.io/}}, Scala\footnote{\url{https://github.com/optics-dev/Monocle}}, Swift\footnote{\url{https://github.com/swiftlang/swift-evolution/blob/main/proposals/0161-key-paths.md}} (языковая поддержка).
+Numerous optics libraries exist for both Haskell\footnote{\url{https://hackage.haskell.org/package/optics-0.1/docs/Optics.html}}\footnote{\url{http://lens.github.io/}}\footnote{\url{https://github.com/marcosh/existential-optics/tree/main}} and other languages: Kotlin\footnote{\url{https://arrow-kt.io/}}, Scala\footnote{\url{https://github.com/optics-dev/Monocle}}, Swift\footnote{\url{https://github.com/swiftlang/swift-evolution/blob/main/proposals/0161-key-paths.md}} (language support).
 
-\subsection{Использование оптики}
+\subsection{Using optics}
 
-Рассмотрим для примера использование нескольких оптических девайсов библиотеки \texttt{optics}, имеющей прекрасную документацию\footnote{\url{https://hackage.haskell.org/package/optics-0.4.2.1/docs/Optics.html}}.
+As an example, let us consider the use of several optical devices from the \texttt{optics} library, which has excellent documentation\footnote{\url{https://hackage.haskell.org/package/optics-0.4.2.1/docs/Optics.html}}.
 
 % todo
 
-Примеры:
+Examples:
 \begin{minted}{haskell}
     data Pet = Cat String | Dog Int deriving Show
     newtype UserName = UserName { _getUserName :: String } deriving Show
@@ -132,9 +132,9 @@ TODO % todo
 
 \subsection{Data optics}
 
-\subsubsection{Линзы}
+\subsubsection{Lenses}
 
-Простейшую линзу образуют пара функций --- просмотр и установка свойства:
+The simplest lens is formed by a pair of functions --- viewing and setting a property:
 \begin{minted}{haskell}
     data SimpleLens' s a = SimpleLens'
       { view' :: s -> a
@@ -142,14 +142,14 @@ TODO % todo
       }
 \end{minted}
 
-На эти функции накладываются естественные законы:
+Natural laws are imposed on these functions:
 \begin{minted}{haskell}
     view l (set l s x) ?$\equiv$? x
     set l s (view l s) ?$\equiv$? s
     set l (view l s x) y ?$\equiv$? set l s y
 \end{minted}
 
-Например, можно легко изменить возраст пользователя:
+For example, one can easily modify a user's age:
 \begin{minted}{haskell}
     newtype Age = Age { _getAge :: Int }
     data User = User { _userName :: String, _userAge :: Age }
@@ -163,7 +163,7 @@ TODO % todo
     ghci> set (userAge % getAge) user 1
 \end{minted}
 
-Можно обобщить линзы до полиморфных линз, которые позволяют пересоздавать структуру с новыми типовыми параметрами:
+One can generalize lenses to polymorphic lenses, which allow recreating the structure with new type parameters:
 \begin{minted}{haskell}
     data SimpleLens s t a b = SimpleLens
       { view :: s -> a
@@ -174,23 +174,23 @@ TODO % todo
     _1 = SimpleLens { view = \(x, _) -> x, set = \(x, c) y -> (y, c) }
 \end{minted}
 
-Можно заметить, что линза в таком представлении является комонадой коалгеброй коstate\footnote{\href{https://youtu.be/9_iYlp8smc8?si=NLka0vnnhYDdTfgm}{(youtube) Category Theory II 9.1: Lenses.}}.
-Действительно, пару функций можно заменить на функцию, возвращающую пару:
+One can notice that a lens in this representation is a costate comonad coalgebra\footnote{\href{https://youtu.be/9_iYlp8smc8?si=NLka0vnnhYDdTfgm}{(youtube) Category Theory II 9.1: Lenses.}}.
+Indeed, the pair of functions can be replaced with a function returning a pair:
 \begin{minted}{haskell}
     data Store a s = Store (a, a -> s)
     data DataLens s a = DataLens (s -> Store a s)
 \end{minted}
 
-Если определить инстанс комонады для \mintinline{haskell}|Store a s| и выписать законы совместимости с коалгеброй, мы получим в точности законы линз.
+If we define a comonad instance for \mintinline{haskell}|Store a s| and write out the laws of compatibility with the coalgebra, we obtain exactly the lens laws.
 
 TODO % todo
 
-\subsubsection{Призмы}
+\subsubsection{Prisms}
 
-Призмы позволяют получить свойство, которое может отсутствовать, и устанавливать его при наличии.
-Так, конкретное поле типа-суммы может не удаться извлечь, при передаче не ожидаемого конструктора.
+Prisms allow obtaining a property that may be absent, and setting it when present.
+Thus, a specific field of a sum type may fail to be extracted if an unexpected constructor is passed.
 
-Простые призмы можно определить аналогично линзам, с учётом возможного отсутствия свойства:
+Simple prisms can be defined analogously to lenses, accounting for possible absence of the property:
 
 \begin{minted}{haskell}
     data SimplePrism' s a = SimplePrism'
@@ -199,7 +199,7 @@ TODO % todo
       }
 \end{minted}
 
-Полиморфная призма должна предоставить структуру с обновлённым типом в случае неуспеха просмотра:
+A polymorphic prism must provide the structure with an updated type in case the preview fails:
 \begin{minted}{haskell}
     data SimplePrism s t a b = SimplePrism
       { preview :: s -> Either t a
@@ -207,7 +207,7 @@ TODO % todo
       }
 \end{minted}
 
-Можно определить призму для работы с содержимым конструктора \mintinline{haskell}|Left|:
+One can define a prism for working with the contents of the \mintinline{haskell}|Left| constructor:
 \begin{minted}{haskell}
     _Left :: SimplePrism (Either a c) (Either b c) a b
     _Left = SimplePrism
@@ -216,22 +216,22 @@ TODO % todo
       }
 \end{minted}
 
-Композиция призм определяется естественным образом.
+Composition of prisms is defined in a natural way.
 
-% todo сериализация это призма
+% todo serialization is a prism
 
-\subsubsection{Композиция линз и призм}
+\subsubsection{Composition of lenses and prisms}
 
-Заведём класс типов, с помощью которого научимся композировать различные комбинации линз и призм.
-Результирующий девайс однозначно определяется операндами композиции.
+Let us introduce a type class with which we will learn to compose various combinations of lenses and prisms.
+The resulting device is uniquely determined by the operands of the composition.
 
 \begin{minted}{haskell}
     class Composable o1 o2 o3 | o1 o2 -> o3 where
       compose :: o1 s t a b -> o2 a b c d -> o3 s t c d
 \end{minted}
 
-Теперь можем естественным образом определить композицию для различных девайсов.
-Можно заметить, что этот подход требует квадратичное количество инстансов от количества оптических девайсов.
+Now we can naturally define composition for various devices.
+One can notice that this approach requires a quadratic number of instances in the number of optical devices.
 
 \begin{minted}{haskell}
     instance Composable SimpleLens SimpleLens SimpleLens where
@@ -242,8 +242,8 @@ TODO % todo
         }
 \end{minted}
 
-Композиция линз и призм образует другой девайс --- аффинные траверсы, которые являются чем-то средним.
-Наличие призмы в композиции не позволяет гарантированно просматривать свойство, а линзы --- создавать новое значение без изначального.
+Composition of lenses and prisms forms a different device --- affine traversals, which are something in between.
+The presence of a prism in the composition does not allow guaranteed viewing of the property, while a lens does not allow creating a new value without the original.
 \begin{minted}{haskell}
     data AffineTraversal s t a b = AffineTraversal
       { apreview :: s -> Either t a
@@ -260,11 +260,11 @@ TODO % todo
         }
 \end{minted}
 
-\subsection{Путь к profunctor optics}
+\subsection{The path to profunctor optics}
 
 TODO % todo
 
-\subsection{Генерация оптики}
+\subsection{Generating optics}
 
 TODO % todo
 
@@ -285,8 +285,8 @@ TODO % todo
 
 
 
-%Например, линза может фокусироваться на знак числа, позволяя его просматривать и устанавливать.
-%Это свойство имеет тип \mintinline{haskell}|Bool|:
+%For example, a lens can focus on the sign of a number, allowing it to be viewed and set.
+%This property has the type \mintinline{haskell}|Bool|:
 %\begin{minted}{haskell}
 %    sign :: Lens' Int Bool
 %\end{minted}
@@ -294,36 +294,36 @@ TODO % todo
 
 
 %
-%\subsubsection{Линзы --- costate coalgebra comonad}
+%\subsubsection{Lenses --- costate coalgebra comonad}
 %
-% todo картинки
-%
-
+% todo pictures
 %
 
 %
 
 %
 
-
-
-
-%\subsection{Другие представления оптики}
 %
-%Ранее мы рассмотрели тривиальную оптику, составленную непосредственно из кортежа элиминирующих функций (пары разбора-пересборки значений).
-%Однако, у такого подхода есть существенные недостатки.
-%Во-первых, нужно определять много операций композиции для различных видов оптики.
-%То есть композиция девайсов --- что-то гораздо более сложное, чем композиция функций.
-%Во-вторых, это представление не очень эффективно, так как нужно инлайнить вызовы функций из структур данных. % todo девиртуализировать в терминах llvm
+
+
+
+
+%\subsection{Other representations of optics}
 %
-%Было приложено много усилий и теорката\footnote{\url{https://bartoszmilewski.com/category/lens/}}, чтобы получить другие представления оптики.
-%Некоторые из них являются просто одной функцией, кодирующей все нужные преобразования, а композиция определена как композиция таких функций.
+%Earlier we considered trivial optics, composed directly from a tuple of eliminating functions (a pair of parsing-reassembly of values).
+%However, this approach has significant drawbacks.
+%First, many composition operations need to be defined for different kinds of optics.
+%That is, device composition is something much more complex than function composition.
+%Second, this representation is not very efficient, since function calls from data structures need to be inlined. % todo devirtualize in LLVM terms
+%
+%Much effort and category theory\footnote{\url{https://bartoszmilewski.com/category/lens/}} was invested to obtain other representations of optics.
+%Some of them are simply a single function encoding all the necessary transformations, and composition is defined as composition of such functions.
 %
 %\subsubsection{Semantic editor combinators}
 %
 %TODO semantic editor combinators\footnote{\url{http://conal.net/blog/posts/semantic-editor-combinators}} % todo
 %
-%\subsubsection{Линзы ван Лаарховена}
+%\subsubsection{Van Laarhoven lenses}
 %
 %TODO van Laarhoven lens\footnote{\url{https://www.twanvl.nl/blog/haskell/cps-functional-references}}\footnote{\href{http://r6.ca/blog/20120623T104901Z.html}{(post) Polymorphic Update with van Laarhoven Lenses}} % todo
 %
@@ -333,57 +333,57 @@ TODO % todo
 %
 %\subsubsection{Profunctor optics}
 %
-%TODO % todo немножко profunctor optics
+%TODO % todo a bit of profunctor optics
 %
-%% todo ссылки на Бартоша
+%% todo links to Bartosz
 %
 %\subsubsection{Existential (coend) optics}
 %
 %TODO\footnote{\url{https://github.com/marcosh/existential-optics/tree/main}}\footnote{\url{https://www.tweag.io/blog/2022-05-05-existential-optics/}}\footnote{\url{https://www.twanvl.nl/blog/haskell/isomorphism-lenses}}\footnote{\url{https://www.brunogavranovic.com/posts/2022-01-05-lenses-to-the-left-of-me.html}} % todo
 %
 %
-%\subsection{Генерация оптики}
+%\subsection{Generating optics}
 %
-%Чтобы использовать оптику для работы со своими структурами данных, нужно так или иначе получить для них реализацию девайсов.
+%To use optics for working with your own data structures, one needs to somehow obtain device implementations for them.
 %
-%Некоторую специфичную оптику можно написать руками.
-%Например, позволяющую работать с нетривиальным свойством значения (знак числа, высота дерева\ldots).
-%Библиотеки предоставляют специальные билдеры, упрощающие конструирование\footnote{\url{https://hackage.haskell.org/package/optics-core-0.1/docs/Optics-Lens.html\#v:lens}}.
+%Some specific optics can be written by hand.
+%For example, those that work with a non-trivial property of a value (sign of a number, height of a tree\ldots).
+%Libraries provide special builders that simplify construction\footnote{\url{https://hackage.haskell.org/package/optics-core-0.1/docs/Optics-Lens.html\#v:lens}}.
 %
-%Некоторая оптика получается автоматически из инстансов стандартных классов типов.
-%Например, свёртки и траверсы\footnote{\url{https://hackage.haskell.org/package/optics-core-0.1/docs/Optics-Traversal.html\#g:6}}.
-%Дальше уже встаёт вопрос о генерации инстансов классов типов (см.~\ref{sec:datatype-generic}).
+%Some optics are obtained automatically from instances of standard type classes.
+%For example, folds and traversals\footnote{\url{https://hackage.haskell.org/package/optics-core-0.1/docs/Optics-Traversal.html\#g:6}}.
+%Beyond that, the question of generating type class instances arises (see~\ref{sec:datatype-generic}).
 %
-%Поскольку линзы являются просто обобщением полей, а призмы --- конструкторов, их можно генерировать автоматически с помощью макросов по структуре данных\footnote{\url{https://hackage.haskell.org/package/optics-th-0.1/docs/Optics-TH.html}}.
-%Для этого используются конвенции, поля называются с подчёркиванием, а макрос сгенерирует линзы без подчёркивания.
-%С призмами наоборот.
-%Так, генерация для примера выше (\ref{subsec:optics}) будет выглядеть следующим образом:
+%Since lenses are simply generalizations of fields and prisms of constructors, they can be generated automatically using macros from the data structure\footnote{\url{https://hackage.haskell.org/package/optics-th-0.1/docs/Optics-TH.html}}.
+%For this, conventions are used: fields are named with an underscore, and the macro generates lenses without the underscore.
+%With prisms it is the opposite.
+%Thus, generation for the example above (\ref{subsec:optics}) would look as follows:
 %\begin{minted}{haskell}
 %    makeLenses ''User
 %    makeLenses ''UserName
 %    makePrisms ''Pet
 %\end{minted}
 %
-%TODO библиотека  % todo
+%TODO library  % todo
 %
 %TODO data-generic optics\footnote{\url{https://hackage.haskell.org/package/optics-core-0.4.1.1/docs/Optics-Label.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_record_update.html}}\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_labels.html}} % todo
 %
 %TODO % todo
 
 
-% todo библиотеки с оптикой для других языков
+% todo optics libraries for other languages
 
 % todo transducers
 
-% todo слайды Беляева
+% todo Belyaev's slides
 
 % todo zippers
 
-% todo сравнение с datatype generic programming
+% todo comparison with datatype generic programming
 
-% todo оптика как альтернатива стримам?
+% todo optics as an alternative to streams?
 
-% todo first-class patterns should also be able to re-build the values that they match, Pattern Synonyms paper, кастомные паттерны это та же оптика только с фиксированной структурой, которая помогает с exhaustiveness
+% todo first-class patterns should also be able to re-build the values that they match, Pattern Synonyms paper, custom patterns are the same optics but with a fixed structure that helps with exhaustiveness
 
 % todo data processing
 
@@ -391,12 +391,12 @@ TODO % todo
 % todo lens and serialization
 
 
-% todo общее между оптикой и data-дженериками - нужно универсально работать с разными структурами, хоть они и все так или иначе суммы, например, мы это знаем. То есть вид структуры знаем, а конкретные конструкторы и прочее - нет.
+% todo the common ground between optics and data-generics - one needs to work universally with different structures, even though they are all sums of products in some way, for example, we know this. That is, we know the kind of structure, but not the specific constructors and so on.
 
-%Рассмотрим самую вершину башни интерпретаторов.
-%Там интерпретируется программа, которая сама по себе уже не является интерпретатором, а представляет собой API или UI запрос от внешнего мира.
-%Эта программа интерпретируется в некоторое преобразование данных $d_{in}\rightsquigarrow d_{out}$, которые в свою очередь уже не являются программой (поскольку им не даётся семантика).
-%Как выглядят эти преобразования, как их композиционно описывать?
+%Let us consider the very top of the tower of interpreters.
+%There a program is interpreted that is itself no longer an interpreter, but represents an API or UI request from the outside world.
+%This program is interpreted into some data transformation $d_{in}\rightsquigarrow d_{out}$, which in turn is no longer a program (since no semantics is given to it).
+%What do these transformations look like, how does one describe them compositionally?
 %
 %\[
 %    d_{out} =

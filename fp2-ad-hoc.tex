@@ -1,23 +1,23 @@
 %! suppress = EscapeUnderscore
 %! suppress = MissingLabel
 
-Как-то Joe Fasel в разговоре с Philip Wadler высказал идею того, что перегрузка функций (overloading) должна находить своё отражение в типах.
-Wadler понял его неправильно~\cite{hudak2007history}.
-Но то, что он понял, --- оказалось классами типов~\cite{wadler1989make}.
+Once, Joe Fasel in a conversation with Philip Wadler expressed the idea that function overloading should be reflected in types.
+Wadler misunderstood him~\cite{hudak2007history}.
+But what he understood turned out to be type classes~\cite{wadler1989make}.
 
-Christopher Strachey ввёл классификацию полиморфизма на две категории~\cite{strachey2000fundamental}.
-Параметрический~--- один и тот же код работает с данными различных типов.
-\vocab{Специальный (ad-hoc) полиморфизм} --- код выбирается в зависимости от типа.
-Например, один и тот же символ умножения по-разному действует на целые числа и на числа с плавающей точкой.
+Christopher Strachey introduced a classification of polymorphism into two categories~\cite{strachey2000fundamental}.
+Parametric --- the same code works with data of different types.
+\vocab{Ad-hoc polymorphism} --- code is selected depending on the type.
+For example, the same multiplication symbol acts differently on integers and on floating-point numbers.
 
-Перегрузка в языках обозначает возможность назвать несколько функций с различными наборами входных параметров одинаково.
-В месте вызова компилятор статически определяет по типам аргументов, какую из них действительно следует вызвать.
+Overloading in languages refers to the ability to give the same name to several functions with different sets of input parameters.
+At the call site, the compiler statically determines by the argument types which one should actually be called.
 \begin{minted}{cpp}
     string toString(x: int) { ... }
     string toString(fmt: String, d: double) { ... }
 \end{minted}
 
-Классы типов обязуют сначала задекларировать именованную сущность (собственно, класс типов), включающую в себя пачку деклараций функций, которые могут быть перегружены для различных типов.
+Type classes require first declaring a named entity (the type class itself) that includes a set of function declarations that can be overloaded for different types.
 \begin{minted}{haskell}
     class Show a where
       show :: a -> String
@@ -27,9 +27,9 @@ Christopher Strachey ввёл классификацию полиморфизм�
       show = ...
 \end{minted}
 
-Необходимо заметить, что декларация класса типов содержит формальный типовой параметр, по вхождениям которого в тип функции, собственно, выбирается перегрузка.
-Таких параметров может быть много (\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/multi_param_type_classes.html}{MultiParamTypeClasses}), они могут иметь стрелочные кайнды.
-Например, в случае класса типов \mintinline{haskell}|Applicative|, выбор реализации операции \mintinline{haskell}|pure| будет происходить по типовому конструктору результата, то есть даже не по полноценному типу.
+It is important to note that a type class declaration contains a formal type parameter, and by its occurrences in the function type, the overloading is selected.
+There can be many such parameters (\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/multi_param_type_classes.html}{MultiParamTypeClasses}), and they can have arrow kinds.
+For example, in the case of the type class \mintinline{haskell}|Applicative|, the choice of implementation for the operation \mintinline{haskell}|pure| happens based on the type constructor of the result, i.e. not even on a full type.
 \begin{minted}{haskell}
     class Functor f => Applicative (f :: Type -> Type) where
       pure :: a -> f a
@@ -40,38 +40,38 @@ Christopher Strachey ввёл классификацию полиморфизм�
       ...
 \end{minted}
 
-Также, в отличие от перегрузки, классы типов совместимы с параметрическим полиморфизмом.
-Так, в типе полиморфной функции нельзя указать, что для типа должна присутствовать определённая перегрузка.
-Классы типов же позволяют ограничить набор возможных типовых аргументов теми, для которых реализован инстанс нужного класса типов:
+Also, unlike overloading, type classes are compatible with parametric polymorphism.
+In the type of a polymorphic function, one cannot specify that a certain overloading must exist for a type.
+Type classes, however, allow constraining the set of possible type arguments to those for which an instance of the required type class is implemented:
 \begin{minted}{haskell}
     showPrefixed :: Show a => a -> String -> String
 \end{minted}
 
-Если сравнивать классы типов с переопределением (overriding) в ООП языках, то разрешение вызова виртуальной функции происходит с использованием таблицы, хранящейся объекте первого параметра (получателя вызова, receiver).
-Классы типов же опираются исключительно на тип, поэтому, например, возможно определение констант в классах типов\footnote{Современные ООП языки, тем не менее, стремятся поддержать статические функции в интерфейсах, что делает их ближе к классам типов и позволяет делать похожие вещи. Например, Swift.}: % todo reference
+Comparing type classes with overriding in OOP languages, the resolution of a virtual function call uses a table stored in the object of the first parameter (the call receiver).
+Type classes, on the other hand, rely exclusively on the type, so, for example, it is possible to define constants in type classes\footnote{Modern OOP languages, however, strive to support static functions in interfaces, which makes them closer to type classes and allows doing similar things. For example, Swift.}: % todo reference
 \begin{minted}{haskell}
     class Enum a => Bounded a where
       minBound :: a
       maxBound :: a
 \end{minted}
 
-В то же время, классы типов не являются типами, а, скорее, предикатами на типах.
-Тип удовлетворяет такому предикату, или свойству, если для него есть соответствующий инстанс.
-Поэтому, в частности, привычный способ в ООП создать гетерогенную коллекцию элементов, имеющих общий интерфейс, напрямую не сработает с классами типов.
-Например, такой тип не будет корректным: \mintinline{haskell}|[Show]|.
-Мы вернёмся к этой проблеме в~\ref{subsubsec:existentials}.
+At the same time, type classes are not types, but rather predicates on types.
+A type satisfies such a predicate, or property, if there is a corresponding instance for it.
+Therefore, in particular, the familiar OOP way of creating a heterogeneous collection of elements with a common interface does not work directly with type classes.
+For example, this type would not be valid: \mintinline{haskell}|[Show]|.
+We will return to this problem in~\ref{subsubsec:existentials}.
 
-\subsection{Классы типов в языке}
+\subsection{Type classes in the language}
 
-Несмотря на поразительное могущество, идея реализации классов типов крайне проста.
-Она была уже во всей полноте представлена в первой работе~\cite{wadler1989make}.
-В дальнейших работах уточнялся механизм вывода типов в виде сведения к классической системе типов в стиле Hindley-Milner~\cite{hall1996type}.
-Остальные работы, в основном, предлагают огромное разнообразие различных расширений и приложений~\cite{jones1997type}.
+Despite its remarkable power, the idea of implementing type classes is extremely simple.
+It was already fully presented in the original paper~\cite{wadler1989make}.
+Subsequent work refined the type inference mechanism by reducing it to the classical Hindley-Milner type system~\cite{hall1996type}.
+Other work mostly proposes a huge variety of extensions and applications~\cite{jones1997type}.
 
-\subsubsection{Словари} \label{subsubsec:tc-dict}
+\subsubsection{Dictionaries} \label{subsubsec:tc-dict}
 
-Рассмотрим идею реализации классов типов на примере полиморфной сортировки.
-Сортировка для списка элементов конкретного типа пишется тривиально:
+Let us consider the idea of implementing type classes using the example of polymorphic sorting.
+Writing a sort for a list of elements of a specific type is trivial:
 \begin{minted}{haskell}
     sort :: [Int] -> [Int]
     sort = \case [] -> []; x:xs -> insert x (sort xs)
@@ -79,8 +79,8 @@ Christopher Strachey ввёл классификацию полиморфизм�
         insert x xs = let (l, r) = List.partition (?\framebox{<}? x) xs in l ++ x : r)
 \end{minted}
 
-В реализации единственная информация о типе, которой мы пользуемся --- порядок на его обитателях.
-Таким образом, при переходе к полиморфной сортировке, нам нужно принять словарь с предикатами, задающими нужный порядок для данного типа.
+In the implementation, the only type-specific information we use is the ordering on its inhabitants.
+Thus, when moving to polymorphic sorting, we need to accept a dictionary with predicates defining the required ordering for the given type.
 \begin{minted}{haskell}
     data OrdDict a = OrdDict { less :: a -> a -> Bool }
 
@@ -90,7 +90,7 @@ Christopher Strachey ввёл классификацию полиморфизм�
         insert x xs = let (l, r) = List.partition (?\framebox{`less`}? x) xs in l ++ x : r
 \end{minted}
 
-Теперь, чтобы воспользоваться сортировкой на списке чисел, нужно сконструировать нужный рекорд и вызвать с ним функцию на списке конкретных типов:
+Now, to use sorting on a list of numbers, we need to construct the appropriate record and call the function with it on a list of specific types:
 \begin{minted}{haskell}
     intOrd :: OrdDict Int
     intOrd = OrdDict { less = (<) }
@@ -98,95 +98,95 @@ Christopher Strachey ввёл классификацию полиморфизм�
     ghci> sort intOrd [3, 2, 1]
 \end{minted}
 
-Возможна ситуация, когда инстанс для одного типа зависит от инстанса для другого
-Например, порядок на списках можно получить автоматически, зная порядок на элементах.
-В случае словарей мы это моделируем функцией между словарями:
+There can be a situation where an instance for one type depends on an instance for another.
+For example, ordering on lists can be derived automatically, knowing the ordering on elements.
+In the case of dictionaries, we model this as a function between dictionaries:
 \begin{minted}{haskell}
     listDict :: OrdDict a -> OrdDict [a]
     listDict d = OrdDict { less = ... ?\framebox{less d}? ... }
 \end{minted}
 
-Теперь мы можем сортировать список списков, конструируя нужный словарь:
+Now we can sort a list of lists by constructing the appropriate dictionary:
 \begin{minted}{haskell}
     ghci> sort (listDict intDict) [[3, 2], [2, 1], [0]]
 \end{minted}
 
-Сравнение явной передачи словарей и классов типов можно увидеть в следующей таблице:
+A comparison of explicit dictionary passing and type classes can be seen in the following table:
 
 \begin{tabular}{p{8cm}p{8cm}}
     \begin{enumerate}
-        \item Определение словаря функций
+        \item Definition of a dictionary of functions
         \begin{minted}{haskell}
             data MyOrd a = MyOrd
               { less :: a -> a -> Bool }
         \end{minted}
-        \item Экземпляр словаря для конкретного типа
+        \item Dictionary instance for a specific type
         \begin{itemize}
-            \item Именованное значение
+            \item Named value
         \end{itemize}
         \begin{minted}{haskell}
             intMyOrd :: MyOrd Int
             intMyOrd = MyOrd { less = (<) }
         \end{minted}
-        \item Явный параметр функции
+        \item Explicit function parameter
         \begin{minted}{haskell}
             sort :: MyOrd a -> [a] -> [a]
         \end{minted}
-        \item Передаётся пользователем
+        \item Passed by the user
         \begin{minted}{haskell}
             test = sort ?\framebox{intMyOrd}? [3, 2, 1]
         \end{minted}
     \end{enumerate}
     &
     \begin{enumerate}
-        \item Определение класса типов
+        \item Definition of a type class
         \begin{minted}{haskell}
              class MyOrd a where
                less :: a -> a -> Bool
         \end{minted}
-        \item Объявление типа представителем класса типов
+        \item Declaring a type as a member of a type class
         \begin{itemize}
-            \item Не имеет имени
+            \item Has no name
         \end{itemize}
         \begin{minted}{haskell}
             instance MyOrd Int where
               less = (<)
         \end{minted}
-        \item Неявный параметр функции
+        \item Implicit function parameter
         \begin{minted}{haskell}
             sort :: MyOrd a => [a] -> [a]
         \end{minted}
-        \item Передаётся компилятором
+        \item Passed by the compiler
         \begin{minted}{haskell}
             test = sort [3, 2, 1]
         \end{minted}
     \end{enumerate}
 \end{tabular}
 
-Таким образом, словарь --- это \vocab{свидетель (witness)} или доказательство того, что тип удовлетворяет ограничению.
+Thus, a dictionary is a \vocab{witness} or proof that the type satisfies the constraint.
 
 \begin{task}
-    Какой словарь будет соответствовать higher-kinded классу типов \mintinline{haskell}|Functor|?
+    What dictionary would correspond to the higher-kinded type class \mintinline{haskell}|Functor|?
 \end{task}
 
-\subsubsection{Неявные аргументы} \label{subsubsec:ad-hoc-implicits}
+\subsubsection{Implicit arguments} \label{subsubsec:ad-hoc-implicits}
 
-Можно думать так, что слева от \mintinline{haskell}|=>| передаются неявные аргументы функций, выводимые компилятором из контекста.
-То есть, например, не стоит удивляться вхождениям \mintinline{haskell}{=>} в типе аргумента, это просто функция с неявным аргументом.
-Так, следующий код не скомпилируется, потому что в месте использования переменной \texttt{y} нет значения типа \mintinline{haskell}|Show b|:
+One can think of it as follows: to the left of \mintinline{haskell}|=>|, implicit function arguments are passed, inferred by the compiler from the context.
+That is, for example, one should not be surprised by occurrences of \mintinline{haskell}{=>} in the type of an argument --- it is simply a function with an implicit argument.
+Thus, the following code will not compile because at the use site of variable \texttt{y} there is no value of type \mintinline{haskell}|Show b|:
 \begin{minted}{haskell}
     f :: (Show b => b) -> b
-    f x = ?\framebox{x}? -- ошибка
+    f x = ?\framebox{x}? -- error
 \end{minted}
-Можно это значение принять в функции \texttt{f}, тогда оно автоматически пропагируется в \texttt{x}:
+We can accept this value in function \texttt{f}, and then it will automatically propagate to \texttt{x}:
 \begin{minted}{haskell}
     f :: Show b => (Show b => b) -> b
     f x = ?\framebox{x}?
 \end{minted}
 
-Расширение \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/implicit_parameters.html}{ImplicitParams} даёт возможность делать некоторые аргументы функции неявными.
-Фактически, это реализация динамического связывания в статическом языке~\cite{lewis2000implicit} (см. далее\ \ref{subsubsec:name-bindings}).
-Неявные аргументы берутся из скоупа по имени и подставляются автоматически:
+The extension \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/implicit_parameters.html}{ImplicitParams} provides the ability to make some function arguments implicit.
+In fact, this is an implementation of dynamic binding in a static language~\cite{lewis2000implicit} (see~\ref{subsubsec:name-bindings}).
+Implicit arguments are taken from the scope by name and substituted automatically:
 %! suppress = EscapeHashOutsideCommand
 \begin{minted}[escapeinside=##]{haskell}
     sortBy :: (a -> a -> Bool) -> [a] -> [a]
@@ -195,41 +195,41 @@ Christopher Strachey ввёл классификацию полиморфизм�
     sort = sortBy ?cmp
 \end{minted}
 
-Haskell также предоставляет возможность сохранять словари в структуры данных:
+Haskell also provides the ability to store dictionaries in data structures:
 \begin{minted}{haskell}
     data ShowDict a where
       ShowDict :: Show a => ShowDict a
 
     f :: ShowDict b -> (Show b => b) -> b
-    f d x = case d of ShowDict -> ?\framebox{x}? -- в скоупе доступен инстанс Show b
+    f d x = case d of ShowDict -> ?\framebox{x}? -- the Show b instance is available in scope
 \end{minted}
 
 \begin{task}
-    Возможна ли именно такая семантика в энергичном языке?
-    Почему?
+    Is exactly this semantics possible in a strict language?
+    Why?
 \end{task}
 
-\subsubsection{Вывод инстансов} \label{subsubsec:instance-inference}
+\subsubsection{Instance inference} \label{subsubsec:instance-inference}
 
-Чтобы вызвать ограниченно-полиморфную функцию, GHC производит вывод инстансов или, иначе говоря, автоматически конструирует свидетелей.
-Вывод инстансов тесно интегрирован с общей системой вывода типов Haskell~\cite{spj-type-inference}.
+To call a constrained-polymorphic function, GHC performs instance inference, or in other words, automatically constructs witnesses.
+Instance inference is tightly integrated with Haskell's overall type inference system~\cite{spj-type-inference}.
 
-В действительности вывод инстансов это не что иное, как \point{задача населения типа}.
-Действительно, после трансляции в Core (промежуточное представление в GHC), классы типов представляют собой словари функций.
-У нас в контексте имеются конкретные словари и функции, позволяющие из одних словарей получать другие.
-Требуется найти терм, конструирующий словарь нужного типа.
+In reality, instance inference is nothing other than \point{the type inhabitation problem}.
+Indeed, after translation to Core (the intermediate representation in GHC), type classes are represented as dictionaries of functions.
+We have in context specific dictionaries and functions that allow deriving new dictionaries from existing ones.
+We need to find a term that constructs a dictionary of the required type.
 
-Пусть, например, внутри функции \mintinline{haskell}|f :: Show a => ..| происходит вызов ограниченно--полиморфной функции
+Suppose, for example, that inside function \mintinline{haskell}|f :: Show a => ..| there is a call to a constrained-polymorphic function
 \mintinline{haskell}|g :: Show [a] -> ..|.
-То есть, у нас имеется словарь \mintinline{haskell}|d1 :: ShowDict a|, а так же функция \mintinline{haskell}|d2 :: ShowDict a -> ShowDict [a]|, пришедшая из импортов\footnote{Инстансы можно импортировать пустым импортом: \mintinline{haskell}|import Module ()|.}.
-Необходимо сконструировать терм типа \mintinline{haskell}|ShowDict [a]|.
-Очевидно, это будет просто аппликации одного к другому: \texttt{d2 d1}.
+That is, we have a dictionary \mintinline{haskell}|d1 :: ShowDict a|, as well as a function \mintinline{haskell}|d2 :: ShowDict a -> ShowDict [a]|, coming from imports\footnote{Instances can be imported with an empty import: \mintinline{haskell}|import Module ()|.}.
+We need to construct a term of type \mintinline{haskell}|ShowDict [a]|.
+Obviously, it is simply the application of one to the other: \texttt{d2 d1}.
 
-Вывод инстансов происходит рекурсивно.
-Чтобы вывести \mintinline{haskell}|ShowDict [a]|, выводится сначала посылка \mintinline{haskell}|ShowDict a|.
-То есть получается рекурсия по структуре типа.
-Иначе говоря, вывод инстансов можно эксплуатировать как вычислительный примитив уровня типов.
-Так, например, мы можем опускать информацию из типов в термы (аналогично \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/GHC-TypeLits.html}{GHC.TypeLits}):
+Instance inference proceeds recursively.
+To infer \mintinline{haskell}|ShowDict [a]|, the premise \mintinline{haskell}|ShowDict a| is first inferred.
+That is, we get recursion on the structure of the type.
+In other words, instance inference can be exploited as a type-level computational primitive.
+For example, we can lower information from types into terms (analogous to \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/GHC-TypeLits.html}{GHC.TypeLits}):
 \begin{minted}{haskell}
     type data Nat = Zero | Suc Nat
 
@@ -243,14 +243,14 @@ Haskell также предоставляет возможность сохра�
       natVal = 1 + natVal @n
 
     ghci> natVal @(Suc (Suc Zero))
-    -- выведется natVal {knownSuc (knownSuc knownZero)}
+    -- will be inferred as natVal {knownSuc (knownSuc knownZero)}
 \end{minted}
 
-В общем случае процесс населения типа, как можно предположить по вычислительной аналогии, неразрешим.
-Поэтому GHC накладывает большое количество ограничений на вид инстансов, которые гарантируют тотальность вывода.
-Подробно эти ограничения описаны в~\cite{sulzmann2007understanding}.
-Также GHC предоставляет различные расширения, ослабляющие эти ограничения и перекладывающие часть ответственности на плечи программиста\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/instances.html}}.
-Например, c \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/instances.html\#extension-UndecidableInstances}{UndecidableInstances} можно легко написать разворот списка типов на этапе компиляции, как и любую другую функцию:
+In the general case, the type inhabitation process, as one might expect by computational analogy, is undecidable.
+Therefore GHC imposes many restrictions on the form of instances that guarantee totality of inference.
+These restrictions are described in detail in~\cite{sulzmann2007understanding}.
+GHC also provides various extensions that relax these restrictions, shifting part of the responsibility to the programmer\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/instances.html}}.
+For example, with \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/instances.html\#extension-UndecidableInstances}{UndecidableInstances} one can easily write type-level list reversal at compile time, as well as any other function:
 \begin{minted}{haskell}
     class Reverse (acc :: [Type]) (tys :: [Type]) where
       showReverse :: String
@@ -264,34 +264,34 @@ Haskell также предоставляет возможность сохра�
     ghci> showReverse @'[] @'[Char, Int, Double]
 \end{minted}
 
-Можно заметить, что процесс вывода классов типов очень похож на вычисление логических программ, например, на Prolog, только без backtracking'а (перебора различных вариантов решений в поисках подходящего).
-Как, впрочем, и вывод типов в Haskell~\cite{spj-type-inference} в целом: собранные по программе эквивалентности можно рассматривать как логическую программу, решение этой системы типовых уравнений --- как исполнение этой программы.
+One can notice that the process of type class inference is very similar to the evaluation of logic programs, for example in Prolog, only without backtracking (trying different solution variants in search of a suitable one).
+As, indeed, type inference in Haskell~\cite{spj-type-inference} in general: the equivalences collected across the program can be viewed as a logic program, and solving this system of type equations as executing that program.
 
-Между классами типов и выводом типов существует интересная синергия (рис.~\ref{fig:class-sinergy})\footnote{\href{https://youtu.be/5QQdI3P7MdY?si=VAgqyD7iycALTrz_}{(youtube) Hackett: a metaprogrammable Haskell}.}.
-Исходя из термов, выводятся типы.
-Затем, исходя из типов, выводятся инстансы классов типов.
-То есть мы пишем какой-то интересный интеллектуальный код, а параллельно с нами компилятор выписывает неинтересный код.
+There is an interesting synergy between type classes and type inference (Fig.~\ref{fig:class-sinergy})\footnote{\href{https://youtu.be/5QQdI3P7MdY?si=VAgqyD7iycALTrz_}{(youtube) Hackett: a metaprogrammable Haskell}.}.
+Based on terms, types are inferred.
+Then, based on types, type class instances are inferred.
+That is, we write some interesting intellectual code, and in parallel the compiler writes out the uninteresting code.
 
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.4\textwidth]{figs/class-sinergy}
-    \caption{Классы типов + вывод инстансов = кодогенерация.}
+    \caption{Type classes + instance inference = code generation.}
     \label{fig:class-sinergy}
 \end{figure}
 
-Вывод инстансов опирается только на вид ``головы'' декларации --- справа от \mintinline{haskell}|=>|, а ограничения слева применяются постфактум.
-Это можно использовать, чтобы писать более общие инстансы.
-Так, например, работает \vocab{constraint trick}\footnote{\url{https://chrisdone.com/posts/haskell-constraint-trick/}}, позволяющий резолвить ad-hoc полиморфные функции в параметрически-полиморфном контексте.
+Instance inference relies only on the form of the ``head'' of the declaration --- to the right of \mintinline{haskell}|=>|, while constraints on the left are applied after the fact.
+This can be used to write more general instances.
+For example, this is how the \vocab{constraint trick}\footnote{\url{https://chrisdone.com/posts/haskell-constraint-trick/}} works, allowing one to resolve ad-hoc polymorphic functions in a parametrically-polymorphic context.
 
-\subsubsection{Построение типа по значению} \label{subsubsec:reify}
+\subsubsection{Constructing a type from a value} \label{subsubsec:reify}
 
-После того как мы научились опускать значения из типов, закономерно научиться обратному --- поднимать значения в типы.
-Воспользуемся техникой, описанной в~\cite{kiselyov2004functional}.
-Существует соответствующая библиотека \href{https://hackage.haskell.org/package/reflection-2.1.6/docs/Data-Reflection.html}{Data.Reflection} (см. далее\ \ref{subsubsec:data-reflection}).
+After we have learned to lower values from types, it is natural to learn the reverse --- lifting values into types.
+We use the technique described in~\cite{kiselyov2004functional}.
+There is a corresponding library \href{https://hackage.haskell.org/package/reflection-2.1.6/docs/Data-Reflection.html}{Data.Reflection} (see~\ref{subsubsec:data-reflection}).
 
-В действительности мы, конечно, не можем честно получить синтаксически тип нужного размера, просто потому, что типы существуют строго до стадии исполнения.
-Однако, как мы знаем, словари классов типов имеют воплощение в рантайме (случай полиморфной рекурсии~--- как раз пример, когда этого нельзя полностью избежать).
-Поэтому воспользуемся continuation passing style, который будет подробно рассмотрен далее в главе~\ref{sec:continuations}: вместо того, чтобы вернуть результат, примем продолжение, умеющее работать с любым типом с \mintinline{haskell}|KnownNat| (пользуемся типовыми абстракциями и аппликациями, см.\ \ref{subsec:lang-parametric-polumorphism})\footnote{В не самых свежих версиях GHC потребуется воспользоваться техникой \mintinline{haskell}{Proxy} из \ref{subsubsec:proxy}.}:
+In reality, we of course cannot honestly obtain a syntactically correct type of the needed size, simply because types exist strictly before the execution stage.
+However, as we know, type class dictionaries have a runtime representation (the case of polymorphic recursion is precisely an example where this cannot be entirely avoided).
+Therefore, we use continuation passing style, which will be examined in detail later in chapter~\ref{sec:continuations}: instead of returning a result, we accept a continuation that can work with any type with \mintinline{haskell}|KnownNat| (we use type abstractions and applications, see\ \ref{subsec:lang-parametric-polumorphism})\footnote{In not the most recent versions of GHC, you will need to use the \mintinline{haskell}{Proxy} technique from \ref{subsubsec:proxy}.}:
 \begin{minted}{haskell}
     reify :: Int -> (forall n. KnownNat n => a) -> a
     reify n k
@@ -299,32 +299,32 @@ Haskell также предоставляет возможность сохра�
       | otherwise = reify (n - 1) \@n' -> k @(Suc n')
 \end{minted}
 
-Продолжение, передаваемое в рекурсивный вызов, захватывает словарь для типа \texttt{n} и конструирует словарь для \mintinline{haskell}|Suc n|.
+The continuation passed to the recursive call captures the dictionary for type \texttt{n} and constructs a dictionary for \mintinline{haskell}|Suc n|.
 
-Наконец, можем написать следующую удивительную тождественную функцию, поднимающую сначала значение в тип, а потом опускающее тип обратно в термы:
+Finally, we can write the following surprising identity function that first lifts a value into a type and then lowers the type back into terms:
 \begin{minted}{haskell}
     wonderId :: Int -> Int
     wonderId n = reify n (\@t -> natVal @t)
 \end{minted}
 
-\subsubsection{Имплиситы и когерентность}
+\subsubsection{Implicits and coherence}
 
-Классы типов можно не делать специальным языковым механизмом, но вместо этого предоставлять на языковом уровне неявные параметры и население, достаточные для реализации классов типов.
+Type classes need not be a special language mechanism; instead, one can provide at the language level implicit parameters and inhabitation sufficient to implement type classes.
 
-Так, в Scala существует механизм имплиситов (implicits)~\cite{kvrikava2019scala}\footnote{Дизайн неявных параметров в Scala3 изменился \href{https://youtu.be/dr0PUXQhg3M?si=pCydSikA_gnnCMrq}{(youtube) Scala Implicits Revisited, Martin Odersky}.}.
-Параметры функций могут быть помечены ключевым словом \mintinline{scala}|implicit|, тогда Scala попытается их вывести самостоятельно с помощью доступных в скоупе \mintinline{scala}|implicit| деклараций.
-Объявления переменных, функций и конструкторов объектов также могут быть помечены \mintinline{scala}|implicit|, тогда они будут использоваться при населении.
-Теперь мы можем смоделировать словарь функций, например, с помощью интерфейсов (которые в Scala называются \mintinline{scala}|trait|) и ООП синглтонов, чтобы получить классы типов~\cite{oliveira2010type}:
+Thus, in Scala there is the mechanism of implicits~\cite{kvrikava2019scala}\footnote{The design of implicit parameters in Scala 3 has changed \href{https://youtu.be/dr0PUXQhg3M?si=pCydSikA_gnnCMrq}{(youtube) Scala Implicits Revisited, Martin Odersky}.}.
+Function parameters can be marked with the keyword \mintinline{scala}|implicit|, and Scala will try to infer them automatically using the \mintinline{scala}|implicit| declarations available in scope.
+Declarations of variables, functions, and object constructors can also be marked \mintinline{scala}|implicit|, and they will be used during inhabitation.
+Now we can model a dictionary of functions, for example using interfaces (which in Scala are called \mintinline{scala}|trait|) and OOP singletons, to obtain type classes~\cite{oliveira2010type}:
 \begin{minted}{scala}
-    // Пачка функций.
+    // A bundle of functions.
     trait Show[T] {
         def show(x: T): String
     }
 
-    // Обёртка для удобства вызова.
+    // Wrapper for convenient calling.
     def show[T](x: T)(implicit ev: Show[T]): String = ev.show(x)
 
-    // Объект-синклтон, значение для пачки функций.
+    // Singleton object, a value for the bundle of functions.
     implicit object intShow extends Show[Int] {
         def show(x: Int): String = x.toString
     }
@@ -333,36 +333,36 @@ Haskell также предоставляет возможность сохра�
         xs.map(show(_)).join(", ")
 \end{minted}
 
-Как мы говорили ранее (\ref{subsec:lang-parametric-polumorphism}), работа с типовыми параметрами похожа на работу с обычными.
-Также, вывод типов можно рассматривать как процесс восстановления пропущенных типовых аппликаций.
-Заметим, что примерно этим же занимается и механизм вывода имплиситов.
-Таким образом, при попытке сделать функции с имплиситами функциями первого класса, будут возникать сложности схожие со сложностями first-class полиморфизма (\ref{subsubsec:first-class-polymorphism}).
+As we discussed earlier (\ref{subsec:lang-parametric-polumorphism}), working with type parameters is similar to working with ordinary ones.
+Also, type inference can be viewed as the process of recovering omitted type applications.
+Note that the implicit inference mechanism does approximately the same thing.
+Therefore, when trying to make functions with implicits first-class functions, difficulties similar to those of first-class polymorphism arise (\ref{subsubsec:first-class-polymorphism}).
 
-В языках с зависимыми типами неявные параметры\footnote{\url{https://agda.readthedocs.io/en/v2.7.0.1/language/implicit-arguments.html}} особенно нужны, потому что, например, типы --- это ровно такие же параметры функции, как и все остальные.
-Поэтому вывод типов~--- это фактически вывод неявных аргументов функций.
-Более того, зависимые функции, вместе с аргументами часто принимают доказательства каких-то свойств этих аргументов, которые тоже хочется по возможности выводить из контекста автоматически.
-Такой механизм вывода можно переиспользовать для эмулирования классов типов\footnote{\url{https://agda.readthedocs.io/en/v2.7.0.1/language/instance-arguments.html}}~\cite{devriese2011bright}.
-В обратную сторону тоже работает --- можно механизмы зависимой типизации эмулировать классами типов~\cite{mcbride2002faking}.
+In dependently typed languages, implicit parameters\footnote{\url{https://agda.readthedocs.io/en/v2.7.0.1/language/implicit-arguments.html}} are especially needed because, for example, types are exactly the same parameters of a function as all others.
+Therefore, type inference is essentially the inference of implicit function arguments.
+Moreover, dependent functions, along with arguments, often accept proofs of some properties of those arguments, which one also wants to infer from context automatically where possible.
+Such an inference mechanism can be reused for emulating type classes\footnote{\url{https://agda.readthedocs.io/en/v2.7.0.1/language/instance-arguments.html}}~\cite{devriese2011bright}.
+It also works in the reverse direction --- one can emulate dependent typing mechanisms using type classes~\cite{mcbride2002faking}.
 
 \begin{figure}
     \centering
     \includegraphics[width=0.8\linewidth]{figs/coherence}
-    \caption{Когерентность инстансов --- диаграмма коммутирует.}
+    \caption{Instance coherence --- the diagram commutes.}
     \label{fig:coherence}
 \end{figure}
 
-Как мы увидим далее, неявные параметры сами по себе тоже нужны как статическая аппроксимация динамических свободных переменных для реализации системы эффектов (см. далее~\ref{sec:effect-systems}).
-Однако, иметь классы типов отдельной языковой возможностью всё же полезно, несмотря на то, что они, вроде бы, представляют собой те же неявные параметры (пусть и с рекурсивным механизмом населения).
-Так, можно поддержать важное свойство при соблюдении всех ограничений, т.е. при отсутствии \vocab{orphan instances}\footnote{\url{https://stackoverflow.com/questions/3079537/orphaned-instances-in-haskell}}.
-\vocab{Когерентность инстансов (coherence)} --- для одного типа все инстансы данного класса типов, полученные разными способами, неотличимы (рис.~\ref{fig:coherence}).
-Соответственно, не имеет значения происхождение того или иного инстанса.
-Иначе говоря, об этом можно не думать, это снимает существенное количество когнитивной нагрузки и упрощает рефакторинг\footnote{\href{https://youtu.be/hIZxTQP1ifo?si=aG2Lk2eb-5E5SOLb}{Edward Kmett - Type Classes vs. the World.}}.
-В то время как остальные подходы требуют трепетного отношения к контексту вызова, потому что из него может прийти неожиданная реализация.
+As we will see later, implicit parameters on their own are also needed as a static approximation of dynamic free variables for implementing effect systems (see~\ref{sec:effect-systems}).
+However, having type classes as a separate language feature is still useful, despite them seemingly being the same implicit parameters (albeit with a recursive inhabitation mechanism).
+One can support an important property when all restrictions are respected, i.e. in the absence of \vocab{orphan instances}\footnote{\url{https://stackoverflow.com/questions/3079537/orphaned-instances-in-haskell}}.
+\vocab{Instance coherence} --- for a given type, all instances of a given type class obtained by different means are indistinguishable (Fig.~\ref{fig:coherence}).
+Accordingly, the origin of any particular instance does not matter.
+In other words, one need not think about this, which removes a significant amount of cognitive load and simplifies refactoring\footnote{\href{https://youtu.be/hIZxTQP1ifo?si=aG2Lk2eb-5E5SOLb}{Edward Kmett - Type Classes vs. the World.}}.
+In contrast, other approaches require careful attention to the calling context, because an unexpected implementation may come from it.
 
-\subsubsection{Правила (rules) и специализация} \label{subsubsec:rules}
+\subsubsection{Rules and specialization} \label{subsubsec:rules}
 
-GHC позволяет прямо в коде, с помощью специально прагмы, указывать оптимизирующие правила переписывания для компилятора\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/rewrite_rules.html}}~\cite{jones2001playing}.
-Например:
+GHC allows specifying optimizing rewrite rules for the compiler directly in code using a special pragma\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/rewrite_rules.html}}~\cite{jones2001playing}.
+For example:
 \begin{minted}{haskell}
     {-# RULES
       "map/map"    forall f g xs.  map f (map g xs) = map (f . g) xs
@@ -370,11 +370,11 @@ GHC позволяет прямо в коде, с помощью специал�
      #-}
 \end{minted}
 
-Первый закон представляет собой не что иное, как закон функторов.
-В идеале, мы формулируем законы на этапе дизайна~\cite{maguire-algebra}, проверяем их выполнение с помощью property-based testing\footnote{\href{https://youtu.be/G0NUOst-53U?si=vdcKVUi9vSPBY0Jz}{(youtube) John Hughes - Keynote: How to specify it!}}, а потом используем их для оптимизаций.
+The first law is nothing other than the functor law.
+Ideally, we formulate laws at the design stage~\cite{maguire-algebra}, verify their correctness using property-based testing\footnote{\href{https://youtu.be/G0NUOst-53U?si=vdcKVUi9vSPBY0Jz}{(youtube) John Hughes - Keynote: How to specify it!}}, and then use them for optimizations.
 
-Можно переписать полиморфную версию функции на специализированную, если типы подходят.
-Для этого нужно реализовать специализированную версию (совпадение семантики~--- полностью ответственность программиста) и задать соответствующее правило переписывания:
+One can rewrite a polymorphic version of a function to a specialized one when the types match.
+For this, one needs to implement the specialized version (semantic equivalence is entirely the programmer's responsibility) and set up the corresponding rewrite rule:
 \begin{minted}{haskell}
     genericLookup :: Ord a => Table a b   -> a   -> b
     intLookup     ::          Table Int b -> Int -> b
@@ -382,17 +382,17 @@ GHC позволяет прямо в коде, с помощью специал�
     {-# RULES "genericLookup/Int" genericLookup = intLookup #-}
 \end{minted}
 
-Основной эффект такой оптимизации --- гарантированное превращение динамических вызовов функций классов типов в статические (потому что тип известен, следовательно, --- и соответствующий ему словарь).
+The main effect of this optimization is the guaranteed conversion of dynamic type class function calls into static ones (because the type is known, and therefore so is the corresponding dictionary).
 
-\subsubsection{Отступление: дефункционализация} \label{subsubsec:defunctionalization}
+\subsubsection{Digression: defunctionalization} \label{subsubsec:defunctionalization}
 
-\vocab{Дефункционализация (defunctionalization)} --- техника избавления от функций высших порядков в программе\footnote{\url{https://en.wikipedia.org/wiki/Defunctionalization}}~\cite{defunctionalization-slides}.
-Впервые предложена в~\cite{reynolds1972definitional, reynolds1998definitional}.
+\vocab{Defunctionalization} --- a technique for eliminating higher-order functions from a program\footnote{\url{https://en.wikipedia.org/wiki/Defunctionalization}}~\cite{defunctionalization-slides}.
+It was first proposed in~\cite{reynolds1972definitional, reynolds1998definitional}.
 
-Идея заключается в том, чтобы заменить каждое создание лямбда-функции вызовом конструктора некоторого алгебраического типа данных.
-А каждый call-cite функции заменить на вызов специальной first-order функции \texttt{apply}, интерпретирующей данный алгебраический тип.
+The idea is to replace every creation of a lambda function with a call to a constructor of some algebraic data type.
+And every call site of a function is replaced with a call to a special first-order function \texttt{apply} that interprets this algebraic type.
 
-Рассмотрим пример из функции высших порядков \texttt{map} и двух колсайтов, создающих лямбда-функции:
+Consider the example with the higher-order function \texttt{map} and two call sites that create lambda functions:
 \begin{minted}{haskell}
     map :: (Int -> Int) -> [Int] -> [Int]
     map f = \case [] -> []; x:xs -> f x : map f xs
@@ -400,9 +400,9 @@ GHC позволяет прямо в коде, с помощью специал�
     example1 xs = map (\x -> x + 1) xs
     example2 y xs = map (\x -> x * y) xs
 \end{minted}
-Для каждого лямбда-литерала заводим по конструктору, хранящему замыкание.
-Аппликацию заменяем на вызов \texttt{apply}.
-Таким образом получили функцию \texttt{map} первого порядка.
+For each lambda literal we create a constructor that stores the closure.
+Application is replaced with a call to \texttt{apply}.
+Thus we obtained a first-order version of \texttt{map}.
 \begin{minted}{haskell}
     data Fun = F1 | F2 Int
     apply :: Fun -> Int -> Int
@@ -415,29 +415,29 @@ GHC позволяет прямо в коде, с помощью специал�
     example2 y xs = map (F2 y) xs
 \end{minted}
 
-\subsubsection{Эмуляция полиморфизма высших порядков} \label{subsubsec:simulating-hkt}
+\subsubsection{Emulating higher-kinded polymorphism} \label{subsubsec:simulating-hkt}
 
-Далеко не во всех языках есть полиморфизм высшего ранга, но иногда он бывает полезен.
-Самое распространённое его применение~--- эмуляция классов типов стрелочных кайндов вроде \mintinline{haskell}{Monad}.
+Not all languages have higher-rank polymorphism, but sometimes it is useful.
+Its most common application is emulating type classes of arrow kinds like \mintinline{haskell}{Monad}.
 
-Заметим, что типовый конструктор кайнда \mintinline{haskell}|Type -> Type| --- это функция на типах, принимающая один тип, и возвращающая другой.
-Применим дефункционализацию, чтобы избежать необходимости параметризовать один типовый конструктор другим~\cite{defunctionalization-slides, yallop2014lightweight}.
+Note that a type constructor of kind \mintinline{haskell}|Type -> Type| is a function on types that takes one type and returns another.
+Let us apply defunctionalization to avoid the need to parameterize one type constructor by another~\cite{defunctionalization-slides, yallop2014lightweight}.
 
-Поставим в соответствие типовому конструктору \mintinline{haskell}{List} тип-``символ'' \mintinline{haskell}{ListSym} (для примера используем Kotlin):
+We associate to the type constructor \mintinline{haskell}{List} a type ``symbol'' \mintinline{haskell}{ListSym} (for illustration we use Kotlin):
 \begin{minted}{kotlin}
     class ListSym
 \end{minted}
-Заведём тип, соответствующий аппликации символа к типу, хранящий оригинальное значение со стёртым типом:
+We create a type corresponding to the application of a symbol to a type, storing the original value with erased type:
 \begin{minted}{kotlin}
     class Apply<Sym, T>(val value: Any)
 \end{minted}
-Установим изоморфизм между изначальным типом, полученным типовой аппликацией конструктора, и новой аппликацией символа:\footnote{Слева от точки в декларации указывается дополнительный аргумент функции с синтаксисом передачи совпадающим с вызовом метода на объекте. Из тела функции на него можно ссылаться с помощью \mintinline{kotlin}{this}.}
+We establish an isomorphism between the original type obtained by type application of the constructor and the new symbol application:\footnote{To the left of the dot in the declaration, an additional function argument is specified with call syntax matching a method call on an object. From the body of the function, it can be referenced using \mintinline{kotlin}{this}.}
 \begin{minted}{kotlin}
     fun <T> List<T>.to(): Apply<ListSym, T> = Apply(this)
     fun <T> Apply<ListSym, T>.from(): List<T> = this.value as List<T>
 \end{minted}
 
-Теперь мы можем объявить интерфейс монад и задать реализацию для списка с помощью объекта-синглтона:
+Now we can declare a monad interface and provide an implementation for lists using a singleton object:
 \begin{minted}{kotlin}
     interface Monad<M> {
         fun <T> pure(x: T): Apply<M, T>
@@ -451,7 +451,7 @@ GHC позволяет прямо в коде, с помощью специал�
             this.from().flatMap { k(it).from() }.to()
     }
 \end{minted}
-И наконец мы можем писать функции над произвольными монадами:\footnote{Аргументы слева от точки умеют самостоятельно запрыгивать в последующие вызовы. Собственно говоря, они являются неявными параметрами.}
+And finally we can write functions over arbitrary monads:\footnote{Arguments to the left of the dot can automatically jump into subsequent calls. In fact, they are implicit parameters.}
 \begin{minted}{kotlin}
     fun <M> Monad<M>.go(x: Apply<M, Int>): Apply<M, Int> =
         x bind { it -> pure(it + 1) } bind { it -> pure(it + 2) }
@@ -459,28 +459,28 @@ GHC позволяет прямо в коде, с помощью специал�
     fun test(xs: List<Int>): List<Int> = ListMonad.go(xs.to()).from()
 \end{minted}
 
-Не лишним будет отметить, что результирующий код выглядит несколько чудовищно.
-Скорее всего, использование этой техники не окупает себя и нужно выбирать другой стиль программирования.
+It is worth noting that the resulting code is rather unwieldy.
+Most likely, using this technique does not pay for itself and one should choose a different programming style.
 
-\subsection{Семейства} \label{subsec:families}
+\subsection{Families} \label{subsec:families}
 
-Идея ad-hoc полиморфизма в том, чтобы в зависимости от типа получать различный код.
-Семейства начинались как продолжение этой идеи в плоскость данных и типов.
-Так, ассоциированные синонимы типов --- различные типы для различных индексов (типовых параметров)~\cite{chakravarty2005associated-syn}.
-Ассоциированные \mintinline{haskell}|data| --- различные представления для различных индексов~\cite{chakravarty2005associated}.
-В конце концов эти идеи были обобщены до открытых семейств~\cite{schrijvers2008type}, потом были введены закрытые~\cite{eisenberg2014closed}.
+The idea of ad-hoc polymorphism is to obtain different code depending on the type.
+Families started as an extension of this idea into the domain of data and types.
+Thus, associated type synonyms provide different types for different indices (type parameters)~\cite{chakravarty2005associated-syn}.
+Associated \mintinline{haskell}|data| provide different representations for different indices~\cite{chakravarty2005associated}.
+Eventually these ideas were generalized to open families~\cite{schrijvers2008type}, and then closed families were introduced~\cite{eisenberg2014closed}.
 
-Можно считать, что семейства\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_families.html}}\footnote{\url{https://serokell.io/blog/type-families-haskell}} --- это типовые конструкторы, задающие множество типов.
-Конкретный тип из множества можно выбрать, передав типовой параметр, называемый \vocab{индексом}.
-Сравните с обычными полиморфными конструкторами типа, которые ведут себя одинаково вне зависимости от типовых параметров.
+One can think of families\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_families.html}}\footnote{\url{https://serokell.io/blog/type-families-haskell}} as type constructors that define a set of types.
+A specific type from the set can be selected by passing a type parameter called an \vocab{index}.
+Compare this with ordinary polymorphic type constructors, which behave the same regardless of type parameters.
 
-Большое количество интересных примеров использования можно найти, например, в~\cite{kiselyov2010fun}.
+A large number of interesting usage examples can be found, for example, in~\cite{kiselyov2010fun}.
 
 \subsubsection{Data families}
 
-Data families позволяют выбирать декларацию алгебраического типа в зависимости от типового индекса.
-Например, для более эффективной реализации структур данных.
-Это напоминает специализацию шаблонов в C++.
+Data families allow choosing an algebraic type declaration depending on the type index.
+For example, for a more efficient implementation of data structures.
+This resembles template specialization in C++.
 
 \begin{minted}{haskell}
     data family XList elem
@@ -488,7 +488,7 @@ Data families позволяют выбирать декларацию алге�
     data instance XList Bool = BoolList ByteArray
 \end{minted}
 
-Единственный способ работать с data family --- разместить реализацию в классе типов, чтобы она сопровождала значение с того момента, когда типовой индекс конкретный.
+The only way to work with a data family is to place the implementation in a type class so that it accompanies the value from the point when the type index is concrete.
 
 \begin{minted}{haskell}
     class XListOp elem where
@@ -504,14 +504,14 @@ Data families позволяют выбирать декларацию алге�
     xelemAll xs = all (`xelem` xs)
 \end{minted}
 
-К сожалению, в отличие от специализации шаблонов, нельзя задать определение по-умолчанию вроде \mintinline{haskell}{data instance XList a = AList [a]}.
+Unfortunately, unlike template specialization, one cannot provide a default definition like \mintinline{haskell}{data instance XList a = AList [a]}.
 
 \subsubsection{Synonym families}
 
-Synonym families (семейства типов) фактически являются функциями на типах.
-Они бывают открытыми, закрытыми и ассоциированными.
-Открытые семейства открыты в том смысле, что инстансы можно писать отдельно от декларации, подобно классам типов.
-Закрытые, наоборот, полностью описываются в одном месте, кейсы упорядочены сверху вниз, что несколько ослабляет ограничения на паттерны.
+Synonym families (type families) are effectively functions on types.
+They can be open, closed, and associated.
+Open families are open in the sense that instances can be written separately from the declaration, similar to type classes.
+Closed families, on the contrary, are fully described in one place, cases are ordered top to bottom, which somewhat relaxes restrictions on patterns.
 
 \begin{minted}{haskell}
     type family Plus (n :: Nat) (m :: Nat) :: Nat where
@@ -519,16 +519,16 @@ Synonym families (семейства типов) фактически являю
       Plus (Suc n) m = Suc (Plus n m)
 \end{minted}
 
-Чтобы посмотреть, во что вычисляется нечто на уровне типов, можно воспользоваться следующей командой в ghci:
+To see what something at the type level evaluates to, one can use the following command in ghci:
 \begin{minted}{haskell}
     ghci> :k! Plus (Suc Zero) (Suc (Suc Zero))
     Plus (Suc Zero) (Suc (Suc Zero)) :: Nat
     = Suc (Suc (Suc Zero))
 \end{minted}
 
-Ассоциированные семейства работают аналогично, только объявляются в рамках некоторого класса типов, являясь некоторой функциональной альтернативой \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/functional_dependencies.html}{FunctionalDependencies}\ \cite{jones2000type} (которые выглядят скорее реляционно).
-Иначе говоря, позволяют поставить в соответствие типу, для которого написан инстанс, другой тип.
-Например, коллекции --- тип её элементов:
+Associated families work similarly, only they are declared within a certain type class, serving as a functional alternative to \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/functional_dependencies.html}{FunctionalDependencies}\ \cite{jones2000type} (which look more relational).
+In other words, they allow associating another type with the type for which an instance is written.
+For example, collections and their element type:
 
 \begin{minted}{haskell}
     class Container c where
@@ -544,65 +544,65 @@ Synonym families (семейства типов) фактически являю
       elements = ByteString.unpack
 \end{minted}
 
-В современных языках часто встречаются ассоциированные семейства под видом ассоциированных типов\footnote{Ассоциированные типы являются фактически экзистенциальными типами, их связывает с ассоциированными семействами логический процесс сколемизации.}.
-Так, Swift сильно полагается на ассоциированные типы, вовсе не поддерживая дженерики в протоколах (интерфейсах)\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube) 2017 LLVM Developers’ Meeting: ``Implementing Swift Generics''}}.
-В то же время Scala пытается отслеживать, в присутствии экзистенциальных типов (интерфейсов), из какого именно значения пришёл тот или иной ассоциированный тип с помощью path-dependent types~\cite{amin2014foundations}.
+In modern languages, associated families often appear as associated types\footnote{Associated types are essentially existential types; they are connected to associated families by the logical process of Skolemization.}.
+Swift relies heavily on associated types, not supporting generics in protocols (interfaces) at all\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube) 2017 LLVM Developers' Meeting: ``Implementing Swift Generics''}}.
+Meanwhile, Scala attempts to track, in the presence of existential types (interfaces), which specific value a given associated type came from, using path-dependent types~\cite{amin2014foundations}.
 
-\subsubsection{Инъективные семейства}
+\subsubsection{Injective families}
 
-Семейства типов отличаются от типовых конструкторов примерно так же, как функции от конструкторов данных.
-Конструкторы пассивны и не редуцируются (\mintinline{haskell}|Maybe Int|), в то время как функции вычисляются в какой-то результат (e.g. \mintinline{haskell}|F Int ?$\sim$? Bool|).
-В частности, как и функции, семейства не обязательно инъективны.
+Type families differ from type constructors roughly in the same way that functions differ from data constructors.
+Constructors are passive and do not reduce (\mintinline{haskell}|Maybe Int|), while functions compute to some result (e.g. \mintinline{haskell}|F Int ?$\sim$? Bool|).
+In particular, like functions, families are not necessarily injective.
 
-Для типовых конструкторов, зная, что сконструированные ими типы эквивалентны, можно вывести, что типовые аргументы эквивалентны тоже.
-Например:
+For type constructors, knowing that the types they construct are equivalent, one can infer that the type arguments are equivalent too.
+For example:
 \begin{minted}{haskell}
     Maybe a ?$\sim$? Maybe b ?$\Rightarrow$? a ?$\sim$? b
 \end{minted}
 
-Очевидно, что для классов типов это свойство по умолчанию не выполняется:
+Obviously, for type families this property does not hold by default:
 \begin{minted}{haskell}
     type family NonInjective a where
       NonInjective Int = Double
       NonInjective Char = Double
 \end{minted}
 
-Haskell предоставляет явный синтаксис для объявления инъективных семейств типов, напоминающий функциональные зависимости в классах типов (\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_families.html#extension-TypeFamilyDependencies}{TypeFamilyDependencies})~\cite{stolarek2015injective}.
-Конечно, компилятор проверит, что реализация инъективна.
-Синтаксис требует связать результат именем через равенство и указать, аналогично \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/functional_dependencies.html}{FunctionalDependencies}, что результат определяет какие-то из типовых индексов семейства:
+Haskell provides explicit syntax for declaring injective type families, resembling functional dependencies in type classes (\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_families.html#extension-TypeFamilyDependencies}{TypeFamilyDependencies})~\cite{stolarek2015injective}.
+Of course, the compiler will verify that the implementation is injective.
+The syntax requires binding the result to a name via equality and specifying, analogous to \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/functional_dependencies.html}{FunctionalDependencies}, that the result determines some of the type indices of the family:
 \begin{minted}{haskell}
     type family InjectiveB a b = r | r -> b
       ...
 \end{minted}
 
-\subsubsection{Семейства первого класса}
+\subsubsection{First-class families}
 
-Помимо инъективности, классы типов также не обязательно обладают свойством \vocab{generavity}, критически важным для вывода типов, --- один и тот же результат не обязательно получен из того же самого семейства:
+Besides injectivity, type families also do not necessarily possess the property of \vocab{generativity}, which is critically important for type inference --- the same result is not necessarily obtained from the same family:
 \begin{minted}{haskell}
     f a ?$\sim$? g a ?$\Rightarrow$? f ?$\sim$? g
 \end{minted}
 
-Вместе инъективность и generavity --- \vocab{matchability}.
-Когда Haskell работает с типом стрелочного кайнда, он подразумевает, что этот тип matchable.
-Соответственно, семейства не могут передаваться в качестве параметров, а все их вхождения должны быть полностью применёнными ко всем аргументам (fully saturated).
-Либо нужно явно указать, что семейство возвращает конструктор (в этом конкретном месте семантика зависит от переноса аргументов направо от \mintinline{haskell}{::}):
+Together, injectivity and generativity constitute \vocab{matchability}.
+When Haskell works with a type of arrow kind, it assumes that the type is matchable.
+Accordingly, families cannot be passed as parameters, and all their occurrences must be fully applied to all arguments (fully saturated).
+Or one needs to explicitly indicate that the family returns a constructor (in this specific case the semantics depend on moving arguments to the right of \mintinline{haskell}{::}):
 \begin{minted}{haskell}
     type family ToCtor (s :: Symbol) :: Type -> Type where
       ToCtor "maybe" = Maybe
       ToCtor "identity" = Identity
 \end{minted}
 
-Одним из способов обойти это ограничение является дефункционализация семейств~\cite{defunctionalization-slides, eisenberg2014promoting}.
-Как мы и обсуждали ранее~\ref{subsubsec:defunctionalization}, вместо функции первого класса заводится некоторый символ, обозначающий её, и функция интерпретации, умеющая сделать действие, соответствующее этому символу.
-В данном случае функцией интерпретации будет открытое семейство \mintinline{haskell}|Apply|~\cite[глава 10]{maguire-types}.
+One way to work around this restriction is defunctionalization of families~\cite{defunctionalization-slides, eisenberg2014promoting}.
+As we discussed earlier~\ref{subsubsec:defunctionalization}, instead of a first-class function, a symbol designating it is introduced, along with an interpretation function that can perform the action corresponding to that symbol.
+In this case, the interpretation function will be an open family \mintinline{haskell}|Apply|~\cite[chapter 10]{maguire-types}.
 
 % todo example from maguire
 
-В Haskell ведутся работы\footnote{\href{https://ghc-proposals.readthedocs.io/en/latest/proposals/0242-unsaturated-type-families.html}{GHC proposal: Unsaturated Type Families}.} по устранению saturation ограничения~\cite{kiss2019higher}.
-Для этого нужно различать matchable и unmatchable типовые функции.
-Это предлагается делать дополнительным индексированием стрелочных кайндов: $\to \equiv
-\to^M$ и $\twoheadrightarrow \equiv \to^U$.
-И, конечно, эти индексы могут быть полиморфными.
+There is ongoing work in Haskell\footnote{\href{https://ghc-proposals.readthedocs.io/en/latest/proposals/0242-unsaturated-type-families.html}{GHC proposal: Unsaturated Type Families}.} to remove the saturation restriction~\cite{kiss2019higher}.
+For this, one needs to distinguish matchable and unmatchable type functions.
+This is proposed to be done by additional indexing of arrow kinds: $\to \equiv
+\to^M$ and $\twoheadrightarrow \equiv \to^U$.
+And, of course, these indices can be polymorphic.
 
 \begin{minted}{haskell}
     data Matchability = Matchable | Unmatchable
@@ -613,35 +613,35 @@ Haskell предоставляет явный синтаксис для объя
        . All as c => (forall a. c a => a -> f a) -> HList as -> HList (Map f as)
 \end{minted}
 
-\subsection{Кайнд \texttt{Constraint}}
+\subsection{The \texttt{Constraint} kind}
 
-Давно появлялись предложения добавить в GHC поддержку синонимов для констреинтов, семейств констреинтов и т.д~\cite{orchard2010haskell}.
-В итоге был предложен\footnote{\url{https://gitlab.haskell.org/ghc/ghc/-/wikis/kind-fact}} и реализован\footnote{\url{http://blog.omega-prime.co.uk/2011/09/10/constraint-kinds-for-ghc/}} некоторый механизм унификации типов и констреинтов.
-Таким образом, всё, что работало для типов, стало работать и для констреинтов.
+There had long been proposals to add support for constraint synonyms, constraint families, etc. to GHC~\cite{orchard2010haskell}.
+Eventually, a mechanism for unifying types and constraints was proposed\footnote{\url{https://gitlab.haskell.org/ghc/ghc/-/wikis/kind-fact}} and implemented\footnote{\url{http://blog.omega-prime.co.uk/2011/09/10/constraint-kinds-for-ghc/}}.
+Thus, everything that worked for types now also works for constraints.
 
-В GHC с \href{https://downloads.haskell.org/ghc/9.2-latest/docs/html/users_guide/exts/constraint_kind.html}{ConstraintKinds} был добавлен специальный кайнд \mintinline{haskell}|Constraint|:
+In GHC with \href{https://downloads.haskell.org/ghc/9.2-latest/docs/html/users_guide/exts/constraint_kind.html}{ConstraintKinds}, a special kind \mintinline{haskell}|Constraint| was added:
 \begin{itemize}
-    \item Класс типов конструирует констреинт: \mintinline{haskell}|Monad :: (Type -> Type) -> Constraint|;
-    \item Эквивалентность является констреинтом: \mintinline{haskell}|(a ?$\sim$? b) :: Constraint|;
-    \item Пустой кортеж констреинтов является констреинтом: \mintinline{haskell}|() :: Constraint|;
-    \item Кортеж констреинтов является констреинтом: \mintinline{haskell}|(Eq a, a ?$\sim$? b) :: Constraint|.
+    \item A type class constructs a constraint: \mintinline{haskell}|Monad :: (Type -> Type) -> Constraint|;
+    \item Equality is a constraint: \mintinline{haskell}|(a ?$\sim$? b) :: Constraint|;
+    \item An empty constraint tuple is a constraint: \mintinline{haskell}|() :: Constraint|;
+    \item A constraint tuple is a constraint: \mintinline{haskell}|(Eq a, a ?$\sim$? b) :: Constraint|.
 \end{itemize}
 
-Теперь, например, мы можем реифицировать словарь как объект языка:\footnote{\url{https://hackage.haskell.org/package/constraints-0.14.2/docs/src/Data.Constraint.html\#Dict}}
+Now, for example, we can reify a dictionary as a language-level object:\footnote{\url{https://hackage.haskell.org/package/constraints-0.14.2/docs/src/Data.Constraint.html\#Dict}}
 \begin{minted}{haskell}
     data Dict (c :: Constraint) where
       Dict :: c => Dict c
 \end{minted}
 
-Вспомним гетерогенный список, рассмотренный ранее~\ref{subsubsec:promotion}:
+Recall the heterogeneous list considered earlier~\ref{subsubsec:promotion}:
 \begin{minted}{haskell}
     data HList (tys :: [Type]) where
       HNil :: HList '[]
       HCons :: ty -> HList tys -> HList (ty : tys)
 \end{minted}
-Эта структура данных является first-class аналогом variadic generics в C++ или Swift\footnote{\url{https://github.com/swiftlang/swift-evolution/blob/main/proposals/0398-variadic-types.md}} (cобственно, смысл вариадиков --- не работать \mintinline{haskell}|HList|-подобными структурами напрямую).
-Например, мы можем написать \texttt{map} для такой структуры, если все типы удовлетворяют определённому ограничению.
-Для этого сначала реализуем семейство, генерирующее кортеж констреинтов для каждого типа из списка:
+This data structure is the first-class analogue of variadic generics in C++ or Swift\footnote{\url{https://github.com/swiftlang/swift-evolution/blob/main/proposals/0398-variadic-types.md}} (the whole point of variadics is to avoid working with \mintinline{haskell}|HList|-like structures directly).
+For example, we can write \texttt{map} for such a structure if all types satisfy a certain constraint.
+For this, we first implement a family that generates a constraint tuple for each type in the list:
 \begin{minted}{haskell}
     type family All (c :: k -> Constraint) (tys :: [k]) :: Constraint where
       All c '[] = ()
@@ -650,7 +650,7 @@ Haskell предоставляет явный синтаксис для объя
     -- All Show [Int, Double] ?$\sim$? (Show Int, (Show Double, ())
 \end{minted}
 
-Теперь можем реализовать \texttt{map}:
+Now we can implement \texttt{map}:
 \begin{minted}{haskell}
     hmap :: forall c res tys . All c tys
          => (forall ty . c ty => ty -> res) -> HList tys -> [res]
@@ -661,9 +661,9 @@ Haskell предоставляет явный синтаксис для объя
     ghci> hmap @Show show (HCons (1 :: Int) $ HCons 'a' HNil)
 \end{minted}
 
-Больше такого рода упражнений в гетерогенных конструкциях можно найти в~\cite{de2014true}.
+More exercises of this kind with heterogeneous constructions can be found in~\cite{de2014true}.
 
-Констреинты также могут быть параметрически-полиморфными\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/quantified_constraints.html}}~\cite{bottu2017quantified}:
+Constraints can also be parametrically polymorphic\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/quantified_constraints.html}}~\cite{bottu2017quantified}:
 \begin{minted}{haskell}
     data Rose f x = Rose x (f (Rose f x))
 
@@ -671,27 +671,27 @@ Haskell предоставляет явный синтаксис для объя
       Rose x1 rs1 == Rose x2 rs2 = x1 == x2 && rs1 == rs2
 \end{minted}
 
-%Также, как и типы, констреинты параметризованы представлением\footnote{\url{https://hackage.haskell.org/package/base-4.21.0.0/docs/GHC-Exts.html\#t:CONSTRAINT}}: % todo пояснить зачем это
+%Also, like types, constraints are parameterized by representation\footnote{\url{https://hackage.haskell.org/package/base-4.21.0.0/docs/GHC-Exts.html\#t:CONSTRAINT}}: % todo explain why this is needed
 %\begin{minted}{haskell}
 %    data CONSTRAINT (a :: RuntimeRep)
 %    type Constraint = CONSTRAINT LiftedRep
 %\end{minted}
 
-% todo Типы кайнда Constraint не выводятся
+% todo Constraint-kinded types are not inferred
 
-\subsection{Использование ad-hoc полиморфизма}
+\subsection{Uses of ad-hoc polymorphism}
 
-Часто языки, имеющие что-то напоминающее классы типов, стремятся выразить через них как можно больше других языковых возможностей и полезных техник.
-Оказывается, это на удивление мощный механизм.
-Рассмотрим в этом параграфе некоторые избранные примеры.
+Often languages that have something resembling type classes try to express as many other language features and useful techniques through them as possible.
+It turns out that this is a surprisingly powerful mechanism.
+In this section we will consider some selected examples.
 
-\subsubsection{Сериализация}
+\subsubsection{Serialization}
 
-Классическим примером использования классов типов является сериализация.
-Проблема в том, что десериализация производится, когда самого объекта ещё нет (ущербный Java подход заполнения объекта дефолтными значениями с последующей мутацией мы не рассматриваем).
-Поэтому нет возможности написать ООП интерфейс Serializable.
+A classic example of using type classes is serialization.
+The problem is that deserialization is performed when the object does not yet exist (we do not consider the deficient Java approach of filling an object with default values followed by mutation).
+Therefore, it is not possible to write an OOP interface Serializable.
 
-Стандартная библиотека сериализации в Kotlin\footnote{\url{https://github.com/Kotlin/kotlinx.serialization}} предоставляет сущность \mintinline{kotlin}|KSerializer|, которая является интерфейсом для отдельного объекта-сериализатора нашего типа (для эффективности тут используется CPS в виде потоков событий encoder и decoder, вернёмся к этому подходу далее\ \ref{subsubsec:deforestation-fusion}):
+The standard serialization library in Kotlin\footnote{\url{https://github.com/Kotlin/kotlinx.serialization}} provides the entity \mintinline{kotlin}|KSerializer|, which is an interface for a separate serializer object for our type (for efficiency, CPS in the form of encoder and decoder event streams is used here; we will return to this approach later\ \ref{subsubsec:deforestation-fusion}):
 \begin{minted}{kotlin}
     interface KSerializer<T> {
         fun serialize(encoder: Encoder, value: T)
@@ -699,8 +699,8 @@ Haskell предоставляет явный синтаксис для объя
     }
 \end{minted}
 
-Очевидно, чтобы сконструировать сериализатор полиморфного типа, нужны сериализаторы типов-параметров.
-Что уже отчётливо напоминает классы типов.
+Obviously, to construct a serializer for a polymorphic type, serializers for the type parameters are needed.
+Which already clearly resembles type classes.
 \begin{minted}{kotlin}
     class PairSerializer(
         keySerializer: KSerializer<K>,
@@ -708,74 +708,74 @@ Haskell предоставляет явный синтаксис для объя
     ): KSerializer<Pair<K, V>> { ... }
 \end{minted}
 
-Однако в Kotlin нет классов типов, а значит создавать сериализаторы придётся вручную.
-С этим, однако несколько помогает пачка технологий: \mintinline{kotlin}|inline fun|, \mintinline{kotlin}|reified| дженерики, рефлексия и компиляторный плагин библиотеки, который, однако не безопасен с точки зрения типов.
+However, Kotlin does not have type classes, so serializers must be created manually.
+A set of technologies helps with this: \mintinline{kotlin}|inline fun|, \mintinline{kotlin}|reified| generics, reflection, and a compiler plugin from the library, which however is not type-safe.
 
-\subsubsection{Экзистенциальные типы} \label{subsubsec:existentials}
+\subsubsection{Existential types} \label{subsubsec:existentials}
 
-Квантор существования в типах является механизмом инкапсуляции~\cite[глава 24]{pierce2002types}.
-Так, мы можем в типе $\tau$ заменить вхождения подтипа $\sigma$ на переменную $\alpha$ и получить $\exists \alpha\ldotp \tau'$, где $\subst{\tau'}{\alpha}{\sigma}\equiv\tau$.
-Таким образом, мы скрыли от пользователя часть типа.
+The existential quantifier in types is an encapsulation mechanism~\cite[chapter 24]{pierce2002types}.
+We can replace occurrences of a subtype $\sigma$ in a type $\tau$ with a variable $\alpha$ and obtain $\exists \alpha\ldotp \tau'$, where $\subst{\tau'}{\alpha}{\sigma}\equiv\tau$.
+Thus, we have hidden part of the type from the user.
 
-Например, можно с помощью экзистенциальных типов привести разные типы к одной форме и сложить их значения в один список.
-В Haskell экзистенциальный тип выражают через \mintinline{haskell}{data} декларацию, в которой полиморфный конструктор данных и мономорфный тип\footnote{Подобно идиоме type erasure в C++.}.
-Так, тривиальный экзистенциальный тип $\exists \alpha\ldotp \alpha$ можно получить в Haskell в виде типа \mintinline{haskell}{Any}, заданного следующим образом:
+For example, one can use existential types to bring different types to a common form and put their values in a single list.
+In Haskell, an existential type is expressed through a \mintinline{haskell}{data} declaration in which the data constructor is polymorphic but the type is monomorphic\footnote{Similar to the type erasure idiom in C++.}.
+Thus, the trivial existential type $\exists \alpha\ldotp \alpha$ can be obtained in Haskell as the type \mintinline{haskell}{Any}, defined as follows:
 \begin{minted}{haskell}
     data Any where
-      Any :: forall a . a -> Any  -- логически эквивалентно (exists a . a) -> Any
+      Any :: forall a . a -> Any  -- logically equivalent to (exists a . a) -> Any
 
     list :: [Any]
     list = [Any 42, Any "Hello", Any (Just Nothing)]
 \end{minted}
 
-В месте деконструирования \mintinline{haskell}|Any|, будет доступно значение некоторого неизвестного типа.
-Очевидно, с таким значением ничего сделать нельзя.
-Однако, помимо значения, можно положить в конструктор свидетельство о том, что этот неизвестный тип удовлетворяет некоторому классу типов\footnote{Подобно Rust fat pointers (пара из указателя на данные и указателя на таблицу виртуальных функций) и ООП объектам.}.
+At the deconstruction site of \mintinline{haskell}|Any|, a value of some unknown type will be available.
+Obviously, nothing can be done with such a value.
+However, in addition to the value, one can place in the constructor a witness that this unknown type satisfies some type class\footnote{Similar to Rust fat pointers (a pair of a pointer to data and a pointer to a virtual function table) and OOP objects.}.
 \begin{minted}{haskell}
     data Has (c :: Type -> Constraint) where
       Has :: c a => a -> Has c
 \end{minted}
 
-Значение типа \mintinline{haskell}|Has| свидетельствует о том, что существует некоторый населённый тип \texttt{a}, который принадлежит определённому классу типов.
-Например, рассмотрим \mintinline{haskell}|Show|:
+A value of type \mintinline{haskell}|Has| witnesses that there exists some inhabited type \texttt{a} that belongs to a certain type class.
+For example, consider \mintinline{haskell}|Show|:
 \begin{minted}{haskell}
     showAll :: [Has Show] -> String
     showAll = List.intercalate "," . map \(Has x) -> show x
 \end{minted}
 
-В общем случае, чтобы элиминировать такой тип данных нужны типы высших рангов~\cite[глава 24.3]{pierce2002types}:
+In general, to eliminate such a data type, higher-rank types are needed~\cite[chapter 24.3]{pierce2002types}:
 \begin{minted}{haskell}
     foldHas :: Has c -> (forall a . c a => a -> b) -> b
     foldHas (Has x) k = k x
 \end{minted}
 
-Подробнее можно посмотреть в~\cite[глава 7]{maguire-types} и~\cite[глава 24]{pierce2002types}.
+More details can be found in~\cite[chapter 7]{maguire-types} and~\cite[chapter 24]{pierce2002types}.
 
-\subsubsection{Разрешение имён} \label{subsubsec:resolve}
+\subsubsection{Name resolution} \label{subsubsec:resolve}
 
-Процесс разрешения имён (name resolution) в языках программирования определяет, с какой программной сущностью связать то или иное употребление имени.
-Разрешение имён рассматривает импорты, иерархию пространств имён и скоупов, типы выражений\ldots
-Как правило, это сложный процесс, неотделимый от вывода типов.
+The process of name resolution in programming languages determines which program entity a given use of a name is bound to.
+Name resolution considers imports, the hierarchy of namespaces and scopes, expression types\ldots
+As a rule, this is a complex process, inseparable from type inference.
 
-Однако, в GHC стадия разрешения имён довольно простая и отрабатывает до вывода типов.
-На её тривиальную суть намекает её название --- Renamer --- она просто переписывает имена в программе на fully-qualified имена, опираясь на импорты.
+However, in GHC the name resolution stage is rather simple and runs before type inference.
+Its trivial nature is hinted at by its name --- Renamer --- it simply rewrites names in the program to fully-qualified names, relying on imports.
 
-С одной стороны, простота --- это хорошо.
-С другой --- строгое отделение от вывода типов накладывает неприятное ограничение: типы не могут участвовать в разрешении имён.
-Наиболее остро эта проблема стоит с метками полей в рекордах.
-Приходится называть все поля в модуле по-разному, чтобы избежать клешей.
+On one hand, simplicity is good.
+On the other, strict separation from type inference imposes an unpleasant restriction: types cannot participate in name resolution.
+This problem is most acute with record field labels.
+One has to name all fields in a module differently to avoid clashes.
 
-Чтобы заставить разрешение имён зависеть от типов, Haskell снова прибегает к классам типов.
-А именно, определяется класс типов \mintinline{haskell}{IsLabel}, который зависит от символа и ожидаемого типа:
+To make name resolution depend on types, Haskell once again resorts to type classes.
+Namely, a type class \mintinline{haskell}{IsLabel} is defined that depends on a symbol and the expected type:
 \begin{minted}{haskell}
     class IsLabel (s :: Symbol) a where
       fromLabel :: a
 \end{minted}
-Для вызова \texttt{fromLabel} есть синтаксический сахар (\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_labels.html}{OverloadedLabels}):
+There is syntactic sugar for calling \texttt{fromLabel} (\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/overloaded_labels.html}{OverloadedLabels}):
 \begin{minted}{haskell}
     #name ?$\equiv$? fromLabel @"name"
 \end{minted}
-Теперь разрешение имени \texttt{name} будет учитывать тип\footnote{Чтобы избавиться от ошибки переопределения, нужно включить \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/field_selectors.html\#extension-FieldSelectors}{NoFieldSelectors}.}:
+Now resolution of the name \texttt{name} will take the type into account\footnote{To get rid of the redefinition error, you need to enable \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/field_selectors.html\#extension-FieldSelectors}{NoFieldSelectors}.}:
 \begin{minted}{haskell}
     data Pet = Pet { name :: String }
     instance IsLabel "name" (Pet -> String) where
@@ -788,68 +788,68 @@ Haskell предоставляет явный синтаксис для объя
     ghci> #name pet
 \end{minted}
 
-\subsubsection{Несинтаксические типовые эквивалентности, System FC} \label{subsubsec:system-fc}
+\subsubsection{Non-syntactic type equalities, System FC} \label{subsubsec:system-fc}
 
-Современный Haskell является синтаксически богатым языком, который, однако, несмотря не многообразие конструкций, транслируется в маленький типизированный внутренний язык.
-Это язык $System~F_C$~\cite{sulzmann2007system}, расширяет $System~F$ (\ref{subsec:lang-parametric-polumorphism}) несинтаксическими эквивалентностями типов.
-Оказывается, этого достаточно, чтобы поддержать такие возможности Haskell как обобщённые алгебраические типы, ассоциированные семейства типов, функциональные зависимости и т.д.
+Modern Haskell is a syntactically rich language that, despite its diversity of constructs, is translated into a small typed internal language.
+This is the language $System~F_C$~\cite{sulzmann2007system}, which extends $System~F$ (\ref{subsec:lang-parametric-polumorphism}) with non-syntactic type equalities.
+It turns out that this is sufficient to support such Haskell features as generalized algebraic data types, associated type families, functional dependencies, and so on.
 
-А именно, вводится встроенный констреинт $\sim$, свидетельствующий о эквивалентности двух типов\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/equality_constraints.html}}.
-Например, тип функции \texttt{id} может быть записан таким странным образом:
+Specifically, a built-in constraint $\sim$ is introduced, witnessing the equivalence of two types\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/equality_constraints.html}}.
+For example, the type of function \texttt{id} can be written in this unusual way:
 \begin{minted}{haskell}
     f :: forall a b . a ?$\sim$? b => a -> b
     f = id
 \end{minted}
-На самом деле это функция от четырёх параметров: двух типовых параметров, коерции и аргумента.
-Коерция --- это значение размера 0, автоматически выводимое компилятором, которое является свидетельством того, что два соответствующих типа эквивалентны.
+In fact, this is a function of four parameters: two type parameters, a coercion, and an argument.
+A coercion is a zero-sized value, automatically inferred by the compiler, that serves as a witness that the two corresponding types are equivalent.
 
-Например, GADT из~\ref{subsubsec:gadts} рассахаривается следующим образом:
+For example, the GADT from~\ref{subsubsec:gadts} is desugared as follows:
 \begin{minted}{haskell}
     data Expr ty where
       Const :: Int -> Expr Int
       IsZero :: Expr Int -> Expr Bool
       If :: forall ty . Expr Bool -> Expr ty -> Expr ty -> Expr ty
-    -- транслируется в
+    -- translates to
     data Expr ty where
       Const :: forall ty . ty ?$\sim$? Int => Expr ty
       IsZero :: forall ty . ty ?$\sim$? Bool => Expr Int -> Expr ty
       If :: forall ty . Expr Bool -> Expr ty -> Expr ty -> Expr ty
 \end{minted}
-И после паттерн-матчинга по конструкторам, констреинт эквивалентности попадёт в ветку и позволит системе вывода типов сделать необходимые переписывания.
+And after pattern matching on the constructors, the equality constraint enters the branch and allows the type inference system to perform the necessary rewrites.
 
-Про вывод типов при наличии локальных предположений можно почитать в классической статье $OutsideIn(X)$~\cite{vytiniotis2011outsidein}.
+More on type inference in the presence of local assumptions can be found in the classical paper $OutsideIn(X)$~\cite{vytiniotis2011outsidein}.
 
-Очевидно, что Haskell может населить констреинт эквивалентности следуя рефлексивности, симметричности и транзитивности.
-Также, компилятор может генерировать новые аксиомы (пользователь напрямую свои аксиомы записать не может).
-Например, по семейству типов компилятор генерирует аксиомы равенства апплицированного конструктора семейства результирующим типам:
+Obviously, Haskell can inhabit an equality constraint following reflexivity, symmetry, and transitivity.
+Also, the compiler can generate new axioms (the user cannot directly write their own axioms).
+For example, for a type family the compiler generates equality axioms between the applied family constructor and the resulting types:
 \begin{minted}{haskell}
     type family Plus (n :: Nat) (m :: Nat) :: Nat where
       Plus Zero m = m
       Plus (Suc n) m = Suc (Plus n m)
-    -- раскроется в
+    -- expands to
     axiom Plus Zero m ?$\sim$? m
     axiom Plus (Suc n) m ?$\sim$? Suc (Plus n m)
 \end{minted}
 
-\subsubsection{Коерции и роли} \label{subsubsec:coercions}
+\subsubsection{Coercions and roles} \label{subsubsec:coercions}
 
-Haskell имеет поддержку \vocab{generative type abstractions} в виде \mintinline{haskell}|newtype| деклараций.
-Эта техника позволяет задавать доменно-специфичные типы, которые во время исполнения не отличимы от оборачиваемых типов, но позволяют различать их.
-Так, мы можем ввести обёртки для чисел, которые в предметной области представляют собой идентификаторы различных сущностей.
-Теперь система типов не даст их перепутать.
+Haskell supports \vocab{generative type abstractions} in the form of \mintinline{haskell}|newtype| declarations.
+This technique allows defining domain-specific types that are indistinguishable from the wrapped types at runtime but allow distinguishing them at compile time.
+For instance, we can introduce wrappers for numbers that in the problem domain represent identifiers of different entities.
+Now the type system will prevent confusing them.
 \begin{minted}{haskell}
     newtype ModuleId = ModuleId Int64
     newtype CourceId = CourceId Int64
 \end{minted}
 
-Существует крайне недооценённая практика программирования\footnote{\url{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}}, когда у нас в программе есть чёткая граница, на которой происходит парсинг данных из внешнего мира.
-После неё сырые неструктурированные данные обогащаются структурой и принимают смысл внутри предметной области.
-Либо же мы отвергаем эти данные как некорректные.
-В оставшейся же части программы мы уже пользуемся типизированными данными, свойства которых уже установлены и гарантированы.
-Например, мы можем быть уверены, что число \mintinline{haskell}|ModuleId| строго больше нуля.
+There is an extremely underappreciated programming practice\footnote{\url{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}} where our program has a clear boundary at which data from the external world is parsed.
+Beyond it, raw unstructured data is enriched with structure and takes on meaning within the problem domain.
+Or we reject this data as incorrect.
+In the remaining part of the program, we work with typed data whose properties have already been established and guaranteed.
+For example, we can be sure that the number \mintinline{haskell}|ModuleId| is strictly greater than zero.
 
-Однако, если у нас есть коллекция обёрнутых данных, а мы хотим с ней поработать как с коллекцией сырых, то нам придётся трансформировать коллекцию, несмотря на то, что эта трансформация ничего не делает.
-Оптимизатор Haskell не справится её элиминировать, потому что работает с типизированным промежуточным представлением и не сможет избавиться от преобразования, меняющего тип.
+However, if we have a collection of wrapped data and we want to work with it as a collection of raw data, we would have to transform the collection, even though this transformation does nothing.
+The Haskell optimizer cannot eliminate it because it works with a typed intermediate representation and cannot remove a conversion that changes the type.
 \begin{minted}{haskell}
     newtype Csv = Csv { unCsv :: String }
 
@@ -857,9 +857,9 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
     concatC = Csv . concat . ?\framebox{map}? unCsv
 \end{minted}
 
-Поэтому в Haskell есть механизм безопасных коерций между типами, у которых одинаковое представление во время исполнения.
-Это реализовано с помощью магического класса типов \mintinline{haskell}|Coercible|.
-Его имплементирует компилятор автоматически (см.\ рис.~\ref{fig:coersions}).
+Therefore, Haskell has a mechanism of safe coercions between types with the same runtime representation.
+This is implemented using the magical type class \mintinline{haskell}|Coercible|.
+The compiler implements it automatically (see\ Fig.~\ref{fig:coersions}).
 \begin{minted}{haskell}
     class Coercible from to where
       coerce :: from -> to
@@ -868,21 +868,21 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 \begin{figure}[h]
     \centering
     \includegraphics[width=\linewidth]{figs/coersions}
-    \caption{Принципы построения инстансов \mintinline{haskell}|Coercible|~\cite{breitner2014safe}.}
+    \caption{Principles of constructing \mintinline{haskell}|Coercible| instances~\cite{breitner2014safe}.}
     \label{fig:coersions}
 \end{figure}
 
-Теперь, можем избавиться от лишней трансформации списка:
+Now we can eliminate the unnecessary list transformation:
 \begin{minted}{haskell}
     concatC :: [Csv] -> Csv
     concatC = coerce concat
 \end{minted}
 
-Безопасность коерций обеспечивает \vocab{система ролей}.
-Каждый типовой параметр имеет специальное свойство --- роль.
+The safety of coercions is ensured by the \vocab{role system}.
+Each type parameter has a special property --- a role.
 
-Роль phantom имеют фантомные типовые параметры.
-Их можно свободно коерсить (нет пререквизитов для инстансов \mintinline{haskell}|Coercible|):
+The phantom role is assigned to phantom type parameters.
+They can be freely coerced (there are no prerequisites for \mintinline{haskell}|Coercible| instances):
 \begin{minted}{haskell}
     data Phantom h = Phantom
     data NestedPhantom b = MkNP [Phantom b] | SomethingElse
@@ -891,14 +891,14 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
     instance Coercible (NestedPhantom a) (NestedPhantom b)
 \end{minted}
 
-Типовой параметр имеет роль representational, если типовой конструктор можно коерсить только при условии, что можно коерсить аргументы:
+A type parameter has the representational role if the type constructor can be coerced only when the arguments can be coerced:
 \begin{minted}{haskell}
     data Maybe a = Nothing | Just a
     instance Coerce a b => Coerce (Maybe a) (Maybe b)
 \end{minted}
 
-Роль nominal имеет типовой параметр, если типовой конструктор можно коерсить только при условии, что аргументы эквивалентны.
-Это требуется, если типовой аргумент индексирует семейство или констреинт.
+A type parameter has the nominal role if the type constructor can be coerced only when the arguments are equal.
+This is required when the type argument indexes a family or a constraint.
 \begin{minted}{haskell}
     type family F a
     data Applied a = Applied (F a)
@@ -909,32 +909,32 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
     instance (a ?$\sim$? b) => Coercible (ShowDict a) (ShowDict b)
 \end{minted}
 
-Иногда компилятор выводит неправильную роль типовому параметру.
-Например, если инварианты структуры зависят на конкретную имплементацию какого-то класса типов для типового аргумента, что совершенно не видно в декларации самого типа.
-В таком случае, роли можно указать явно:
+Sometimes the compiler infers the wrong role for a type parameter.
+For example, if the invariants of a structure depend on a specific implementation of some type class for the type argument, which is not visible in the type declaration itself.
+In such cases, roles can be specified explicitly:
 \begin{minted}{haskell}
     type role Map nominal representational
     data Map k v = ...
 \end{minted}
 
-Подробнее можно прочитать в~\cite{breitner2014safe} и~\cite[глава 8]{maguire-types}.
+More details can be found in~\cite{breitner2014safe} and~\cite[chapter 8]{maguire-types}.
 
-% todo про value types
+% todo about value types
 
 \subsubsection{Type reflection} \label{subsubsec:type-reflection}
 
-Рефлексия --- это языковой механизм получения информации о типах во время исполнения (на уровне термов).
-Звучит знакомо, и действительно, Haskell реализует этот механизм через классы типов~\cite{peyton2016reflection}.
+Reflection is a language mechanism for obtaining information about types at runtime (at the term level).
+This sounds familiar, and indeed Haskell implements this mechanism through type classes~\cite{peyton2016reflection}.
 
-Библиотека предоставляет магический класс типов \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/Type-Reflection.html}{\mintinline{haskell}|Typeable|}, который реализуется компилятором для каждого конкретного типа через \mintinline{haskell}{deriving}.
-Чтобы получить информацию о типе, в скоупе должен быть инстанс \mintinline{haskell}|Typeable| для этого типа.
-Структура типа представлена типом-суммы \href{https://hackage.haskell.org/package/ghc-internal-9.1001.0/docs/src/GHC.Internal.Data.Typeable.Internal.html#TypeRep}{\mintinline{haskell}|TypeRep|}, который предоставляет возможность дополнительного типового контроля с помощью обобщённых алгебраических типов данных и типовых тегов.
+The library provides the magical type class \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/Type-Reflection.html}{\mintinline{haskell}|Typeable|}, which is implemented by the compiler for each concrete type via \mintinline{haskell}{deriving}.
+To obtain information about a type, a \mintinline{haskell}|Typeable| instance for that type must be in scope.
+The type structure is represented by the sum type \href{https://hackage.haskell.org/package/ghc-internal-9.1001.0/docs/src/GHC.Internal.Data.Typeable.Internal.html#TypeRep}{\mintinline{haskell}|TypeRep|}, which provides the ability for additional type checking using generalized algebraic data types and type tags.
 \begin{minted}{haskell}
     class Typeable a where
       typeRep# :: TypeRep a
 \end{minted}
 
-Например, следующим образом можно получить имя конструктора типа:
+For example, one can obtain the name of a type constructor as follows:
 \begin{minted}{haskell}
     typeName :: forall a. Typeable a => String
     typeName = tyConName $ typeRepTyCon $ typeRep $ Proxy @a
@@ -943,11 +943,11 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 \end{minted}
 
 \begin{task}
-    Объявите класс типов, который позволяет распечатать список типов.
+    Declare a type class that allows printing a list of types.
 \end{task}
 
-С помощью структуры представления типа и экзистенциальных типов в Haskell можно эмулировать динамическую типизацию.
-А именно: любой тип может быть преобразован в \href{}{\mintinline{haskell}|Dynamic|}, а потом безопасно преобразован обратно.
+Using the type representation structure and existential types, one can emulate dynamic typing in Haskell.
+Namely: any type can be converted to \href{}{\mintinline{haskell}|Dynamic|}, and then safely converted back.
 \begin{minted}{haskell}
     data Dynamic where
       Dynamic :: Typeable a => a -> Dynamic
@@ -955,7 +955,7 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
     fromDynamic :: Typeable a => Dynamic -> Maybe a
 \end{minted}
 
-Это может быть полезно, например, для определения гетерогенного хранилища ключ-значение:
+This can be useful, for example, for defining a heterogeneous key-value store:
 \begin{minted}{haskell}
     data Store = Map Key Dynamic
     data Ref ty = Ref Key
@@ -964,32 +964,32 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 
 \subsubsection{Data reflection} \label{subsubsec:data-reflection}
 
-Как мы обсуждали ранее, в свойство когерентности гарантирует, что каждому типу в Haskell соответствует ровно один инстанс определённого класса типов.
-И единственный способ объявить инстанс в Haskell --- декларацией на верхнем уровне, то есть он не может зависеть ни от каких локальных данных.
-Однако в Haskell есть библиотека \href{https://hackage.haskell.org/package/reflection-2.1.6/docs/Data-Reflection.html}{Data.Reflection}\footnote{\url{https://www.tweag.io/blog/2017-12-21-reflection-tutorial/}}, которая позволяет создавать локальные инстансы для свежих, чёрной магией сгенерированных\footnote{\url{https://www.schoolofhaskell.com/user/thoughtpolice/using-reflection}}, типов.
+As we discussed earlier, the coherence property guarantees that each type in Haskell corresponds to exactly one instance of a given type class.
+And the only way to declare an instance in Haskell is with a top-level declaration, meaning it cannot depend on any local data.
+However, Haskell has the library \href{https://hackage.haskell.org/package/reflection-2.1.6/docs/Data-Reflection.html}{Data.Reflection}\footnote{\url{https://www.tweag.io/blog/2017-12-21-reflection-tutorial/}}, which allows creating local instances for fresh, magically generated\footnote{\url{https://www.schoolofhaskell.com/user/thoughtpolice/using-reflection}} types.
 
-Она пользуется идеей ``поднятия значений в типы'', обсуждённой нами ранее (см.~\ref{subsubsec:reify}), но в несколько более общем виде.
-Вместо заведения классов типов вида \mintinline{haskell}|Known_|, вводится один класс типов, индексированный типом термов \texttt{terms}, которые спускаются из типов:
+It uses the idea of ``lifting values into types'' that we discussed earlier (see~\ref{subsubsec:reify}), but in a somewhat more general form.
+Instead of defining type classes of the form \mintinline{haskell}|Known_|, a single type class is introduced, indexed by the type of terms \texttt{terms} that are lowered from types:
 \begin{minted}{haskell}
     class Reifies ty terms | ty -> terms where
       reflect :: Proxy ty -> terms
 \end{minted}
 
-Также, с помощью следующей функции, библиотека позволяет сгенерировать свежий тип и инстанс \mintinline{haskell}|Reifies|, который по этому свежему типу возвращает данное значение типа \texttt{a} (переданное первым аргументом).
-Поскольку он передаётся в функцию высшего ранга, свежий тип не может утечь из скоупа~\ref{subsubsec:first-class-polymorphism}:
+Also, using the following function, the library allows generating a fresh type and a \mintinline{haskell}|Reifies| instance that, given this fresh type, returns the given value of type \texttt{a} (passed as the first argument).
+Since it is passed into a higher-rank function, the fresh type cannot escape the scope~\ref{subsubsec:first-class-polymorphism}:
 \begin{minted}{haskell}
     reify :: a -> (forall fresh . Reifies fresh a => Proxy fresh -> res) -> res
 \end{minted}
 
-Чтобы воспользоваться нестандартным инстансом класса типов для некого типа \texttt{a}, нужно объявить новый тип (например, с помощью \mintinline{haskell}|newtype|), содержащий данный, и написать для него нужный инстанс (см, например, \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/Data-Ord.html#t:Down}{Down}).
-Мы не хотим объявлять по новой декларации для каждого случая, поэтому заведём обёртку, похожую на \href{https://hackage.haskell.org/package/tagged-0.8.8/docs/Data-Tagged.html}{Data.Tagged}, которая позволяет добавлять фантомный типовой тег к типу значения.
-Варьируя тег, можно получить сколь угодно много типов, оборачивающих данный.
+To use a non-standard instance of a type class for some type \texttt{a}, one needs to declare a new type (for example, using \mintinline{haskell}|newtype|), containing the given one, and write the needed instance for it (see, for example, \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/Data-Ord.html#t:Down}{Down}).
+We do not want to declare a new declaration for each case, so we create a wrapper similar to \href{https://hackage.haskell.org/package/tagged-0.8.8/docs/Data-Tagged.html}{Data.Tagged}, which allows adding a phantom type tag to the value type.
+By varying the tag, we can obtain as many types wrapping the given one as we need.
 \begin{minted}{haskell}
     newtype Wrapped tag a = Wrapped { unwrap :: a }
 \end{minted}
 
-Объявим тип обёртки \mintinline{haskell}|Wrapped tag a| представителем нужного класса типов.
-Код для реализации будем с помощью \texttt{reflect} получать по типу тега в виде честного словаря.
+We declare the wrapper type \mintinline{haskell}|Wrapped tag a| as a member of the needed type class.
+The implementation code is obtained via \texttt{reflect} by the tag type in the form of an actual dictionary.
 \begin{minted}{haskell}
     data ReifiedOrd a = ReifiedOrd { compare :: a -> a -> Ordering }
 
@@ -997,7 +997,7 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
       compare = coerce $ compare $ reflect $ Proxy @tag
 \end{minted}
 
-Наконец, можем вызвать функцию сортировки, подменив локально порядок на обратный:
+Finally, we can call the sort function, locally replacing the ordering with the reverse one:
 \begin{minted}{haskell}
     sort :: Ord a => [a] -> [a]
 
@@ -1008,35 +1008,35 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
         coerce $ sort @(Wrapped fresh a) $ coerce xs
 \end{minted}
 
-\subsubsection{Открытые структуры} \label{subsubsec:open-structs}
+\subsubsection{Open structures} \label{subsubsec:open-structs}
 
-В динамических языках можно создавать объекты на ходу, последовательно дописывая в них содержимое, и не вводя предварительно декларацию.
-В Haskell тоже так можно, используя пары для произведений и \mintinline{haskell}|Either| для сумм.
-Например, можно добавить новое поле, создав новую пару: \mintinline{haskell}{(oldObj, newField)}.
+In dynamic languages, one can create objects on the fly, sequentially adding content to them without introducing a declaration beforehand.
+In Haskell, this is also possible using pairs for products and \mintinline{haskell}|Either| for sums.
+For example, one can add a new field by creating a new pair: \mintinline{haskell}{(oldObj, newField)}.
 
-Однако, такая реализация не оптимальна как с точки зрения эффективности (о более эффективных реализациях можно почитать в~\cite[глава 11]{maguire-types}), так и с точки зрения удобства использования.
-А именно --- порядок полей имеет значение и на типах в Haskell нет отношения подтипизации (например, нельзя передать значение с меньшим количеством полей или вариантов).
-Но можно заметить, что констреинты лишены этих недостатков.
-Поэтому можно организовывать тип структуры данных, например, таким образом:
+However, this implementation is suboptimal both in terms of efficiency (more efficient implementations can be found in~\cite[chapter 11]{maguire-types}) and in terms of usability.
+Namely, the order of fields matters and there is no subtyping relation on types in Haskell (for example, one cannot pass a value with fewer fields or variants).
+But one can notice that constraints lack these drawbacks.
+Therefore, the type of a data structure can be organized, for example, as follows:
 \begin{minted}{haskell}
-    (Int, Double) ?заменяем на? (Member Int d, Member Double d) => Prod d
+    (Int, Double) ?replaced by? (Member Int d, Member Double d) => Prod d
 \end{minted}
 
-\subsubsection{Исключения и открытая иерархия}
+\subsubsection{Exceptions and the open hierarchy}
 
-Важный аспект работы с ошибками заключается в том, что многие из них обрабатываются единообразно.
-Таким образом, ошибки должны образовывать иерархию наподобие той, которая в ООП языках получается с помощью наследования, чтобы иметь возможность реагировать сразу на группу ошибок одним кодом.
-Так, возникает задача моделирования подобной иерархии в Haskell.
+An important aspect of error handling is that many errors are handled uniformly.
+Thus, errors should form a hierarchy similar to the one obtained in OOP languages through inheritance, so that one can react to a group of errors with a single handler.
+This gives rise to the task of modeling such a hierarchy in Haskell.
 
-Более того, статически типизированные ошибки это активная область исследований, будем говорить об этом в рамках систем эффектов (см. далее~\ref{sec:effect-systems}).
-Классические исключения же динамически типизированные.
-Особенно хорошо этот вариант подходит для ошибок программиста, которые по-хорошему не должны обрабатываться в программе кроме как закрытием ресурсов. % todo citations
+Moreover, statically typed errors are an active area of research; we will discuss this in the context of effect systems (see~\ref{sec:effect-systems}).
+Classical exceptions, however, are dynamically typed.
+This variant is especially well-suited for programmer errors, which ideally should not be handled in the program except for resource cleanup. % todo citations
 
-Поддержка исключений присутствует в системе исполнения Haskell как простого и привычного способа обработки исключительных ситуаций: ошибок программиста, исполнения неполного паттерн-матчинга, асинхронных системных сигналов~\cite{marlow2001asynchronous}\ldots
-Исключения динамически типизированные и образуют иерархию~\cite{marlow2006extensible}.
-Если породить исключение может и чистый код, так как $\bot$, по семантике Haskell, населяет любой тип, то поймать исключение можно только\footnote{\href{https://stackoverflow.com/questions/3642793/why-can-haskell-exceptions-only-be-caught-inside-the-io-monad}{(stackoverflow) Why can Haskell exceptions only be caught inside the IO monad?}} в \mintinline{haskell}|IO|~\cite{jones2001tackling}, используя специальные примитивы языка.
+Exception support is present in the Haskell runtime system as a simple and familiar way to handle exceptional situations: programmer errors, incomplete pattern match execution, asynchronous system signals~\cite{marlow2001asynchronous}\ldots
+Exceptions are dynamically typed and form a hierarchy~\cite{marlow2006extensible}.
+While pure code can throw an exception, since $\bot$ by Haskell's semantics inhabits every type, catching an exception is only possible\footnote{\href{https://stackoverflow.com/questions/3642793/why-can-haskell-exceptions-only-be-caught-inside-the-io-monad}{(stackoverflow) Why can Haskell exceptions only be caught inside the IO monad?}} in \mintinline{haskell}|IO|~\cite{jones2001tackling}, using special language primitives.
 
-Чтобы сделать тип исключением, нужно объявить инстанс \mintinline{haskell}|Exception| для него:
+To make a type an exception, one needs to declare an \mintinline{haskell}|Exception| instance for it:
 \begin{minted}{haskell}
     class (Typeable a, Show a) => Exception a where
       toException :: a -> SomeException
@@ -1045,8 +1045,8 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
       fromException :: SomeException -> Maybe a
       fromException (SomeExcetion e) = cast e
 \end{minted}
-Где \mintinline{haskell}|SomeException| --- это экзистенциальная обёртка наподобие \mintinline{haskell}|Dynamic| (см.\ \ref{subsubsec:type-reflection}), в которую заворачивается конкретный тип исключения.
-Ловя \mintinline{haskell}|SomeException|, можно поймать любое исключение (\texttt{cast} всегда сработает).
+Where \mintinline{haskell}|SomeException| is an existential wrapper similar to \mintinline{haskell}|Dynamic| (see\ \ref{subsubsec:type-reflection}), into which the concrete exception type is wrapped.
+By catching \mintinline{haskell}|SomeException|, one can catch any exception (\texttt{cast} will always succeed).
 \begin{minted}{haskell}
     data SomeException where
       SomeException :: Exception a => a -> SomeException
@@ -1054,7 +1054,7 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
     instance Exception SomeException
 \end{minted}
 
-Система исполнения Haskell предоставляет интринсики для кидания и ловли исключений, обернём их для поддержки любого \mintinline{haskell}|Exception| типа:
+The Haskell runtime system provides intrinsics for throwing and catching exceptions; we wrap them to support any \mintinline{haskell}|Exception| type:
 \begin{minted}{haskell}
     throw :: Exception e => e -> a
     throw = primThrow (toException e)
@@ -1067,22 +1067,22 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
     ghci> throw "error" `catch` (e :: String) -> putStrLn e
 \end{minted}
 
-В простейшем случае свой тип исключения можно реализовать в две строчки.
-Чтобы его поймать, нужно либо ловить сам этот тип, либо \mintinline{haskell}|SomeException|, потому что для них обоих \mintinline{haskell}|fromException| на объекте вида \mintinline{haskell}|SomeException MyError| вернёт \mintinline{haskell}|Just|\footnote{\mintinline{haskell}{instance Exception SomeException where fromException = Just}}.
+In the simplest case, a custom exception type can be implemented in two lines.
+To catch it, one must either catch this type itself or \mintinline{haskell}|SomeException|, because for both of them \mintinline{haskell}|fromException| on an object of the form \mintinline{haskell}|SomeException MyError| will return \mintinline{haskell}|Just|\footnote{\mintinline{haskell}{instance Exception SomeException where fromException = Just}}.
 \begin{minted}{haskell}
     data MyError = MyError deriving (Show, Typeable)
     instance Exception MyError
 \end{minted}
 
-Добавим исключение \mintinline{haskell}|ArithException| и ещё один более общий тип исключений между ним и \mintinline{haskell}|SomeException| --- \mintinline{haskell}|SomeArithException| (таким образом, будет три способа поймать \mintinline{haskell}|ArithException|).
-Для этого сделаем \mintinline{haskell}|SomeArithException| экзистенциальной обёрткой, а каждое исключение типа \mintinline{haskell}|ArithException| будем автоматически оборачивать в неё.
-В \mintinline{haskell}|fromException| на каждом уровне вложенности будем пытаться получить оборачивающий конструктор рекурсивным вызовом.
+Let us add the exception \mintinline{haskell}|ArithException| and one more, more general exception type between it and \mintinline{haskell}|SomeException| --- \mintinline{haskell}|SomeArithException| (thus, there will be three ways to catch \mintinline{haskell}|ArithException|).
+For this, we make \mintinline{haskell}|SomeArithException| an existential wrapper, and automatically wrap each exception of type \mintinline{haskell}|ArithException| in it.
+In \mintinline{haskell}|fromException|, at each level of nesting, we try to obtain the wrapping constructor by a recursive call.
 
 \begin{minted}{haskell}
     data SomeArithException where
       SomeArithException :: Exception a => a -> SomeArithException
 
-    -- SomeException - базовый (реализация по умолчанию)
+    -- SomeException - base (default implementation)
     instance Exception ArithException
 
     data DivisionByZero = DivisionByZero deriving Show
@@ -1093,22 +1093,22 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
         cast e'
 \end{minted}
 
-Так, во время бросания \mintinline{haskell}|DivisionByZero| будет конструироваться объект вида:
+Thus, when throwing \mintinline{haskell}|DivisionByZero|, an object of the following form will be constructed:
 \begin{minted}{haskell}
     SomeException (SomeArithException DivisionByZero)
 \end{minted}
-Реализация \mintinline{haskell}|fromException| для конкретного типа умеет убедиться в наличии соответствующего конструктора в результирующем объекте исключения.
+The implementation of \mintinline{haskell}|fromException| for a concrete type can verify the presence of the corresponding constructor in the resulting exception object.
 
-\subsubsection{Легковесные частичные стек-трейсы}
+\subsubsection{Lightweight partial stack traces}
 
-Забавной эксплуатацией классов типов в Haskell являются легковесные частичные стек-трейсы\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/callstack.html}}.
-Вообще для сбора трейсов нужна поддержка рантайма, что в случае Haskell усложняется ещё и тем, что модель вычислений, редукция графов, реальных трейсов не содержит и их приходится эмулировать.
-Мы же получим трейсы без поддержки рантайма.
+An amusing exploitation of type classes in Haskell is lightweight partial stack traces\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/callstack.html}}.
+In general, collecting traces requires runtime support, which in Haskell's case is further complicated by the fact that the computation model, graph reduction, does not contain real traces and they have to be emulated.
+Here we obtain traces without runtime support.
 
-В стандартной библиотеке определён констреинт \mintinline{haskell}|GHC.Stack.HasCallStack|, позволяющий получить информацию о месте вызова функции.
-Эту информацию фактически размещает компилятор в процессе вывода инстансов.
-Если в месте вызова доступна информация с уровня выше, компилятор распространяет её дальше.
-Таким образом, доступна информация только на определённую глубину стека вызовов.
+The standard library defines the constraint \mintinline{haskell}|GHC.Stack.HasCallStack|, allowing one to obtain information about the call site of a function.
+This information is effectively placed by the compiler during instance inference.
+If information from the level above is available at the call site, the compiler propagates it further.
+Thus, information is available only to a certain depth of the call stack.
 \begin{minted}{haskell}
     myHead :: HasCallStack => [a] -> a
     myHead []     = error "empty"
@@ -1125,18 +1125,18 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
       -- no information about bad call site here
 \end{minted}
 
-\mintinline{haskell}{HasCallStack} --- это просто имплисит (см.~\ref{subsubsec:ad-hoc-implicits}), про который знает компилятор:
+\mintinline{haskell}{HasCallStack} is simply an implicit (see~\ref{subsubsec:ad-hoc-implicits}) that the compiler knows about:
 \begin{minted}[escapeinside=##]{haskell}
     type HasCallStack = (?callStack :: CallStack)
 \end{minted}
 
-\subsubsection{Кастомизируемые ошибки типизации} \label{subsubsec:custom-type-errors}
+\subsubsection{Customizable type errors} \label{subsubsec:custom-type-errors}
 
-При программировании сложных с точки зрения типов библиотек, желательно предоставлять пользователям более информативные ошибки типизации, чем ошибки по умолчанию.
-Для этого в GHC есть механизм в \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/GHC-TypeLits.html}{GHC.TypeLits}, позволяющий сконструировать специальный тип, информация из которого попадёт в сообщение об ошибке.
-Например, этот тип можно вернуть из synonym family при некорректном наборе аргументов.
-Или же можно воспользоваться constraint trick (см.\ \ref{subsubsec:instance-inference}) и разместить такой тип в качестве посылки в инстансе.
-Если инстанс подошел и компилятор начал обрабатывать ограничения слева, значит, что-то пошло не так~\cite[глава 12]{maguire-types}.
+When developing libraries that are complex from the type perspective, it is desirable to provide users with more informative type errors than the defaults.
+For this, GHC has a mechanism in \href{https://hackage.haskell.org/package/base-4.20.0.1/docs/GHC-TypeLits.html}{GHC.TypeLits} that allows constructing a special type whose information will appear in the error message.
+For example, this type can be returned from a synonym family with an incorrect set of arguments.
+Or one can use the constraint trick (see\ \ref{subsubsec:instance-inference}) and place such a type as a premise in an instance.
+If the instance matched and the compiler started processing the constraints on the left, something went wrong~\cite[chapter 12]{maguire-types}.
 
 \begin{minted}{haskell}
     instance (TypeError
@@ -1144,7 +1144,7 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
         :<>: Text "'" :<>: ShowType (a -> b) :<>: Text "'"
         :$$: Text "Did you forget to apply an argument?"
       )) => Show (a -> b) where
-      show = undefined -- реализация не важна, до исполнения дело не дойдёт
+      show = undefined -- the implementation does not matter, execution will not reach here
 \end{minted}
 
 

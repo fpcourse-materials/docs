@@ -1,43 +1,43 @@
 %! suppress = EscapeHashOutsideCommand
 %! suppress = MissingLabel
 
-Продолжения с начала 60х не один раз возникали в литературе в различных формах и разнообразных приложениях~\cite{reynolds1993discoveries, landin1997histories}, пока в 70х Wadsworth не придумал общий термин и единую концепцию --- \vocab{continuation}\footnote{\url{https://en.wikipedia.org/wiki/Continuation}} --- ``the meaning of the rest of the program''.
+Since the early 1960s, continuations have appeared in the literature multiple times in various forms and diverse applications~\cite{reynolds1993discoveries, landin1997histories}, until in the 1970s Wadsworth coined a general term and a unified concept --- \vocab{continuation}\footnote{\url{https://en.wikipedia.org/wiki/Continuation}} --- ``the meaning of the rest of the program''.
 
-Начальным толчком к размышлениям стал язык Algol 60, имевший нетривиальный механизм меток и прыжков.
-Проблемой была как имплементация семантики, так и её денотационное описание вместе с трансляцией в лямбда-исчисление.
-Действительно, как математически описать \texttt{goto}?
-В каком домене искать семантику таких программ?
-Как написать определяющий интерпретатор, отправляющий программу в этот домен?
-Решением стала возможность сослаться на семантику остатка программы, продолжение, в определённой точке (например, на метке).
+The initial impetus for these reflections was the Algol 60 language, which had a non-trivial mechanism of labels and jumps.
+The problem was both the implementation of the semantics and its denotational description together with translation into lambda calculus.
+Indeed, how does one mathematically describe \texttt{goto}?
+In which domain should one seek the semantics of such programs?
+How does one write a definitional interpreter mapping a program into this domain?
+The solution turned out to be the ability to refer to the semantics of the remainder of the program, the continuation, at a given point (for example, at a label).
 
-О продолжениях всегда должен думать автор языка, ведь вычислителю в каждой точке программы нужно знать, что исполнять дальше.
-А как мы уже поняли, любой программист является автором множества языков, приближающих его к решению задачи.
-Более того, многие повседневные языковые конструкции явно или неявно непосредственно манипулируют продолжениями.
+The language designer must always think about continuations, since the evaluator at each point of a program needs to know what to execute next.
+And as we have already understood, every programmer is the author of many languages that bring them closer to solving their problem.
+Moreover, many everyday language constructs explicitly or implicitly directly manipulate continuations.
 
-\subsection{Концепция продолжений}
+\subsection{The concept of continuations}
 
-Рассмотрим семантику выражения с операционной точки зрения, как последовательность шагов переписывания (см.\ \ref{subsubsec:semantics}).
-Если внимательно рассмотреть каждый шаг, то мы обнаружим, что он состоит из двух этапов: поиска подвыражения (редекса), в котором можно сделать элементарный шаг вычислений, выполнение этого шага, и так далее\footnote{На самом деле вычислениям с продолжениями учат в начальных классах, когда рассказывают про вычисление выражений ``по действиям''.}.
-Во время поиска редекса, выражение разбивается на две части (см.~\ref{fig:basic-continuation}):
+Let us consider the semantics of an expression from the operational point of view, as a sequence of rewriting steps (see\ \ref{subsubsec:semantics}).
+If we carefully examine each step, we discover that it consists of two stages: finding a subexpression (redex) in which an elementary computation step can be performed, executing that step, and so on\footnote{In fact, computing with continuations is taught in elementary school, when students learn to evaluate expressions ``step by step.''}.
+During the search for a redex, the expression is split into two parts (see~\ref{fig:basic-continuation}):
 \begin{itemize}
-    \item Фокус --- подвыражение в котором ищем редекс;
-    \item Продолжение --- остаток выражения с ``дыркой'', обозначающий место, куда нужно подставить результат шага вычислений.
+    \item The focus --- the subexpression in which we search for a redex;
+    \item The continuation --- the remainder of the expression with a ``hole,'' indicating the place where the result of the computation step should be plugged in.
 \end{itemize}
 
 \begin{figure}
     \centering
     \includegraphics[width=0.35\textwidth]{figs/cont-expr}
-    \caption{Выражение разделяется на фокус (красный) и продолжение (синее), когда в фокусе удалось сделать шаг, они объединяются в новое выражение, для которого процесс повторяется.}
+    \caption{The expression is split into a focus (red) and a continuation (blue); when a step is performed in the focus, they are combined into a new expression, and the process repeats.}
     \label{fig:basic-continuation}
 \end{figure}
 
-Как правило, продолжения существуют вне пользовательского кода как состояние интерпретатора, которому в каждый следующий момент времени нужно помнить, какой код и в каком состоянии исполнять дальше.
-Однако, языки предоставляют пользователям множество конструкций, позволяющих управлять продолжениями (см.\ \ref{fig:exit-exceptions}):
+As a rule, continuations exist outside user code as the state of the interpreter, which at each successive moment in time needs to remember what code to execute next and in what state.
+However, languages provide users with many constructs that allow controlling continuations (see\ \ref{fig:exit-exceptions}):
 \begin{itemize}
-    \item Функция \mintinline{kotlin}|exit| выбрасывает продолжение программы целиком;
-    \item Конструкция \mintinline{kotlin}|try-catch| позволяет выбросить часть продолжения до места поимки исключения и исполнить оставшееся;
-    \item Конструкция \mintinline{kotlin}|return| позволяет восстановить исполнение в месте, где функция была вызвана;
-    \item Конструкции \mintinline{kotlin}|break| и \mintinline{kotlin}|continue| восстанавливают продолжение после цикла и до\ldots
+    \item The function \mintinline{kotlin}|exit| discards the entire program continuation;
+    \item The construct \mintinline{kotlin}|try-catch| allows discarding part of the continuation up to the exception handler and executing the remainder;
+    \item The construct \mintinline{kotlin}|return| allows resuming execution at the point where the function was called;
+    \item The constructs \mintinline{kotlin}|break| and \mintinline{kotlin}|continue| restore the continuation after and before the loop, respectively\ldots
 \end{itemize}
 
 \begin{figure}
@@ -48,45 +48,45 @@
     \begin{subfigure}[h]{0.7\linewidth}
         \includegraphics[width=1\textwidth]{figs/cont-try-catch}
     \end{subfigure}
-    \caption{Конструкция \mintinline{kotlin}|exit| выбрасывает продолжение и программа останавливается, в то время как \mintinline{kotlin}{throw} выбрасывает лишь часть продолжения до ближайшего \mintinline{kotlin}{try-catch}.}
+    \caption{The construct \mintinline{kotlin}|exit| discards the continuation and the program halts, while \mintinline{kotlin}{throw} discards only part of the continuation up to the nearest \mintinline{kotlin}{try-catch}.}
     \label{fig:exit-exceptions}
 \end{figure}
 
 \subsubsection{Reduction semantics}
 
-Стиль задания операционной семантики через описание поиска примитивных (``\vocab{головных}'') редексов и их редукций называют \vocab{семантикой редукционных контекстов (reduction semantics)}\footnote{\url{https://en.wikipedia.org/wiki/Operational_semantics}}.
-Как обычно, следуя Hutton's Razor, рассмотрим интерпретацию маленького простого язычка с вычитанием (несимметричная операция для проверки реализации):
+The style of specifying operational semantics through the description of searching for primitive (``\vocab{head}'') redexes and their reductions is called \vocab{reduction semantics (reduction context semantics)}\footnote{\url{https://en.wikipedia.org/wiki/Operational_semantics}}.
+As usual, following Hutton's Razor, let us consider the interpretation of a small simple language with subtraction (an asymmetric operation for testing the implementation):
 \begin{minted}{haskell}
     data Expr = Const Int | Diff Expr Expr
 \end{minted}
 
-Для начала нам нужно определить синтаксис продолжений, ``выражений с дыркой''.
-То есть с технической точки зрения продолжение --- это структура данных, содержащая всю необходимую информацию, чтобы продолжить исполнение (здесь~--- только остаток выражения):
+First, we need to define the syntax of continuations, ``expressions with a hole.''
+That is, from a technical standpoint, a continuation is a data structure containing all the information necessary to continue execution (here --- only the remainder of the expression):
 \begin{minted}{haskell}
     data K
-      = Hole         -- дырка ?$\boxempty$?
-      | LDiff K Expr -- фокус пошел в левое подвыражение, запомнили правое
-      | RDiff Int K  -- посчитали левое, фокус пошел вправо
+      = Hole         -- hole ?$\boxempty$?
+      | LDiff K Expr -- focus went into the left subexpression, remembered the right
+      | RDiff Int K  -- computed the left, focus went right
 \end{minted}
 
-Зададим операцию разбиения выражения на фокус и продолжение:
+Let us define the operation of splitting an expression into a focus and a continuation:
 \begin{minted}{haskell}
     split :: Expr -> (Expr, K)
     split e = case e of
       Const _ -> (e, Hole)
-      Diff (Const _) (Const _) -> (e, Hole) -- примитивный редекс
-      Diff (Const l) r ->                   -- левое подвыражение уже посчитано
-        let (focus, k) = split r in         -- ищем редекс в правом
+      Diff (Const _) (Const _) -> (e, Hole) -- primitive redex
+      Diff (Const l) r ->                   -- left subexpression already computed
+        let (focus, k) = split r in         -- search for redex in the right
         (focus, RDiff l k)
-      Diff l r ->                           -- ничего ещё не посчитано
-        let (focus, k) = split l in         -- начинам с поиска редекса слева
+      Diff l r ->                           -- nothing computed yet
+        let (focus, k) = split l in         -- start by searching for redex on the left
         (focus, LDiff k r)
 
     ghci> split (Diff (Diff (Const 1) (Const 2)) (Const 3)) -- (1 - 2) - 3
     (Diff (Const 1) (Const 2), LDiff Hole (Const 3)) -- (1 - 2, ?$\boxempty$? - 3)
 \end{minted}
 
-Шаг примитивной редукции умеет только вычитать числа:
+The primitive reduction step only knows how to subtract numbers:
 \begin{minted}{haskell}
     headReduction :: Expr -> Expr
     headReduction = \case
@@ -94,7 +94,7 @@
       e -> e
 \end{minted}
 
-После шага примитивной редукции нам понадобится подставить результат обратно в продолжение, чтобы из ``выражения с дыркой'' получить полноценное выражение, которое можно продолжить редуцировать:
+After a primitive reduction step, we need to plug the result back into the continuation, so that from an ``expression with a hole'' we obtain a full expression that can be further reduced:
 \begin{minted}{haskell}
     plugIn :: Expr -> K -> Expr
     plugIn e k = case k of
@@ -102,17 +102,17 @@
       LDiff k' r -> Diff (e `plugIn` k') r
       RDiff l k' -> Diff (Const l) (e `plugIn` k')
 \end{minted}
-Как правило, подстановку терма $t$ в продолжение $E$ обозначают как $E[t]$.
+As a rule, plugging a term $t$ into a continuation $E$ is denoted as $E[t]$.
 
-Теперь мы можем определить полноценный шаг:
+Now we can define a full step:
 \begin{minted}{haskell}
     transition :: Expr -> Expr
     transition e =
-      let (focus, k) = split e in    -- разбиваем на фокус и контекст
-      headReduction focus `plugIn` k -- делаем вычисление в фокусе и подставляем
+      let (focus, k) = split e in    -- split into focus and context
+      headReduction focus `plugIn` k -- perform computation in the focus and plug in
 \end{minted}
 
-Тода операционная семантика это развёртка списка промежуточных выражений:
+Then the operational semantics is the unfolding of the list of intermediate expressions:
 \begin{minted}{haskell}
     eval :: Expr -> [Expr]
     eval = List.unfoldr \prev ->
@@ -120,8 +120,8 @@
       if prev == next then Nothing else Just (next, next)
 \end{minted}
 
-Можно заметить, что \texttt{split} и \texttt{plugIn} однозначно определяется по синтаксису продолжений и виду главных редукций, а \texttt{transition} и \texttt{eval} одинаковы для произвольного языка.
-Поэтому семантику редукционных контекстов обычно задают как синтаксис продолжений, перечень главных редукций и единственное правило вывода --- шаг в контексте:\footnote{$\ominus$ тут обозначает синтаксический минус (ноду в дереве).}
+One can notice that \texttt{split} and \texttt{plugIn} are uniquely determined by the syntax of continuations and the form of head reductions, while \texttt{transition} and \texttt{eval} are the same for any language.
+Therefore, reduction semantics is usually specified as the syntax of continuations, a list of head reductions, and a single inference rule --- a step in context:\footnote{$\ominus$ here denotes syntactic minus (a node in the tree).}
 %! suppress = EscapeAmpersand
 \[
     \begin{array}{lrl}
@@ -133,11 +133,11 @@
     \end{array}
 \]
 
-Существует стандартный инструмент PLT Redex\footnote{\url{https://redex.racket-lang.org/}} для описания и тестирования семантики в стиле редукционных контекстов.
+There exists a standard tool PLT Redex\footnote{\url{https://redex.racket-lang.org/}} for describing and testing semantics in the reduction context style.
 
 \subsubsection{Continuation semantics} \label{subsubsec:continuation-semantics}
 
-Запишем денотационную семантику нашего языка:
+Let us write the denotational semantics of our language:
 \begin{minted}{haskell}
     evalDirect :: Expr -> Int
     evalDirect = \case
@@ -145,40 +145,40 @@
       Diff l r -> evalDirect l - evalDirect r
 \end{minted}
 
-Перепишем денотационную семантику в стиле с явными продолжениями.
-Но сначала поработаем с типом \mintinline{haskell}{K} и упростим работу с ним:
+Let us rewrite the denotational semantics in a style with explicit continuations.
+But first, let us work with the type \mintinline{haskell}{K} and simplify handling it:
 \begin{minted}{haskell}
     data K = Hole | LDiff K Expr | RDiff Int K
     -- ?$K = 1 + (K \times Expr) + (Int \times K) = 1 + (Expr + Int) \times K$?
     data Frame = LDiff Expr | RDiff Int
     type K = [Frame]
 \end{minted}
-Получили представление продолжения как стека фреймов.
+We have obtained a representation of the continuation as a stack of frames.
 
-Денотационную семантику будем записывать для домена \mintinline{haskell}{K -> Int}.
-Такая разновидность денотационной семантики с явным представлением смысла остатка программы (в виде \mintinline{haskell}{K}) иногда называют \vocab{continuation semantics}.
-А соответствующий стиль программирования с передачей продолжений --- \vocab{continuation passing style (CPS)}.
+We will write the denotational semantics for the domain \mintinline{haskell}{K -> Int}.
+Such a variant of denotational semantics with an explicit representation of the meaning of the rest of the program (in the form of \mintinline{haskell}{K}) is sometimes called \vocab{continuation semantics}.
+And the corresponding programming style with passing continuations is called \vocab{continuation passing style (CPS)}.
 
-В нашем continuation semantics будет выглядеть как пара взаимно-рекурсивных функций:
+In our case, the continuation semantics will look like a pair of mutually recursive functions:
 \begin{minted}{haskell}
     evalK :: Expr -> K -> Int
     evalK e k = case e of
-      Const n -> k `appK` n             -- выполняем остаток программы
-      Diff l r -> evalK l (LDiff r : k) -- запоминаем дальше вычислить правое
+      Const n -> k `appK` n             -- execute the rest of the program
+      Diff l r -> evalK l (LDiff r : k) -- remember to compute the right next
 
     appK :: K -> Int -> Int
     appK k result = case k of
-      [] -> result                                -- дальше делать нечего
-      LDiff r : k' -> evalK r (RDiff result : k') -- идем вычислять вправо
-      RDiff l' : k' -> k' `appK` (l' - result)    -- продолжаем на результате
+      [] -> result                                -- nothing more to do
+      LDiff r : k' -> evalK r (RDiff result : k') -- go compute the right
+      RDiff l' : k' -> k' `appK` (l' - result)    -- continue on the result
 \end{minted}
-Тут мы снова спускаемся по выражению в поисках примитивного редекса (тут~--- константы), попутно запоминая, что нужно будет сделать после.
+Here we again descend through the expression searching for a primitive redex (here --- a constant), while remembering what needs to be done afterwards.
 
 %\begin{figure}
 %    \centering
 %    \begin{tabular}{|c|c|}
 %        \hline
-%        Фокус         & Продолжение           \\
+%        Focus         & Continuation           \\
 %        \hline
 %        $(5 - 2) - 1$ & $\boxempty$           \\
 %        $5 - 2$       & $\boxempty - 1$       \\
@@ -189,36 +189,36 @@
 %    \end{tabular}
 %\end{figure}
 
-Первая рекурсивная реализация \texttt{evalDirect} не заботилась о продолжениях.
-Однако, продолжения --- это неотъемлемая часть процесса вычисления, вычислителю нужно знать, что делать дальше в каждый момент.
-На самом деле \texttt{evalDirect} лишь делегирует работу с продолжениями определяемого языка мета-языку, но каким образом?
-Заметьте, что полученная в итоге реализация \texttt{evalK} хвостово-рекурсивная, а значит, может быть скомпилирована в цикл, не потребляющий стек вызовов, при этом \mintinline{haskell}{K} это стек.
-Таким образом, в первом случае мы делали рекурсивные вызовы и продолжение аллоцировалось на (аппаратном) стеке мета-языка, а во втором случае мы самостоятельно аллоцируем стек в куче.
+The first recursive implementation \texttt{evalDirect} did not worry about continuations.
+However, continuations are an integral part of the computation process: the evaluator needs to know what to do next at every moment.
+In fact, \texttt{evalDirect} merely delegates the management of the object language's continuations to the meta-language, but how?
+Notice that the resulting implementation \texttt{evalK} is tail-recursive, meaning it can be compiled into a loop that does not consume the call stack, while \mintinline{haskell}{K} is the stack.
+Thus, in the first case we made recursive calls and the continuation was allocated on the (hardware) stack of the meta-language, while in the second case we manually allocate the stack on the heap.
 
-В случае, если стек мета-языка реализован поверх аппаратного, есть риск ошибки его переполнения.
-Чтобы этого избежать, используется техника \vocab{trampolining}, которая как раз состоит в ручной аллокации продолжения в куче~\cite{ganz1999trampolined, bjarnarson2012stackless}.
+In the case where the meta-language's stack is implemented on top of the hardware stack, there is a risk of a stack overflow error.
+To avoid this, the \vocab{trampolining} technique is used, which consists precisely in manually allocating the continuation on the heap~\cite{ganz1999trampolined, bjarnarson2012stackless}.
 
-Подобно тому как тип контекста зиппера можно вычислить как производную алгебраического представления соответствующего типа~\cite{huet1997zipper, mcbride2001derivative, abbott2003derivatives}, так можно вычислить тип продолжения свёртки~\cite{mcbride2008clowns}.
+Just as the type of a zipper's context can be computed as the derivative of the algebraic representation of the corresponding type~\cite{huet1997zipper, mcbride2001derivative, abbott2003derivatives}, one can compute the type of a fold's continuation~\cite{mcbride2008clowns}.
 
-\subsubsection{Продолжения первого класса} \label{subsubsec:first-class-cont}
+\subsubsection{First-class continuations} \label{subsubsec:first-class-cont}
 
-В примерах выше конструкции языка управляют продолжениями неявно (см.\ рис.\ \ref{fig:exit-exceptions}).
-Однако, иногда вводят операторы, позволяющие явно оперировать продолжениями.
-С их помощью можно реализовать как возможности манипуляции потоком управления вроде генераторов и корутин\footnote{\url{https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style\#Example:_coroutines}}\footnote{\url{https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.coroutines/suspend-coroutine.html}}, так и все остальные эффекты вроде состояния (см.\ далее\ \ref{sec:effects}).
+In the examples above, language constructs manage continuations implicitly (see\ Fig.\ \ref{fig:exit-exceptions}).
+However, sometimes operators are introduced that allow explicitly manipulating continuations.
+With their help one can implement both control flow manipulation capabilities such as generators and coroutines\footnote{\url{https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style\#Example:_coroutines}}\footnote{\url{https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.coroutines/suspend-coroutine.html}}, as well as all other effects such as state (see~\ref{sec:effects}).
 
-\vocab{Продолжения первого класса (first-class continuations)} --- продолжения, которые представимы в программе в виде значений.
-Учитывая, что продолжение имеет вакантное место ещё не вычисленного подвыражения, продолжения первого класса представляют функциями первого класса.
+\vocab{First-class continuations} are continuations that can be represented as values in the program.
+Given that a continuation has a vacant slot for a not-yet-computed subexpression, first-class continuations are represented as first-class functions.
 
-Чтобы получить в коде продолжение первого класса, нужно либо написать код в CPS, либо воспользоваться встроенным в язык оператором, которых придумано великое множество~\cite[приложение A]{hillerstrom2022foundations}.
-Например, $J$, \texttt{escape}~\cite{reynolds1972definitional}, \texttt{call/cc}\ldots
+To obtain a first-class continuation in code, one needs to either write the code in CPS, or use a built-in language operator, of which a great many have been invented~\cite[appendix A]{hillerstrom2022foundations}.
+For example, $J$, \texttt{escape}~\cite{reynolds1972definitional}, \texttt{call/cc}\ldots
 
-Для примера реализуем в языке операцию \texttt{Cont}, позволяющую захватить текущее продолжение.
-Он будет принимать пользовательскую функцию и передавать в неё текущее продолжение от себя и до конца программы:
+As an example, let us implement in our language an operation \texttt{Cont} that allows capturing the current continuation.
+It will take a user function and pass to it the current continuation from itself to the end of the program:
 \[
     E[cont\ap f] \longrightarrow f\ap (\lambda x\ldotp E[x])
 \]
 
-Сначала расширим язык лямбда-исчислением:
+First, let us extend the language with lambda calculus:
 \begin{minted}{haskell}
     data Expr
       = Const Int | Diff Expr Expr
@@ -227,12 +227,12 @@
     data Frame
       = LDiff Expr | RDiff Value
       | LApp Expr | RApp Value
-      | SetEnv Env -- после исполнения замыкания возвращаем текущее окружение
+      | SetEnv Env -- after executing a closure, restore the current environment
 \end{minted}
 
-Реализация интерпретатора довольно прямолинейна.
-Единственное, сейчас остаток программы представлен в виде линейного списка, который фактически обходится в цикле последовательно.
-Нужно не забыть после исполнения тела замыкания восстановить изначальное окружение для исполнения продолжения:\footnote{Для удобства буддем передавать окружение неявным параметром.}
+The interpreter implementation is fairly straightforward.
+The only thing is that the remainder of the program is now represented as a linear list that is effectively traversed sequentially in a loop.
+We must not forget to restore the original environment after executing a closure body for the continuation to proceed:\footnote{For convenience, we will pass the environment as an implicit parameter.}
 \begin{minted}[escapeinside=##]{haskell}
     evalK :: (?env :: Env) => Expr -> K -> Value
     evalK e k = case e of
@@ -265,7 +265,7 @@
           other -> error $ "Expected number, got " <> show other
 \end{minted}
 
-Наконец, реализуем оператор \texttt{cont}:
+Finally, let us implement the \texttt{cont} operator:
 \begin{minted}[escapeinside=##]{haskell}
     data Expr = ... | Cont Expr
     data Frame = ... | ContFrame
@@ -276,34 +276,34 @@
 
     appK k result = case k of
        ...
-       ContFrame : k' -> [RApp result] `appK` K ?env k' -- переиспользуем ветку RApp
+       ContFrame : k' -> [RApp result] `appK` K ?env k' -- reuse the RApp branch
 \end{minted}
 
-Рассмотрим несколько примеров (обозначим \mintinline{haskell}{contLam name body = Cont (Lam name body)}, \mintinline{haskell}{(-.) = Diff}, \mintinline{haskell}{c = Const}, \mintinline{haskell}{v = Var} и \mintinline{haskell}{(@) = App}):
+Let us consider several examples (denoting \mintinline{haskell}{contLam name body = Cont (Lam name body)}, \mintinline{haskell}{(-.) = Diff}, \mintinline{haskell}{c = Const}, \mintinline{haskell}{v = Var} and \mintinline{haskell}{(@) = App}):
 \begin{itemize}
-    \item \mintinline{haskell}{c 10 -. contLam "k" (c 1)} --- выбросить продолжение и вернуть 1 ($k = 10 - \boxempty$);
+    \item \mintinline{haskell}{c 10 -. contLam "k" (c 1)} --- discard the continuation and return 1 ($k = 10 - \boxempty$);
     \item \mintinline{haskell}{c 10 -. contLam "k" (v "k" @ c 1)} --- $\step k\ap 1 \step 10 - 1 \step 9$;
     \item \mintinline{haskell}{c 10 -. contLam "k" (v "k" @ c 1 -. c 2)} --- $\step k \ap 1 - 2 \step 9 - 2 \step 7$;
     \item \mintinline{haskell}{c 10 -. contLam "k" (v "k" @ c 1 -. v "k" @ c 2)} --- $\step k \ap 1 - k \ap 2 \step 9 - 8 \step 1$.
 \end{itemize}
 
-Таким образом, мы получили язык, который позволяет пользователю в произвольном месте программы получить текущее продолжение в виде функции.
+Thus, we have obtained a language that allows the user to obtain the current continuation as a function at any point in the program.
 
-Возможность получить продолжение первого класса почти не предоставляется промышленными языками, так как это довольно опасный инструмент.
-Действительно, если пользователь не вызовет продолжение, может не произойти закрытия ресурсов.
-Если вызовет несколько раз, снова может произойти как некорректная работа с ресурсами, так и порча изменяемой памяти (продолжения, которые можно безопасно вызывать много раз называют \vocab{multi-shot}).
-Подобные поведения можно исключать специальной обработкой таких ситуаций~\cite{muhcu2025multiple}, проверками времени компиляции (например, с помощью линейных типов) или времени исполнения.
-Сейчас с активными исследованиями о внедрении хендлеров эффектов (см.\ далее\ \ref{sec:effects}) продолжения первого класса могут получить новый шанс.
+The ability to obtain first-class continuations is almost never provided by industrial languages, as it is a rather dangerous tool.
+Indeed, if the user does not invoke the continuation, resources may not be released.
+If they invoke it multiple times, there may again be incorrect resource handling or corruption of mutable memory (continuations that can be safely invoked multiple times are called \vocab{multi-shot}).
+Such behaviors can be excluded by special handling of these situations~\cite{muhcu2025multiple}, compile-time checks (e.g., using linear types) or runtime checks.
+Currently, with active research on integrating effect handlers (see~\ref{sec:effects}), first-class continuations may get a new chance.
 
-\subsection{Продолжения своими руками} \label{subsec:functional-cps}
+\subsection{Continuations by hand} \label{subsec:functional-cps}
 
 % todo higher-order CPS
 
-Рассмотрим, как выглядит CPS в обычном коде, а не в контексте deep embedding.
-Для этого мы, во-первых, перейдём к shallow embedding и будем сразу строить элементы целевого домена.
-А во-вторых, рефункционализируем продолжения \mintinline{haskell}{K} и обобщим: вместо \mintinline{haskell}{K -> Int} будем использовать \mintinline{haskell}{forall r . (a -> r) -> r}, где \texttt{a -> r}~--- функциональное представление продолжения.
+Let us consider what CPS looks like in ordinary code, rather than in the context of deep embedding.
+For this, we will first switch to shallow embedding and directly construct elements of the target domain.
+Second, we will refunctionalize the continuations \mintinline{haskell}{K} and generalize: instead of \mintinline{haskell}{K -> Int} we will use \mintinline{haskell}{forall r . (a -> r) -> r}, where \texttt{a -> r} is the functional representation of the continuation.
 
-Такой CPS эксплуатирует следующий изоморфизм:
+Such CPS exploits the following isomorphism:
 \begin{minted}{haskell}
     to :: a -> (forall r . (a -> r) -> r)
     to x k = k x
@@ -311,18 +311,18 @@
     from :: (forall r . (a -> r) -> r) -> a
     from comp = comp id
 \end{minted}
-Иначе говоря, вместо того, чтобы предоставить значение типа \texttt{a}, можно спросить у вызывающей стороны, как она собирается с этим значением работать \texttt{a -> r}, сделать это самостоятельно, и вернуть вызывающей стороне \texttt{r}.
+In other words, instead of providing a value of type \texttt{a}, one can ask the caller how they intend to use this value \texttt{a -> r}, do it oneself, and return \texttt{r} to the caller.
 
-Прикладным программистам этот изоморфизм знаком по технике использования callback'ов.
-Теоретикам же известно, что он является частным случаем леммы Йонеды~\cite{hinze2010reason}.
-Сравните CPS с интансом этой леммы в теории предпорядка (выше мы считали \texttt{a = Unit; b = a}):
+Practitioners know this isomorphism through the technique of using callbacks.
+Theoreticians know that it is a special case of the Yoneda lemma~\cite{hinze2010reason}.
+Compare CPS with the instance of this lemma in preorder theory (above we took \texttt{a = Unit; b = a}):
 \begin{gather*}
     a\to b \iso \forall r\ldotp (b\to r)\to (a\to r) \\
     a \le b \iff \forall r\ldotp (b \le r) \Rightarrow (a \le r)
 \end{gather*}
 
-Например, мы можем переписать факториал в CPS.
-Заметьте, что код имеет доступ к продолжению первого класса (однако, пока никак нетривиально не использует его), при этом снова является хвостово-рекурсивным.
+For example, we can rewrite factorial in CPS.
+Note that the code has access to a first-class continuation (however, it does not yet use it in any non-trivial way), and is again tail-recursive.
 \begin{minted}{haskell}
     facCps :: Int -> (forall r . (Int -> r) -> r)
     facCps n k
@@ -334,13 +334,13 @@
 \end{minted}
 
 \begin{task}
-    Сколько функция \mintinline{haskell}|facCps| потребляет стековой памяти?
+    How much stack memory does the function \mintinline{haskell}|facCps| consume?
 \end{task}
 
-\subsubsection{Дефункционализация и аккумуляторы} \label{subsubsec:defunctionalization-cont}
+\subsubsection{Defunctionalization and accumulators} \label{subsubsec:defunctionalization-cont}
 
-Дефункционализируем продолжения в \texttt{facCps}.
-Мы используем две функции высших порядков, \texttt{id} и \mintinline{haskell}{\res -> k (n * res)}, они дают нам два конструктора:
+Let us defunctionalize the continuations in \texttt{facCps}.
+We use two higher-order functions, \texttt{id} and \mintinline{haskell}{\res -> k (n * res)}, which give us two constructors:
 \begin{minted}{haskell}
     data K = Id | Times Int K
     -- ?$\iso$?
@@ -357,30 +357,30 @@
     facCps 3 [] ?$\step$? facCps 2 [3] ?$\step$? facCps 1 [3, 2] ?$\step$? runK [3, 2] ?$\step$? 3 * (2 * 1)
 \end{minted}
 
-Мы снова получили представление продолжения в виде стека фреймов.
-А значит, интерпретатор \texttt{evalK} полученный нами ранее (\ref{subsubsec:continuation-semantics}) является CPS версией обычного интерпретатора, только с дефункционализированными продолжениями (они удобны для отладки~--- их можно распечатать, в отличие от функций Haskell).
-Если расширить тот наш язык и написать на нём факториал, а потом сделать fusion или рефункционализацию (\ref{subsubsec:deforestation-fusion}) дерева программы и дерева продолжения, мы получим текущую реализацию факториала.
-И в целом между различными стилями реализаций семантик можно построить соответствие (см.\ рис.\ \ref{fig:semantics-diagram}).
+We have again obtained the representation of the continuation as a stack of frames.
+This means that the interpreter \texttt{evalK} we obtained earlier (\ref{subsubsec:continuation-semantics}) is a CPS version of a regular interpreter, but with defunctionalized continuations (which are convenient for debugging --- they can be printed, unlike Haskell functions).
+If we extend our earlier language and write factorial in it, then perform fusion or refunctionalization (\ref{subsubsec:deforestation-fusion}) of the program tree and the continuation tree, we obtain the current factorial implementation.
+And in general, correspondences can be established between various styles of semantics implementations (see\ Fig.\ \ref{fig:semantics-diagram}).
 
 \begin{figure}
     \centering
     \includegraphics[width=0.6\textwidth]{figs/semantics-diagram}
-    \caption{Связь между семантиками в различных стилях~\cite{danvy2008defunctionalized}.}
+    \caption{Relationship between semantics in various styles~\cite{danvy2008defunctionalized}.}
     \label{fig:semantics-diagram}
 \end{figure}
 
-Этой техникой можно пользоваться и в более сложных случаях, чтобы легко получать хвостово-рекурсивные (итеративные) реализации\footnote{\url{https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html}}~\cite{gibbons2021continuation}\footnote{\href{https://youtu.be/8gnhaE2nmQ0?si=pEJX4jQteYmy7ZZn}{(youtube) Jeremy Gibbons - Continuation-passing style, defunctionalization, and associativity.}}.
-В целом CPS и дефункционализация~--- это богатый источник различных рефакторингов (см.\ рис.\ \ref{fig:cps-refactorings}).
+This technique can be used in more complex cases as well, to easily obtain tail-recursive (iterative) implementations\footnote{\url{https://www.pathsensitive.com/2019/07/the-best-refactoring-youve-never-heard.html}}~\cite{gibbons2021continuation}\footnote{\href{https://youtu.be/8gnhaE2nmQ0?si=pEJX4jQteYmy7ZZn}{(youtube) Jeremy Gibbons - Continuation-passing style, defunctionalization, and associativity.}}.
+In general, CPS and defunctionalization are a rich source of various refactorings (see\ Fig.\ \ref{fig:cps-refactorings}).
 
 \begin{figure}
     \centering
     \includegraphics[width=0.8\textwidth]{figs/cps-defun-refactorings}
-    \caption{Трансформации кода, основанные на CPS и де(ре)функционализации~\cite{danvy2006analytical}.}
+    \caption{Code transformations based on CPS and de(re)functionalization~\cite{danvy2006analytical}.}
     \label{fig:cps-refactorings}
 \end{figure}
 
-Теперь заметим, что операция умножения ассоциативна, а значит, можно \texttt{snoc} заменить на умножение, а продолжение представить одним числом.
-Получим привычную реализацию факториала с аккумулятором:
+Now let us notice that the multiplication operation is associative, so we can replace \texttt{snoc} with multiplication and represent the continuation as a single number.
+We obtain the familiar factorial implementation with an accumulator:
 \begin{minted}{haskell}
     facAcc :: Int -> Int -> Int
     facAcc n acc
@@ -390,14 +390,14 @@
     facAcc 3 1 ?$\step$? facAcc 2 (1 * 3) ?$\step$? facAcc 1 ((1 * 3) * 2) ?$\step$? (1 * 3) * 2 ?$\step$? 6
 \end{minted}
 
-Также, можно фреймы представить в виде эндоморфизмов и в качестве ассоциативной операции использовать композицию функций~\cite{ploeg2014reflection}\footnote{\url{https://wiki.haskell.org/Difference_list}}.
+Also, one can represent frames as endomorphisms and use function composition as the associative operation~\cite{ploeg2014reflection}\footnote{\url{https://wiki.haskell.org/Difference_list}}.
 
-% todo можно ли не пользоваться тем, что единица нейтральная
+% todo can we avoid using the fact that one is the neutral element
 
 \subsubsection{\mintinline{haskell}{Monad Cont}} \label{subsubsec:monad-cont}
 
-Из-за CPS код потерял привычную структуру, при которой функции напрямую возвращают свои результаты (i.e. \vocab{direct style}).
-При наличии большого количества вызовов трансформированных функций, код становится плохо читаемым (проблема известна как \vocab{callback hell}):
+Due to CPS, the code has lost its familiar structure where functions directly return their results (i.e.\ \vocab{direct style}).
+With a large number of calls to transformed functions, the code becomes hard to read (a problem known as \vocab{callback hell}):
 \begin{minted}{haskell}
     fibCps :: Int -> (forall r . (Int -> r) -> r)
     fibCps n k = if n <= 2 then k 1 else
@@ -406,37 +406,37 @@
       k (res1 + res2)
 \end{minted}
 
-Домен \mintinline{haskell}{(a -> r) -> r} можно сделать монадой и восстановить direct style код внутри \mintinline{haskell}{do}-нотации.
-Заведём \mintinline{haskell}|newtype| обёртку для объявления инстансов:
+The domain \mintinline{haskell}{(a -> r) -> r} can be made into a monad, restoring direct-style code inside \mintinline{haskell}{do}-notation.
+Let us introduce a \mintinline{haskell}|newtype| wrapper for declaring instances:
 \begin{minted}{haskell}
     newtype Cont r a = Cont { runCont :: (a -> r) -> r }
 \end{minted}
 
-Функтор добавляет пост-процессинг результату перед передачей в продолжение:
+The functor adds post-processing to the result before passing it to the continuation:
 \begin{minted}{haskell}
     instance Functor (Cont r) where
       -- fmap :: (a -> b) -> ((a -> r) -> r) -> ((b -> r) -> r)
       fmap f (Cont comp) = Cont \k -> comp (k . f)
 \end{minted}
 
-Аппликатив просто передаёт значение продолжению:
+The applicative simply passes the value to the continuation:
 \begin{minted}{haskell}
     instance Applicative (Cont r) where
       pure x = Cont \k -> k x
       (<*>) = ap
 \end{minted}
 
-Можно заметить, что монадическое связывание вторым аргументом тоже принимает продолжение, но ``маленькое'', до конца \mintinline{haskell}|do|-блока.
-Таким образом, смысл реализации монадического связывания для \mintinline{haskell}{Cont}~--- это композиция ``маленького'' продолжения с ``большим'' продолжением, передаваемым снаружи:
+One can notice that monadic bind also takes a continuation as its second argument, but a ``small'' one, up to the end of the \mintinline{haskell}|do|-block.
+Thus, the meaning of the monadic bind implementation for \mintinline{haskell}{Cont} is composing the ``small'' continuation with the ``large'' continuation passed from outside:
 \begin{minted}{haskell}
     instance Monad (Cont r) where
       (>>=) :: Cont r a -> (a -> Cont r b) -> Cont r b
       Cont comp >>= k = Cont \k' -> comp \x -> runCont (k x) k'
 \end{minted}
 
-% todo примеры, какое продолжение большое, какое маленькое
+% todo examples, which continuation is large, which is small
 
-Теперь мы можем писать линейный код, а монадическая машинерия сама конструирует продолжения и подкладывает в предыдущие вычисления:
+Now we can write linear code, and the monadic machinery automatically constructs continuations and feeds them into previous computations:
 \begin{minted}{haskell}
     fibCont :: Int -> Cont r Int
     fibCont n = if n <= 2 then pure 1 else do
@@ -446,29 +446,29 @@
 \end{minted}
 
 \begin{task}
-    Оборвите вычисление, если \texttt{res1} больше \texttt{50}.
+    Abort the computation if \texttt{res1} is greater than \texttt{50}.
 \end{task}
 
 \begin{task}
-    Оборвите вычисление как только общий результат стал больше 50.
+    Abort the computation as soon as the total result exceeds 50.
 \end{task}
 
-Монада \mintinline{haskell}{Cont} даёт реализацию встроенного языка, в котором можно получить продолжение вычисления:
+The monad \mintinline{haskell}{Cont} provides an implementation of an embedded language in which one can obtain the continuation of a computation:
 \begin{minted}{haskell}
     Cont :: ((a -> r) -> r) -> Cont r a
 \end{minted}
 
-Прикладным программистам такая техника написания CPS кода через монады знакома в виде концепций \mintinline{kotlin}{Future}/\mintinline{kotlin}{Promise}\footnote{\url{https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise}}\footnote{\url{https://github.com/promises-aplus/promises-spec/issues/94}}. % todo cite Barbara Liskov and Liuba Shrira. 1988. Promises: Linguistic Support for Efficient Asynchronous Procedure Calls in Distributed Systems. ACM SIGPLAN Notices   23, 7 (1988), 260–267.
+Practitioners know this technique of writing CPS code via monads through the concepts of \mintinline{kotlin}{Future}/\mintinline{kotlin}{Promise}\footnote{\url{https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise}}\footnote{\url{https://github.com/promises-aplus/promises-spec/issues/94}}. % todo cite Barbara Liskov and Liuba Shrira. 1988. Promises: Linguistic Support for Efficient Asynchronous Procedure Calls in Distributed Systems. ACM SIGPLAN Notices   23, 7 (1988), 260--267.
 
 \subsubsection{\texttt{call/cc}}
 
-Самым известным классическим оператором, который использовали в Scheme для получения продолжений первого класса, является \vocab{\texttt{call/cc} (call with current continuation)}\footnote{\url{https://en.wikipedia.org/wiki/Call-with-current-continuation}}\footnote{\url{https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style\#callCC}}.
-Предоставляемое продолжение является \vocab{неограниченным (undelimited/abortive)}, так как оно содержит ``конец программы'' --- никакой код не будет исполняться после его вызова.
-Неограниченные продолжения де-факто --- не совсем функции, так как они не возвращают результата (он уже ``beyond the grave''), следовательно, они также не композируются (также как странно композировать \texttt{abort} с \texttt{exit})\footnote{\url{https://okmij.org/ftp/continuations/undelimited.html}}\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
-Они скорее являются ко-значениями: пока часть программы выполняется, они ожидают её результата~\cite{curien2000duality}.
+The most well-known classical operator used in Scheme for obtaining first-class continuations is \vocab{\texttt{call/cc} (call with current continuation)}\footnote{\url{https://en.wikipedia.org/wiki/Call-with-current-continuation}}\footnote{\url{https://en.wikibooks.org/wiki/Haskell/Continuation_passing_style\#callCC}}.
+The provided continuation is \vocab{undelimited (abortive)}, since it contains ``the end of the program'' --- no code will execute after its invocation.
+Undelimited continuations are, de facto, not quite functions, since they do not return a result (it is already ``beyond the grave''); consequently, they also do not compose (just as it would be strange to compose \texttt{abort} with \texttt{exit})\footnote{\url{https://okmij.org/ftp/continuations/undelimited.html}}\footnote{\url{https://okmij.org/ftp/continuations/against-callcc.html}}.
+They are more like co-values: while a part of the program is executing, they await its result~\cite{curien2000duality}.
 
-Давайте сэмулируем \texttt{call/cc} в монаде \mintinline{haskell}{Cont}.
-Захватить всё продолжение программы у нас не выйдет, так как оно собирается только в рамках \mintinline{haskell}{Cont}, но мы можем проигнорировать продолжение вызова захваченного продолжения:
+Let us emulate \texttt{call/cc} in the \mintinline{haskell}{Cont} monad.
+We cannot capture the entire program continuation, since it is only assembled within \mintinline{haskell}{Cont}, but we can ignore the continuation of the call to the captured continuation:
 \begin{minted}{haskell}
     callCC :: ((a -> Cont r b) -> Cont r a) -> Cont r a
     callCC f = Cont \k -> runCont (f \x -> Cont \_ -> k x) k
@@ -482,50 +482,50 @@
 
 \subsection{Delimited continuations} \label{subsec:delimited-cont}
 
-В современной практике, как правило, используют продолжения не до конца программы, а только до определённой точки.
-Их называют \vocab{ограниченными} или \vocab{разграниченными продолжениями}, \vocab{delimited} или \vocab{composable continuations}, \vocab{subcontinuations}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}.
+In modern practice, continuations are typically used not up to the end of the program, but only up to a certain point.
+They are called \vocab{delimited} or \vocab{composable continuations}, \vocab{subcontinuations}\footnote{\url{https://www.cl.cam.ac.uk/teaching/2324/R277/handout-delimited-continuations.pdf}}\footnote{\href{https://youtu.be/TE48LsgVlIU?si=cBdUCzYwYWpwPkkh}{(youtube)  Keynote: Delimited Continuations, Demystified by Alexis King | Lambda Days 2023}.}.
 
-Конструкции для работы с такими продолжениями парные: вводится оператор, ограничивающий текущее продолжение (мб имеющий метку); а также оператор захвата фрагмента текущего продолжения (мб до конкретного ограничителя с определённой меткой).
-Таких операторов придумано много~\cite[приложение А]{hillerstrom2022foundations}, но они более-менее все сводятся друг к другу.
+Constructs for working with such continuations come in pairs: an operator is introduced that delimits the current continuation (possibly with a label); as well as an operator for capturing a fragment of the current continuation (possibly up to a specific delimiter with a given label).
+Many such operators have been invented~\cite[appendix A]{hillerstrom2022foundations}, but they are more or less all reducible to each other.
 
-Например, работа с исключениями подразумевает использование двух конструкций: продолжение ограничивается с помощью \mintinline{kotlin}|try-catch|, а \mintinline{kotlin}|throw| выкидывает соответствующее частичное продолжение, не захватывая его (см.\ рис. \ref{fig:exit-exceptions}):
+For example, working with exceptions involves two constructs: the continuation is delimited by \mintinline{kotlin}|try-catch|, and \mintinline{kotlin}|throw| discards the corresponding partial continuation without capturing it (see\ Fig.\ \ref{fig:exit-exceptions}):
 \[
     E_1[try\{E_2[throw(v)]\}catch(x) \{t\}] \to E_1[\subst{t}{x}{v}]
 \]
 
-Мы же рассмотрим универсальные операторы из~\cite{dyvbig2007monadic}.
-Работа вводит следующий набор синтаксических конструкций (рис.~\ref{fig:prompt-syntax}) для работы с ограниченными продолжениями в дополнение к чистому call-by-value лямбда-исчислению:
+We will consider the universal operators from~\cite{dyvbig2007monadic}.
+The paper introduces the following set of syntactic constructs (Fig.~\ref{fig:prompt-syntax}) for working with delimited continuations, in addition to pure call-by-value lambda calculus:
 \begin{itemize}
-    \item $newPrompt$\footnote{Исторически в лиспах неограниченные продолжения были ограничены лишь REPL, отсюда название ограничений --- ``prompt''.} --- создаёт свежий идентификатор (метку) ограничения;
-    \item $pushPrompt \ap p \ap e$ --- устанавливает ограничение с меткой $p$ и исполняет выражение $e$;
-    \item $withSubCont\ap p\ap f$ --- захватывает частичное продолжение до ограничения с меткой $p$ и передаёт в функцию $f$, возвращает результат $f$ (рис.~\ref{fig:push-prompt});
-    \item $pushSubCont\ap k \ap v$ --- исполняет композицию текущего продолжения и $k$ на значении $v$.
+    \item $newPrompt$\footnote{Historically in Lisps, undelimited continuations were delimited only by the REPL, hence the name for delimiters --- ``prompt.''} --- creates a fresh identifier (label) for a delimiter;
+    \item $pushPrompt \ap p \ap e$ --- installs a delimiter with label $p$ and executes expression $e$;
+    \item $withSubCont\ap p\ap f$ --- captures the partial continuation up to the delimiter with label $p$ and passes it to function $f$, returns the result of $f$ (Fig.~\ref{fig:push-prompt});
+    \item $pushSubCont\ap k \ap v$ --- executes the composition of the current continuation and $k$ on value $v$.
 \end{itemize}
 
 \begin{figure}
     \centering
     \includegraphics[width=0.75\linewidth]{figs/prompt-syntax}
-    \caption{Синтаксис $\lambda$-исчисления с примитивами для работы с продолжениями.}
+    \caption{Syntax of $\lambda$-calculus with primitives for working with continuations.}
     \label{fig:prompt-syntax}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics[width=0.7\linewidth]{figs/push-prompt}
-    \caption{Пример работы \texttt{withSubCont}.}
+    \caption{Example of \texttt{withSubCont} in action.}
     \label{fig:push-prompt}
 \end{figure}
 
 %\begin{figure}
 %    \centering
 %    \includegraphics[width=0.8\textwidth]{figs/dc-operational}
-%    \caption{Операционная семантика.}
+%    \caption{Operational semantics.}
 %    \label{fig:dc-operational}
 %\end{figure}
 
-Операторы ограниченных продолжений легко понять как \vocab{resumable exceptions}, исключения, которые можно поймать, а программу возобновить с того места, где исключение было выброшено (с некоторым значением).
-Необычно то, что классические операторы ограниченных продолжений принимают код, работающий с частичным продолжением в месте ``кидания исключения'', а не в месте ``поимки''.
-То есть блок обработки пишется не с \mintinline{kotlin}|catch|, а с \mintinline{kotlin}|throw|:
+Delimited continuation operators can be easily understood as \vocab{resumable exceptions}, i.e.\ exceptions that can be caught and the program resumed from the point where the exception was thrown (with some value).
+What is unusual is that the classical delimited continuation operators accept code that works with the partial continuation at the ``throw site,'' rather than at the ``catch site.''
+That is, the handling block is written not with \mintinline{kotlin}|catch|, but with \mintinline{kotlin}|throw|:
 
 \begin{gather*}
     E_1[pushPrompt \ap p \ap \{E_2[withSubCont \ap p \ap f]\}] \to E_1[f \ap E_2]
@@ -536,24 +536,24 @@
 \begin{figure}
     \centering
     \includegraphics[width=0.8\linewidth]{figs/dc-example}
-    \caption{Пример выражения (результат --- $9$).}
+    \caption{Example expression (result is $9$).}
     \label{fig:dc-example}
 \end{figure}
 
 \begin{task}
-    Поредуцируйте пример рис.~\ref{fig:dc-example}.
+    Reduce the example in Fig.~\ref{fig:dc-example}.
 \end{task}
 
-\subsubsection{Реализация операторов}
+\subsubsection{Implementing the operators}
 
-Расширим язык\ \ref{subsubsec:first-class-cont} рассмотренными операторами для работы с ограниченными.
-Для простоты вместо свежих меток промптов будем использовать имена, а вместо \texttt{pushSubCont} обычную аппликацию:
+Let us extend the language from\ \ref{subsubsec:first-class-cont} with the operators for working with delimited continuations discussed above.
+For simplicity, instead of fresh prompt labels we will use names, and instead of \texttt{pushSubCont} ordinary application:
 \begin{minted}{haskell}
     data Expr = ...| PushPrompt String Expr | WithSubCont String Expr
     data Frame = ... | PushPromptFrame String | WithSubContFrame String
 \end{minted}
 
-Поиск редексов расширяется очевидным образом:
+The redex search is extended in the obvious way:
 \begin{minted}[escapeinside=##]{haskell}
     evalK :: (?env :: Env) => Expr -> K -> Value
     evalK e k = case e of
@@ -562,7 +562,7 @@
       WithSubCont promptName f -> evalK f (WithSubContFrame promptName : k)
 \end{minted}
 
-Вся задача \texttt{PushPrompt} --- это застрять в продолжении в виде \texttt{PushPromptFrame}, но когда до него доходит исполнение, он просто игнорируется:
+The entire job of \texttt{PushPrompt} is to get stuck in the continuation as \texttt{PushPromptFrame}, but when execution reaches it, it is simply ignored:
 \begin{minted}[escapeinside=##]{haskell}
     appK :: (?env :: Env) => K -> Value -> Value
     appK k result = case k of
@@ -570,7 +570,7 @@
       PushPromptFrame _ : k' -> k' `appK` result
 \end{minted}
 
-Чтобы захватить фрагмент продолжения, нам нужна операция, которая найдёт первый промпт с соответствующим именем в продолжении и вернёт \vocab{subcontinuation} --- до этого промпта и \vocab{metacontinuation} --- после:
+To capture a fragment of the continuation, we need an operation that finds the first prompt with the matching name in the continuation and returns the \vocab{subcontinuation} --- up to that prompt, and the \vocab{metacontinuation} --- after it:
 \begin{minted}[escapeinside=##]{haskell}
     splitByPrompt :: K -> String -> (K, K)
     splitByPrompt k targetPromptName = go [] k
@@ -581,7 +581,7 @@
         go subcont (frame : metacont) = go (subcont ++ [frame]) metacont
 \end{minted}
 
-Теперь \texttt{WithSubCont} должен просто применить пользовательскую функцию к subcontinuation, но при этом не забыть дальше исполнить metacontinuation:
+Now \texttt{WithSubCont} must simply apply the user function to the subcontinuation, while not forgetting to execute the metacontinuation afterwards:
 \begin{minted}[escapeinside=##]{haskell}
     appK :: (?env :: Env) => K -> Value -> Value
     appK k result = case k of
@@ -592,7 +592,7 @@
 \end{minted}
 
 \begin{task}
-    Поредуцируйте следующий пример:
+    Reduce the following example:
     \begin{minted}[escapeinside=##]{haskell}
         exampleDelimited = let ?env = Map.empty in flip evalK [] $
           c 10 -. PushPrompt "p"
@@ -601,45 +601,45 @@
     \end{minted}
 \end{task}
 
-Многие классические операторы, например, \texttt{shift/reset}, \texttt{prompt/control} и т.д., можно получить, оставив фрейм промпта в subcontinuation или в metacontinuation в реализации \texttt{splitByPrompt}~\cite{dyvbig2007monadic}.
+Many classical operators, such as \texttt{shift/reset}, \texttt{prompt/control}, etc., can be obtained by leaving the prompt frame in the subcontinuation or in the metacontinuation in the implementation of \texttt{splitByPrompt}~\cite{dyvbig2007monadic}.
 
-\subsubsection{В \mintinline{haskell}{Monad Cont}}
+\subsubsection{In \mintinline{haskell}{Monad Cont}}
 
 % todo Monads and composable continuations by Phill Wadler
 
-Для примера реализуем два классических оператора для работы с ограниченными продолжениями --- \textbf{shift-reset}.
-Воспользуемся продолжениями, собираемыми монадой \mintinline{kotlin}|Cont|.
-\texttt{shift} просто захватывает текущее продолжение и передаёт его в пользовательское вычисление подобно \texttt{cont}:
+As an example, let us implement two classical operators for working with delimited continuations --- \textbf{shift-reset}.
+We will use the continuations assembled by the \mintinline{kotlin}|Cont| monad.
+\texttt{shift} simply captures the current continuation and passes it to the user computation similarly to \texttt{cont}:
 \begin{minted}{haskell}
     shift :: ((a -> r) -> Cont r r) -> Cont r a
     shift f = Cont \k -> runCont (f k) id
 \end{minted}
-\texttt{reset} же в качестве продолжения вычислению-аргументу передаёт \texttt{id}, тем самым это вычисление не имеет доступа к продолжению после \texttt{reset} (в то время как продолжение самого Haskell запоминает, что после \texttt{comp} нужно исполнить \texttt{k}):
+\texttt{reset} passes \texttt{id} as the continuation to the argument computation, so that computation does not have access to the continuation after \texttt{reset} (while the Haskell continuation remembers that after \texttt{comp} it needs to execute \texttt{k}):
 \begin{minted}{haskell}
     reset :: Cont a a -> Cont r a
     reset comp = Cont \k -> k (runCont comp id)
 \end{minted}
 
 \begin{task}
-    Каким будет результат исполнения следующей функции:
+    What will be the result of executing the following function:
     \begin{minted}{haskell}
         exampleShiftReset = flip runCont id $
           (1 +) <$> reset ((2 +) <$> shift \k -> pure (k 3 + k 5))
     \end{minted}
 \end{task}
 
-\subsection{Приложения продолжений} \label{subsec:cont-applications}
+\subsection{Applications of continuations} \label{subsec:cont-applications}
 
-Продолжения полезны для понимания смысла программ, которые мы пишем каждый день (см.\ \ref{foot:the-lost-art-of-denotations}).
-Кроме того, как мы увидим в этой главе, продолжения первого класса можно использовать как средство построения могущественных встроенных языков.
+Continuations are useful for understanding the meaning of programs we write every day (see\ \ref{foot:the-lost-art-of-denotations}).
+Furthermore, as we will see in this chapter, first-class continuations can be used as a means of building powerful embedded languages.
 
-\subsubsection{Всё через продолжения} \label{subsubsec:god-cont}
+\subsubsection{Everything through continuations} \label{subsubsec:god-cont}
 
-Реализуем ряд полезных встроенных языков с помощью продолжений первого класса.
-Чтобы получить доступ к продолжениям, воспользуемся shallow embedded языком \mintinline{haskell}{Cont}\footnote{\url{https://blog.poisson.chat/posts/2019-10-26-reasonable-continuations.html}}.
-Таким образом, будем работать с башней языков Haskell, \mintinline{haskell}{Cont}, X, где X --- рассматриваемый встроенный язык.
+Let us implement a number of useful embedded languages using first-class continuations.
+To gain access to continuations, we will use the shallow embedded language \mintinline{haskell}{Cont}\footnote{\url{https://blog.poisson.chat/posts/2019-10-26-reasonable-continuations.html}}.
+Thus, we will work with the tower of languages Haskell, \mintinline{haskell}{Cont}, X, where X is the embedded language under consideration.
 
-Начнём с тривиального встроенного императивного языка:
+Let us start with a trivial embedded imperative language:
 \begin{minted}{haskell}
     runIdentityC :: (forall r . Cont r a) -> a
     runIdentityC comp = runCont comp id
@@ -651,9 +651,9 @@
       pure (x + y)
 \end{minted}
 
-Реализуем язык с исключениями.
-Для этого модифицируем первый типовый параметр \mintinline{haskell}{Cont}, \vocab{answer (response) type}\footnote{\url{https://wiki.haskell.org/Cont_computations_as_question-answering_boxes}}.
-Функция \texttt{abort} игнорирует продолжение программы до \texttt{runExn}, которая завершает продолжение оборачиванием успешного результата в \mintinline{haskell}{Just}:
+Let us implement a language with exceptions.
+For this we modify the first type parameter of \mintinline{haskell}{Cont}, the \vocab{answer (response) type}\footnote{\url{https://wiki.haskell.org/Cont_computations_as_question-answering_boxes}}.
+The function \texttt{abort} ignores the program continuation up to \texttt{runExn}, which concludes the continuation by wrapping the successful result in \mintinline{haskell}{Just}:
 \begin{minted}{haskell}
     abort :: Cont (Maybe r) a
     abort = Cont $ const Nothing
@@ -666,17 +666,17 @@
       when (n < 0) abort
       pure (n + 1)
 \end{minted}
-Обратите внимание, что семантика операции обрыва вычисления полностью сосредоточена в функции \texttt{abort}, в то время как в \mintinline{haskell}{Monad Maybe} соответствующая функция бы отвечала лишь за конструирование элемента домена, а уже монадическое связывание~--- за работу с продолжениями.
-Имея доступ к first-class continuations, нам уже не нужно реализовывать монадическое связывание вручную.
-Говорят, что для произвольного \texttt{m}, \mintinline{haskell}{Cont (m r) a} --- ``бесплатная'' реализация монады\footnote{\url{https://hackage.haskell.org/package/kan-extensions-5.2/docs/Control-Monad-Codensity.html}}.
+Notice that the semantics of the abort operation is entirely concentrated in the function \texttt{abort}, whereas in \mintinline{haskell}{Monad Maybe} the corresponding function would only be responsible for constructing a domain element, while monadic bind would handle the continuations.
+Having access to first-class continuations, we no longer need to implement monadic bind manually.
+It is said that for arbitrary \texttt{m}, \mintinline{haskell}{Cont (m r) a} is a ``free'' implementation of a monad\footnote{\url{https://hackage.haskell.org/package/kan-extensions-5.2/docs/Control-Monad-Codensity.html}}.
 
-Реализация работы с ошибками через возвращение специального результата (\mintinline{haskell}{Either} в Haskell, \mintinline{rust}{Result} в Rust, \mintinline{go}{nil} в Go\ldots) имеет монадическую семантику (условные ветвления на каждом выбрасывают только часть продолжения), в то время как полноценный механизм исключений имеет доступ ко всему ограниченному продолжению до соответствующего блока \mintinline{kotlin}{try-catch}, что напоминает нашу текущую реализацию.
-С точки зрения количества синтаксического шума на уровне исходного кода, вариант с исключениями явно предпочтительнее, а вопрос типизации исключений мы рассмотрим далее (см.\ \ref{sec:effect-systems}).
-С точки зрения производительности всё не так очевидно\footnote{\url{https://www.serpentine.com/2011/02/25/cps-is-great-cps-is-terrible/}}\footnote{\url{https://stackoverflow.com/questions/13835817/are-exceptions-in-c-really-slow}}, однако stack unwinding средствами рантайма как будто имеет большее пространство для оптимизаций.
+Error handling through returning a special result (\mintinline{haskell}{Either} in Haskell, \mintinline{rust}{Result} in Rust, \mintinline{go}{nil} in Go\ldots) has monadic semantics (conditional branches at each point discard only part of the continuation), while a full-fledged exception mechanism has access to the entire delimited continuation up to the corresponding \mintinline{kotlin}{try-catch} block, which resembles our current implementation.
+From the perspective of syntactic noise at the source code level, the exception variant is clearly preferable, and we will consider the question of typing exceptions later (see\ \ref{sec:effect-systems}).
+From a performance perspective, things are less obvious\footnote{\url{https://www.serpentine.com/2011/02/25/cps-is-great-cps-is-terrible/}}\footnote{\url{https://stackoverflow.com/questions/13835817/are-exceptions-in-c-really-slow}}, though stack unwinding by the runtime seemingly has more room for optimization.
 
-Теперь попробуем вызвать продолжение несколько раз.
-Получим язык с недетерминизмом (или backtracking).
-Так, \texttt{choice} дважды продолжает остаток программы и аккумулирует все полученные результаты в списке:
+Now let us try invoking the continuation multiple times.
+We obtain a language with nondeterminism (or backtracking).
+Here, \texttt{choice} continues the rest of the program twice and accumulates all obtained results in a list:
 \begin{minted}{haskell}
     choice :: Cont [r] Bool
     choice = Cont \k -> k True ++ k False
@@ -690,7 +690,7 @@
       if b then pure n else pure (n - 1)
 \end{minted}
 
-Удивительно, но имея только продолжения первого класса можно реализовать даже язык с изменяемой ячейкой памяти:
+Remarkably, having only first-class continuations one can even implement a language with a mutable memory cell:
 \begin{minted}{haskell}
     -- s -> (s, a) ~ ((s, a) -> r) -> (s -> r)
     -- ~ (a -> s -> r) -> (s -> r) ~ Cont (s -> r) a
@@ -701,36 +701,36 @@
     put :: s -> Cont (s -> r) ()
     put s' = Cont \k _s -> k () s'
 
-    runStateС :: (forall r . Cont (s -> r) a) -> s -> (a, s)
-    runStateС comp = runCont comp (,)
+    runStateC :: (forall r . Cont (s -> r) a) -> s -> (a, s)
+    runStateC comp = runCont comp (,)
 
     exampleState :: Int -> ((), Int)
-    exampleState = runStateС do
+    exampleState = runStateC do
       s <- get
       put (s + 1)
 \end{minted}
-Идея довольно простая: захват продолжения оставляет после себя функцию, в которую предыдущий вызов продолжения подкладывает текущее состояние.
-И действительно, изменяемое состояние это просто фрагмент продолжения (например, аппаратного стека), к которому мы имеем непосредственный доступ на чтение и изменение.
-Здесь же мы разместили в начале продолжения аппликацию, к которой, захватывая продолжение, прыгаем, чтобы получить аргумент и обновить её на новую.
+The idea is quite simple: capturing the continuation leaves behind a function into which the previous continuation call supplies the current state.
+And indeed, mutable state is simply a fragment of the continuation (e.g., the hardware stack) to which we have direct read and write access.
+Here we have placed an application at the beginning of the continuation, to which, by capturing the continuation, we jump to obtain the argument and update it to a new one.
 
 \begin{task}
-    Поредуцируйте пример выше, чтобы понять, как это работает.
+    Reduce the example above to understand how it works.
 \end{task}
 
-Интуитивно могущество продолжений можно попробовать объяснить следующим образом: поддерживать продолжение~--- это основная обязанность системы исполнения языка; когда продолжения передаются пользователю, его код как бы вовлекается в деятельность runtime'а и становится его частью.
+Intuitively, the power of continuations can be explained as follows: maintaining the continuation is the primary responsibility of the language's runtime system; when continuations are handed to the user, their code becomes involved in the runtime's activity and effectively becomes part of it.
 
 \subsubsection{The mother of all monads} \label{subsubsec:monadic-reflection}
 
-В предыдущем параграфе (\ref{subsubsec:god-cont}) мы реализовали возможности классических монад в языке с продолжениями.
-Сработает ли это для произвольной монады?
-Оказывается, что да\footnote{\url{http://www.schoolofhaskell.com/school/to-infinity-and-beyond/pick-of-the-week/the-mother-of-all-monads}}\footnote{\url{https://blog.poisson.chat/posts/2019-10-26-reasonable-continuations.html}}~\cite{filinski1994representing}.
+In the previous section (\ref{subsubsec:god-cont}) we implemented the capabilities of classical monads in a language with continuations.
+Does this work for an arbitrary monad?
+It turns out that yes\footnote{\url{http://www.schoolofhaskell.com/school/to-infinity-and-beyond/pick-of-the-week/the-mother-of-all-monads}}\footnote{\url{https://blog.poisson.chat/posts/2019-10-26-reasonable-continuations.html}}~\cite{filinski1994representing}.
 
-Вспомним, что монада --- это конструктор типа \texttt{m}, которым мы представляем денотацию вычисления.
-Операции \texttt{pure} и \texttt{bind} позволяют создавать и композировать денотации.
-Таким образом, мы имеем вычисления, представленные в виде first-class данных.
+Recall that a monad is a type constructor \texttt{m} with which we represent the denotation of a computation.
+The operations \texttt{pure} and \texttt{bind} allow creating and composing denotations.
+Thus, we have computations represented as first-class data.
 
-Если наш язык предоставляет продолжения первого класса (для примера возьмём \mintinline{haskell}{Cont (m r)} как такой язык), мы можем определить две операции: \texttt{reflect}~--- исполнить монадическое вычисление в языке с продолжениями и получить результат \texttt{a}; \texttt{reify}~--- по вычислению в языке с продолжениями получить денотацию\footnote{Для энергичного языка \texttt{reify} должна принимать thunk \texttt{(() -> a) -> m a}.}.
-В Haskell можно это выразить как перегрузку этой пары функций для различных монад:
+If our language provides first-class continuations (let us take \mintinline{haskell}{Cont (m r)} as such a language for example), we can define two operations: \texttt{reflect} --- execute a monadic computation in the language with continuations and obtain the result \texttt{a}; \texttt{reify} --- obtain a denotation from a computation in the language with continuations\footnote{For a strict language, \texttt{reify} should accept a thunk \texttt{(() -> a) -> m a}.}.
+In Haskell, this can be expressed as overloading this pair of functions for various monads:
 \begin{minted}{haskell}
     class MonadicReflection m where
       -- m a -> (a -> m r) -> m r
@@ -739,7 +739,7 @@
       reify :: (forall r . Cont (m r) a) -> m a
 \end{minted}
 
-Например, для домена \mintinline{haskell}{State} реализация будет выглядеть следующим образом:
+For example, for the \mintinline{haskell}{State} domain the implementation looks as follows:
 \begin{minted}{haskell}
     newtype State s a = State { runState :: s -> (a, s) }
 
@@ -759,23 +759,23 @@
       pure x
 \end{minted}
 
-% todo переписать через shift/reset
+% todo rewrite through shift/reset
 
-Интуитивно это можно понимать следующим образом: реализации bind на самом деле не важно, ей подаётся ``маленькое'' продолжение (собранное с помощью рассахаривания \mintinline{haskell}{do}-нотации), или ``большое'' продолжение, собранное мета-языком или монадой \mintinline{haskell}{Cont}.
-И в принципе монады можно задавать через их вложение в монаду \mintinline{haskell}{Cont}\footnote{\url{https://blog.poisson.chat/posts/2019-10-27-continuation-submonads.html}}.
+Intuitively, this can be understood as follows: the bind implementation does not actually care whether it is given a ``small'' continuation (assembled via desugaring of \mintinline{haskell}{do}-notation) or a ``large'' continuation assembled by the meta-language or the \mintinline{haskell}{Cont} monad.
+And in principle, monads can be defined through their embedding into the \mintinline{haskell}{Cont} monad\footnote{\url{https://blog.poisson.chat/posts/2019-10-27-continuation-submonads.html}}.
 
-Таким образом, если язык поддерживает продолжения первого класса, можно в direct-стиле\footnote{\url{https://www.unison-lang.org/docs/fundamentals/abilities/for-monadically-inclined/}} реализовать функциональность произвольной монады, без \mintinline{haskell}{do}-нотации, аппликативных цепочек и прочего синтаксического шума\footnote{\url{http://www.valuedlessons.com/2008/01/monads-in-python-with-nice-syntax.html}}\footnote{\url{https://github.com/lampepfl/monadic-reflection/blob/main/TUTORIAL.md}}.
-Позже мы увидим, что этот подход, в отличие от монад, нативно поддерживает композицию (\ref{sec:effects}), а также не накладывает ограничений на типизацию (\ref{sec:effect-systems}).
-Отсюда возникает вопрос: а нужны ли нам теперь в программировании монады?
+Thus, if the language supports first-class continuations, one can implement the functionality of an arbitrary monad in direct style\footnote{\url{https://www.unison-lang.org/docs/fundamentals/abilities/for-monadically-inclined/}}, without \mintinline{haskell}{do}-notation, applicative chains, and other syntactic noise\footnote{\url{http://www.valuedlessons.com/2008/01/monads-in-python-with-nice-syntax.html}}\footnote{\url{https://github.com/lampepfl/monadic-reflection/blob/main/TUTORIAL.md}}.
+Later we will see that this approach, unlike monads, natively supports composition (\ref{sec:effects}), and also does not impose restrictions on typing (\ref{sec:effect-systems}).
+This raises the question: do we still need monads in programming?
 
-\subsubsection{Генераторы и корутины} \label{subsubsec:generators-coroutines}
+\subsubsection{Generators and coroutines} \label{subsubsec:generators-coroutines}
 
-Генераторы и корутины обычно определяют как вычисление, которое может быть остановлено и возобновлено снова в том же состоянии~\cite{moura2009revisiting}.
-Корутины же обобщают генераторы и, как правило, используются как примитив асинхронного программирования в виде \texttt{async/await} или других языковых конструкций~\cite{elizarov2021kotlin}.
-Различие синхронного и асинхронного программирования можно понимать так: в первом случае продолжениями управляет исключительно операционная система, а во втором --- средства языка.
+Generators and coroutines are usually defined as computations that can be suspended and resumed in the same state~\cite{moura2009revisiting}.
+Coroutines generalize generators and are typically used as a primitive for asynchronous programming in the form of \texttt{async/await} or other language constructs~\cite{elizarov2021kotlin}.
+The difference between synchronous and asynchronous programming can be understood as follows: in the former case, continuations are managed exclusively by the operating system, while in the latter --- by the language facilities.
 
-Для примера реализуем генераторы.
-В качестве результата генератора будем использовать ленивый список, итератор, закодированный в виде развёртки (см.\ \ref{subsec:all-unfolds}):
+As an example, let us implement generators.
+As the result of a generator we will use a lazy list, an iterator encoded as an unfold (see\ \ref{subsec:all-unfolds}):
 \begin{minted}{haskell}
     data Box f = forall s . Box s (s -> f s)
     data ListF a rec = Nil | Cons a rec
@@ -787,9 +787,9 @@
       Cons x s' -> x : box2list (Box s' next)
 \end{minted}
 
-Скрытым состоянием итератора будет ещё невыполненное продолжение.
-Доступ к продолжению будем получать в монаде \mintinline{haskell}{Cont}, где в качестве response type возьмём \mintinline{haskell}{GenState}.
-Так, операция \texttt{yield} останавливает вычисление и сохраняет продолжение в конструкторе \mintinline{haskell}{Yield}, а \texttt{makeGen} заканчивает данный генератор порождением конструктора \mintinline{haskell}{Stop}:
+The hidden state of the iterator will be the not-yet-executed continuation.
+We will obtain access to the continuation via the \mintinline{haskell}{Cont} monad, where we take \mintinline{haskell}{GenState} as the response type.
+Thus, the \texttt{yield} operation suspends the computation and saves the continuation in the \mintinline{haskell}{Yield} constructor, while \texttt{makeGen} finishes the given generator by producing the \mintinline{haskell}{Stop} constructor:
 \begin{minted}{haskell}
     data GenState a = Stop | Yield a (() -> GenState a)
 
@@ -805,7 +805,7 @@
     yield x = cont \k -> Yield x k
 \end{minted}
 
-Теперь мы можем писать код, последовательно порождающий множество результатов:
+Now we can write code that sequentially produces multiple results:
 \begin{minted}{haskell}
     exampleGen :: [Int]
     exampleGen = it2list $ makeGen do
@@ -815,11 +815,11 @@
 \end{minted}
 
 \begin{task}
-    Приведите вычисление \mintinline{haskell}{runCont exampleGen (\() -> Stop))} к нормальной форме.
+    Reduce \mintinline{haskell}{runCont exampleGen (\() -> Stop))} to normal form.
 \end{task}
 
 
-% todo метапрограммирование и построение компиляторов
+% todo metaprogramming and building compilers
 
 % todo paper delimited continuations in WebAssembly
 
@@ -832,43 +832,43 @@
 % todo CEKT
 % todo abstract machines
 
-\subsection{Эффективная работа с продолжениями} \label{subsec:efficient-cps}
+\subsection{Efficient work with continuations} \label{subsec:efficient-cps}
 
-На практике для реализации генераторов и корутин требуется останавливать и продолжать программу, иначе говоря, захватывать продолжения.
-Это нужно делать максимально эффективно.
+In practice, implementing generators and coroutines requires suspending and resuming programs, in other words, capturing continuations.
+This needs to be done as efficiently as possible.
 
 % todo https://dl.acm.org/doi/10.1145/3385412.3385994
 
 \subsubsection{Contiguous stack}
 
-Продолжение представляется в виде аппаратного стека.
-Как только требуется захватить продолжение, стек копируется в кучу (возможно, лениво)\footnote{\href{https://youtu.be/kwS3OeoVCno?si=c4MkSkmLHNeywPrZ}{(youtube) Иван Углянский - Java Project Loom.}}. % todo cite
-То есть этот подход полностью полагается на поддержку со стороны рантайма языка.
+The continuation is represented as a hardware stack.
+As soon as a continuation needs to be captured, the stack is copied to the heap (possibly lazily)\footnote{\href{https://youtu.be/kwS3OeoVCno?si=c4MkSkmLHNeywPrZ}{(youtube) Ivan Uglyansky - Java Project Loom.}}. % todo cite
+That is, this approach relies entirely on support from the language runtime.
 
-\subsubsection{Сегментный стек} % todo cite
+\subsubsection{Segmented stack} % todo cite
 
-Стек вызовов представляется как связный список аллоцированных в куче сегментов, каждый соответствует ограничивающей операции.
-Так, не требуется делать копирования, достаточно подмены указателей.
-Однако, в таком случае стек нелокален, что не очень хорошо для работы кешей.
+The call stack is represented as a linked list of heap-allocated segments, each corresponding to a delimiting operation.
+Thus, no copying is required; it suffices to swap pointers.
+However, in this case the stack is non-local, which is not great for cache performance.
 
-% todo стек как массив
+% todo stack as array
 
 \subsubsection{Finite state machine (FSM)}
 
-Данная реализация подразумевает автоматическую CPS трансформацию пользовательского кода средствами компилятора.
-Чтобы не аллоцировать большое количество замыканий, продолжения дефункционализируются и в рамках каждой функции представляются одним изменяемым объектом.
-Так, состояние функции целиком один раз аллоцируется в куче, а возобновление кода тела функции в определённом месте реализовано как машина состояний~--- с помощью меток и прыжков\footnote{\url{https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md\#state-machines} \label{note:kotlin-state}}.
+This implementation involves automatic CPS transformation of user code by the compiler.
+To avoid allocating a large number of closures, continuations are defunctionalized and within each function are represented by a single mutable object.
+Thus, the function's entire state is allocated on the heap once, and resuming the function body at a particular point is implemented as a state machine --- using labels and jumps\footnote{\url{https://github.com/Kotlin/KEEP/blob/master/proposals/coroutines.md\#state-machines} \label{note:kotlin-state}}.
 
-Таким образом, например, реализованы корутины в Kotlin\footref{note:kotlin-state}, генераторы в C\#\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}\ldots
+This is how, for example, coroutines are implemented in Kotlin\footref{note:kotlin-state}, generators in C\#\footnote{\url{https://csharpindepth.com/Articles/IteratorBlockImplementation}}\ldots
 
-Даже в таком виде CPS остаётся тяжеловесной трансформацией, способной замедлить исполнение кода на порядки.
-Дело, в частности, в том, что переменные в таком подходе сложно размещать в регистрах (у функций много точек выходов и входов\footref{note:kotlin-state}), приходится постоянно записывать их в RAM --- производить \vocab{spilling}\footnote{\url{https://en.wikipedia.org/wiki/Register_allocation}}.
+Even in this form, CPS remains a heavyweight transformation that can slow down code execution by orders of magnitude.
+The issue is, in particular, that variables in this approach are difficult to place in registers (functions have many entry and exit points\footref{note:kotlin-state}), and they constantly have to be written to RAM --- performing \vocab{spilling}\footnote{\url{https://en.wikipedia.org/wiki/Register_allocation}}.
 
-% todo объяснение через дефункционализацию
+% todo explanation through defunctionalization
 
-% todo плюсы минусы подводные камни каждого из них
+% todo pros cons pitfalls of each
 
-% todo картинки
+% todo pictures
 
 % todo in haskell native implementation
 

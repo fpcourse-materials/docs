@@ -1,18 +1,18 @@
 %! suppress = MissingLabel
 
-В этой главе собраны некоторые общие знания о типах.
-Также, мы получим различные эквивалентные представления рекурсивных типов данных (иначе говоря, коллекций).
-Многие концепции являются частными случаями этого многообразия.
+This chapter collects some general knowledge about types.
+We will also obtain various equivalent representations of recursive data types (in other words, collections).
+Many concepts are special cases of this variety.
 
-Разделы~\ref{subsec:variance}, ~\ref{subsec:isomorphism} в основном следуют~\cite[глава 1]{maguire-types}.
+Sections~\ref{subsec:variance}, ~\ref{subsec:isomorphism} mostly follow~\cite[chapter 1]{maguire-types}.
 
-\subsection{Вариантность} \label{subsec:variance}
+\subsection{Variance} \label{subsec:variance}
 
-В этом параграфе мы будем рассматривать тему с точки зрения программирования~\cite[глава 3]{maguire-types}, не отдавая должного теории категорий.
-Восполнить пробел можно с помощью замечательной статьи, написанной в жанре пьесы~\cite{hinze2012functional}.
+In this section we will consider the topic from the programming perspective~\cite[chapter 3]{maguire-types}, without doing justice to category theory.
+The gap can be filled with the help of a wonderful article written in the style of a play~\cite{hinze2012functional}.
 
-\vocab{Ковариантный функтор} --- пара из некоторого типового конструктора \texttt{F} и операции на функциях \texttt{fmap :: (a -> b) -> (F a -> F b)}.
-Плюс законы о том, что \texttt{fmap} уважает \texttt{id} и композицию.
+A \vocab{covariant functor} is a pair of some type constructor \texttt{F} and an operation on functions \texttt{fmap :: (a -> b) -> (F a -> F b)}.
+Plus laws stating that \texttt{fmap} respects \texttt{id} and composition.
 
 \begin{minted}{haskell}
     class Functor f where
@@ -24,8 +24,8 @@
     \includegraphics[width=0.3\textwidth]{figs/functor}
 \end{figure}
 
-\vocab{Контравариантный функтор} --- пара из типового конструктора и операции на функциях, разворачивающей стрелку.
-Плюс соответствующие законы.
+A \vocab{contravariant functor} is a pair of a type constructor and an operation on functions that reverses the arrow.
+Plus corresponding laws.
 
 \begin{minted}{haskell}
     class Contravariant f where
@@ -37,17 +37,17 @@
     \includegraphics[width=0.3\textwidth]{figs/contra-functor}
 \end{figure}
 
-Типовой конструктор можно объявить ковариантным или контравариантным функтором (или никаким из них) относительно некоторого типового параметра в зависимости от вида декларации соответствующих конструкторов данных.
-А именно, от знака позиций, в которых входит этот типовой параметр в тип.
+A type constructor can be declared a covariant or contravariant functor (or neither) with respect to a given type parameter depending on the form of the declarations of the corresponding data constructors.
+Namely, on the sign of the positions in which that type parameter appears in the type.
 
-Разовьём интуитивное понимание знаков позиций.
-Тип \mintinline{haskell}{A} входит в положительной позиции в \mintinline{haskell}{B} если его значение можно извлечь из \mintinline{haskell}{B}.
-И наоборот, тип \mintinline{haskell}{A} входит в отрицательной позиции, если его значение нужно, наоборот, предоставить.
-Рассмотрим знаки позиций типов в базовых типовых конструкторах:
+Let us develop an intuitive understanding of position signs.
+Type \mintinline{haskell}{A} appears in a positive position in \mintinline{haskell}{B} if its value can be extracted from \mintinline{haskell}{B}.
+Conversely, type \mintinline{haskell}{A} appears in a negative position if its value must, on the contrary, be provided.
+Let us consider position signs of types in basic type constructors:
 \begin{center}
     \begin{tabular}[h]{|c|c|c|}
         \hline
-        Тип                              & знак позиции \mintinline{haskell}{A} & знак позиции \mintinline{haskell}{B} \\
+        Type                             & sign of position \mintinline{haskell}{A} & sign of position \mintinline{haskell}{B} \\
         \hline
         \mintinline{haskell}{Either A B} & $+$                                  & $+$                                  \\
         \mintinline{haskell}{(A, B)}     & $+$                                  & $+$                                  \\
@@ -56,83 +56,83 @@
     \end{tabular}
 \end{center}
 
-Действительно, из суммы и произведения можно извлечь компоненты с помощью паттерн-матчинга, а из стрелки можно получить правый тип апплицируя её к аргументу.
-В то же время значение типа слева от стрелки нужно предоставить.
+Indeed, from a sum and a product one can extract components via pattern matching, and from an arrow one can obtain the right type by applying it to an argument.
+At the same time, a value of the type on the left of the arrow must be provided.
 
-На плюс и минус действуют интуитивные алгебраические законы при рассмотрении более сложных типов.
-Рассмотрим на примере \mintinline{haskell}{f :: ((A, B) -> C) -> (D, E)}.
+Plus and minus obey intuitive algebraic rules when considering more complex types.
+Let us consider the example \mintinline{haskell}{f :: ((A, B) -> C) -> (D, E)}.
 \begin{itemize}
-    \item Плюс на плюс даёт плюс.
-    Действительно, нужно лишь применить две элиминации вместо одной, чтобы получить заветный тип.
-    В нашем примере, чтобы получить \mintinline{haskell}{D}, нужно сначала апплицировать функцию, а потом разобрать пару.
-    \item Плюс на минус (и наоборот) даёт минус.
-    Действительно, \mintinline{haskell}{C} нам нужно предоставить: \mintinline{haskell}{f (\ab -> provideC)}.
-    \item Минус на минус даёт плюс.
-    Пару \mintinline{haskell}{(A, B)} нам предоставляют: \mintinline{haskell}{f (\ab -> ...)}.
+    \item Plus times plus gives plus.
+    Indeed, one simply needs to apply two eliminations instead of one to obtain the desired type.
+    In our example, to obtain \mintinline{haskell}{D}, one first applies the function, then destructs the pair.
+    \item Plus times minus (and vice versa) gives minus.
+    Indeed, \mintinline{haskell}{C} must be provided by us: \mintinline{haskell}{f (\ab -> provideC)}.
+    \item Minus times minus gives plus.
+    The pair \mintinline{haskell}{(A, B)} is provided to us: \mintinline{haskell}{f (\ab -> ...)}.
 \end{itemize}
 
 \begin{task}
-    Убедитесь что плюс на минус даёт минус.
+    Verify that plus times minus gives minus.
 \end{task}
 
-Возвращаясь к функторам, если типовой параметр входит в декларацию только в положительных позициях, типовой конструктор можно объявить ковариантным функтором относительно этого параметра.
-Если в только в отрицательных~--- контравариантным функтором.
-Если в обоих, то никаким функтором объявить нельзя.
-Соответственно, будем называть типовые параметры ковариантными, контравариантными и инвариантными.
+Returning to functors, if a type parameter appears in the declaration only in positive positions, the type constructor can be declared a covariant functor with respect to that parameter.
+If only in negative positions --- a contravariant functor.
+If in both, then it cannot be declared any functor.
+Accordingly, we call type parameters covariant, contravariant, and invariant.
 
 \begin{task}
-    Объявите \mintinline{haskell}{instance Contravariant F} для \mintinline{haskell}{data F a = L (a -> ()) | R Int}.
+    Declare \mintinline{haskell}{instance Contravariant F} for \mintinline{haskell}{data F a = L (a -> ()) | R Int}.
 \end{task}
 
-Таким образом, можно понимать ковариантный функтор как вычисление, результат которого можно пост-обработать, а контравариантный функтор --- как вычисление, аргументы которого можно пред-обработать.
+Thus, a covariant functor can be understood as a computation whose result can be post-processed, and a contravariant functor as a computation whose arguments can be pre-processed.
 
-Тип от двух положительных параметров можно объявить \vocab{бифунктором}:
+A type with two positive parameters can be declared a \vocab{bifunctor}:
 \begin{minted}{haskell}
     class Bifunctor f where
       bimap :: (a -> c) -> (b -> d) -> f a b -> f c d
 \end{minted}
 
-Тип от двух параметров, положительного и отрицательного, --- \vocab{профунктором}:
+A type with two parameters, one positive and one negative, is a \vocab{profunctor}:
 \begin{minted}{haskell}
     class Profunctor p where
       dimap :: (c -> a) -> (b -> d) -> p a b -> p c d
 \end{minted}
 
-Профункторы являются некоторыми обобщениями функциональной стрелки.
-Например, если у нас есть SQL запрос, который по данным возвращает результат, его можно объявить профунктором с семантикой --- добавить пред-обработку входных данных и пост-обработку выходных:
+Profunctors are certain generalizations of the function arrow.
+For example, if we have an SQL query that takes data and returns a result, it can be declared a profunctor with the semantics of adding pre-processing of input data and post-processing of output data:
 \begin{minted}{haskell}
     dimap serialize deserialize (query :: Sql Text Text) :: Sql Age [User]
 \end{minted}
 
-Также понятие вариантности часто встречается в объектно ориентированных языках (да и вообще в теории подтипизации) для обозначения возможности дополнить отношение подтипизации на полиморфные типы.
+The concept of variance is also frequently encountered in object-oriented languages (and in subtyping theory in general) to denote the possibility of extending the subtyping relation to polymorphic types.
 
-Действительно, \vocab{отношение подтипизации} \texttt{B <: A} говорит о том, что значение типа \texttt{B} безопасно использовать в позиции, где ожидается значение типа \texttt{A}.
-Иначе говоря, существует функция \texttt{upcast :: B -> A}.
-Если типовой конструктор \texttt{F a} ковариантен относительно параметра \texttt{a}, то по \texttt{upcast} найдётся \texttt{upcast' :: F B -> F A}.
-То есть отношение подтипизации также автоматически включает \texttt{F B <: F A}.
-Контравариантный случай аналогично.
+Indeed, the \vocab{subtyping relation} \texttt{B <: A} says that a value of type \texttt{B} can safely be used in a position where a value of type \texttt{A} is expected.
+In other words, there exists a function \texttt{upcast :: B -> A}.
+If the type constructor \texttt{F a} is covariant with respect to parameter \texttt{a}, then from \texttt{upcast} one can obtain \texttt{upcast' :: F B -> F A}.
+That is, the subtyping relation also automatically includes \texttt{F B <: F A}.
+The contravariant case is analogous.
 
 \begin{task}
-    Убедитесь в вашем любимом языке с подтипизацией и поддержкой вариантности, что минус на минус даёт плюс.
+    Verify in your favorite language with subtyping and variance support that minus times minus gives plus.
 \end{task}
 
-\subsection{Изоморфизм} \label{subsec:isomorphism}
+\subsection{Isomorphism} \label{subsec:isomorphism}
 
-Пусть нам нужно спроектировать функцию или модель данных.
-Мы начинаем с декларации типа, как её выбрать и из каких вариантов?
-Для начала поймём, когда два типа взаимозаменимы, для этого рассмотрим понятия изоморфизма.
+Suppose we need to design a function or a data model.
+We start with a type declaration --- how should we choose it and from which alternatives?
+First, let us understand when two types are interchangeable; for this, we consider the notion of isomorphism.
 
-Два типа \texttt{A} и \texttt{B} называются \vocab{изоморфными} (обозначают \texttt{A $\iso$ B}) тогда и только тогда, когда существует такая пара функций \texttt{to :: A -> B} и \texttt{from :: B -> A}, что\footnote{Под равенством термов можно понимать разное, например, $\alpha\beta\gamma$-эквивалентность. Мы будем пользоваться \vocab{экстенсиональным равенством} для функций~--- две функции равны, когда равны их результаты на всех входах. \url{https://ncatlab.org/nlab/show/function+extensionality}}
+Two types \texttt{A} and \texttt{B} are called \vocab{isomorphic} (denoted \texttt{A $\iso$ B}) if and only if there exists a pair of functions \texttt{to :: A -> B} and \texttt{from :: B -> A} such that\footnote{Equality of terms can mean different things, for example $\alpha\beta\gamma$-equivalence. We will use \vocab{extensional equality} for functions --- two functions are equal when their results are equal on all inputs. \url{https://ncatlab.org/nlab/show/function+extensionality}}
 \begin{minted}{c}
     to . from = id
     from . to = id
 \end{minted}
 
-Иначе говоря, между обитателями таких типов можно установить взаимно-однозначное соответствие.
-Легко понять, что со смысловой точки зрения не принципиально, какой из изоморфных типов использовать --- их можно заменять друг на друга, добавляя вызовы функций перехода.
-Такие два типа заключают в себе одинаковое ``количество информации''.
-Например, типы \mintinline{haskell}|Bool| и \mintinline{haskell}|Maybe ()| в этом смысле совершенно взаимозаменимы.
-Покажем это, предъявив пару взаимообратных функций\footnote{Нужно не забыть показать взаимообратность функций, но это делается тривиально перебором входов (может быть с помощью индукции) и редукцией.}:
+In other words, one can establish a bijection between the inhabitants of such types.
+It is easy to see that from a semantic point of view it does not matter which of the isomorphic types is used --- they can be substituted for each other by adding calls to the conversion functions.
+Two such types contain the same ``amount of information.''
+For example, the types \mintinline{haskell}|Bool| and \mintinline{haskell}|Maybe ()| are in this sense completely interchangeable.
+Let us demonstrate this by exhibiting a pair of mutually inverse functions\footnote{One must not forget to show that the functions are mutually inverse, but this is done trivially by enumeration of inputs (possibly with induction) and reduction.}:
 \begin{minted}{haskell}
     to :: Bool -> Maybe ()
     to b = if b then Just () else Nothing
@@ -141,40 +141,40 @@
     from m = case m of Nothing -> False; Just () -> True
 \end{minted}
 
-Несмотря на смысловую взаимозаменимость, для кодирования информации о том, передал ли пользователь программе определённый флаг, мы, скорее всего, воспользуемся типом \mintinline{haskell}|Bool| ввиду нефункциональных соображений о читабельности кода.
-Аналогично можно рассматривать соображения эффективности.
+Despite semantic interchangeability, to encode information about whether the user passed a particular flag to the program, we would most likely use the type \mintinline{haskell}|Bool| due to non-functional considerations of code readability.
+Analogously, one can consider efficiency considerations.
 
-С категорным взглядом на происходящее можно ознакомиться в~\cite{hinze2010reason}.
-Мы же придерживаемся теоретико-множественной интерпретации типов.
+A categorical perspective on the matter can be found in~\cite{hinze2010reason}.
+We, however, adhere to the set-theoretic interpretation of types.
 
-\subsubsection{Кардинальность: суммы, произведения, экспоненты} \label{subsubsec:cardinality}
+\subsubsection{Cardinality: sums, products, exponentials} \label{subsubsec:cardinality}
 
-Типы можно воспринимать как синтаксис для записи множеств, а населяющие их термы~--- как синтаксические записи элементов этих множеств.
-Так терм \mintinline{haskell}|(True, False)|~--- запись элемента множества пар, записываемого в синтаксисе типов как \mintinline{haskell}|(Bool, Bool)| (вместо математического $\mathbb{B}\times\mathbb{B}$).
-Или же терм \mintinline{haskell}|\x -> x + 1| является записью функции прибавляющей единицу из множества функций над целыми числами, записываемого как \mintinline{haskell}|Integer -> Integer| (вместо математического $\mathbb{Z}\to\mathbb{Z}$).
+Types can be thought of as syntax for writing sets, and the terms inhabiting them as syntactic representations of elements of those sets.
+Thus the term \mintinline{haskell}|(True, False)| is a representation of an element of the set of pairs, written in type syntax as \mintinline{haskell}|(Bool, Bool)| (instead of the mathematical $\mathbb{B}\times\mathbb{B}$).
+Or the term \mintinline{haskell}|\x -> x + 1| is a representation of the function adding one from the set of functions over integers, written as \mintinline{haskell}|Integer -> Integer| (instead of the mathematical $\mathbb{Z}\to\mathbb{Z}$).
 
-Заметим, что два типа изоморфны, если соответствующие им множества имеют одинаковое количество элементов.
-Более того, таких изоморфизмов $n!$ в случае конечности множеств.
-Научимся определять количество таких элементов.
-С помощью $|\cdot|$ будем записывать \vocab{кардинальность} типа~--- количество элементов в соответствующем множестве.
+Note that two types are isomorphic if the corresponding sets have the same number of elements.
+Moreover, there are $n!$ such isomorphisms in the case of finite sets.
+Let us learn to determine the number of such elements.
+Using $|\cdot|$ we will denote the \vocab{cardinality} of a type --- the number of elements in the corresponding set.
 
 \begin{center}
     \begin{tabular}{|l|c|}
         \hline
-        Тип и его декларация                                                                                                                                                                            & кардинальность \\
+        Type and its declaration                                                                                                                                                                            & cardinality \\
         \hline
         \mintinline{haskell}{data Void}                                                                                                                                                                 & $0$            \\
-        \mintinline{haskell}{data Unit = Unit}\footnote{\mintinline{haskell}|Unit| записывается в Haskell с помощью специального синтаксиса \mintinline{haskell}|()|, означающем как бы пустой кортеж.} & $1$ \\
+        \mintinline{haskell}{data Unit = Unit}\footnote{\mintinline{haskell}|Unit| is written in Haskell using special syntax \mintinline{haskell}|()|, meaning something like an empty tuple.} & $1$ \\
         \mintinline{haskell}{data Bool = False | True}                                                                                                                                                  & $2$            \\
         \hline
     \end{tabular}
 \end{center}
 
-Идея алгебраических типов данных в том, что сложные типы можно строить из простых с помощью операции $+$ (``или'') и операции $\times$ (``и'')\footnote{\url{https://stanford-cs242.github.io/f18/lectures/02-2-algebraic-data-types.html}}:
+The idea of algebraic data types is that complex types can be built from simple ones using the operation $+$ (``or'') and the operation $\times$ (``and'')\footnote{\url{https://stanford-cs242.github.io/f18/lectures/02-2-algebraic-data-types.html}}:
 \begin{center}
     \begin{tabular}{|l|c|}
         \hline
-        Тип                                                      & кардинальность   \\
+        Type                                                      & cardinality   \\
         \hline
         \mintinline{haskell}{data Either a b = Left a | Right b} & $|a| + |b|$      \\
         \mintinline{haskell}{data Pair a b = Pair a b}           & $|a| \times |b|$ \\
@@ -182,42 +182,42 @@
     \end{tabular}
 \end{center}
 
-Посчитаем количество обитателей различных типов (вы можете убедиться в справедливости заключения перебрав все термы вручную):
+Let us count the number of inhabitants of various types (you can verify the conclusion by enumerating all terms manually):
 \begin{itemize}
-    \item \mintinline{haskell}{|Either Unit (Eigher Bool Bool)| = |Unit| + (|Bool| + |Bool|) = 5}.
-    \item \mintinline{haskell}{Pair (Either Bool Unit) (Pair Unit Void)| = 0} ~--- тип \mintinline{haskell}|Void| не населён, как и кортеж, его включающий.
-    \item Если \mintinline{haskell}{data Example = FirstAlternative Bool | AnotherOne Unit Bool Bool}, то \\\mintinline{haskell}{|Example| = |Bool| + |Unit| * |Bool| * |Bool| = 2 + 1 * 2 * 2 = 6}.
+    \item \mintinline{haskell}{|Either Unit (Either Bool Bool)| = |Unit| + (|Bool| + |Bool|) = 5}.
+    \item \mintinline{haskell}{|Pair (Either Bool Unit) (Pair Unit Void)| = 0} --- the type \mintinline{haskell}|Void| is uninhabited, as is a tuple containing it.
+    \item If \mintinline{haskell}{data Example = FirstAlternative Bool | AnotherOne Unit Bool Bool}, then \\\mintinline{haskell}{|Example| = |Bool| + |Unit| * |Bool| * |Bool| = 2 + 1 * 2 * 2 = 6}.
 \end{itemize}
 
-Функциональную стрелку называют экспоненциальным типом.
-Действительно, комбинаторно количество обитателей \mintinline{haskell}|A -> B| вычисляется как \[|A \to B| = |B|^{|A|}\]
+The function arrow is called the exponential type.
+Indeed, combinatorially the number of inhabitants of \mintinline{haskell}|A -> B| is computed as \[|A \to B| = |B|^{|A|}\]
 
-Так как же проектировать типы?
-Тому есть несколько соображений:
+So how should one design types?
+There are several considerations:
 \begin{itemize}
-    \item В типе должно быть не меньше элементов, чем в предметной области, все необходимые объекты были представимы.
-    \item В типе должно быть как можно меньше элементов, которых нет в предметной области, чтобы пространство ошибок было минимальным.
-    \item Далее среди изоморфных типов выбирается оптимальный исходя из нефункциональных требований.
+    \item The type should have no fewer elements than the domain, so that all necessary objects are representable.
+    \item The type should have as few elements as possible that are not in the domain, so that the error space is minimal.
+    \item Then among isomorphic types, the optimal one is chosen based on non-functional requirements.
 \end{itemize}
 
-Прежде чем работать с некоторым объектом предметной области, информацию о нём, в соответствии со вторым правилом, следует привести в максимально структурное представление, дающее наибольшее количество гарантий\footnote{\url{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}}.
+Per the second rule, before manipulating a domain object one should first convert the data describing it into the most structured representation possible --- the one that provides the strongest guarantees\footnote{\url{https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/}}.
 
-\subsubsection{Алгебраическое представление типа} \label{subsubsec:type-algebra}
+\subsubsection{Algebraic representation of a type} \label{subsubsec:type-algebra}
 
-Как мы увидели выше, чтобы показать наличие изоморфизма между двумя типами можно либо предъявить пару взаимообратных функций, либо показать, что кардинальности этих двух типов совпадают.
-В этом разделе мы научимся сопоставлять типу некоторую алгебраическую запись, отражающую его структуру и кардинальность.
-Так, мы сможем синтаксическими преобразованиями формул получать эквивалентные записи, из которых будем восстанавливать типы, заведомо изоморфные данному\footnote{\url{https://codewords.recurse.com/issues/three/algebra-and-calculus-of-algebraic-data-types}}.
+As we saw above, to show the existence of an isomorphism between two types one can either exhibit a pair of mutually inverse functions, or show that the cardinalities of the two types coincide.
+In this section we will learn to associate an algebraic expression with a type, reflecting its structure and cardinality.
+Thus, we will be able to obtain equivalent expressions via syntactic transformations of formulas, from which we will recover types that are guaranteed to be isomorphic to the given one\footnote{\url{https://codewords.recurse.com/issues/three/algebra-and-calculus-of-algebraic-data-types}}.
 
-В основу алгебраического представления положим вычисление кардинальности типов.
-Фактически мы забываем несущественную для изоморфизма информацию об именах конструкторов данных и конструкторов типов, то есть переходим к структурной типизации.
+The algebraic representation is based on computing cardinalities of types.
+In effect, we forget information inessential for isomorphism about the names of data constructors and type constructors, i.e.\ we transition to structural typing.
 \begin{center}
     \begin{tabular}{|p{0.5\textwidth}|c|}
         \hline
-        Тип                                                      & алгебраическая формула      \\
+        Type                                                      & algebraic formula      \\
         \hline
         \mintinline{haskell}{data Void}                          & $0$                         \\
         \mintinline{haskell}{data Unit = Unit}                   & $1$                         \\
-        \mintinline{haskell}{data Bool = False | True}           & $1 + 1$ (обозначим как $2$) \\
+        \mintinline{haskell}{data Bool = False | True}           & $1 + 1$ (denote as $2$) \\
         \mintinline{haskell}{data Maybe a = Nothing | Just a}    & $1 + a$                     \\
         \mintinline{haskell}{data Either a b = Left a | Right b} & $a + b$                     \\
         \mintinline{haskell}{data Pair a b = Pair a b}           & $a \times b$                \\
@@ -227,15 +227,15 @@
 \end{center}
 
 \begin{task}
-    Запишите в алгебраическом виде следующий тип:
+    Write the following type in algebraic form:
     \begin{minted}{haskell}
         data T a b = Undefined | Defined a (a -> b)
     \end{minted}
 \end{task}
 
-В качестве отношения эквивалентности, будем использовать изоморфизм соответствующих типов.
-В такой интерпретации, классические свойства алгебраических операций сохраняются (рис.~\ref{fig:school-alg}).
-Действительно, например:
+As the equivalence relation, we use isomorphism of the corresponding types.
+Under this interpretation, the classical properties of algebraic operations are preserved (Fig.~\ref{fig:school-alg}).
+Indeed, for example:
 \begin{minted}{haskell}
     -- ?$(c^b)^a \iso c^{a\times b}$?
     to :: (a -> b -> c) -> (a, b) -> c
@@ -247,20 +247,20 @@
 \begin{figure}
     \centering
     \includegraphics[width=0.4\textwidth]{figs/school-alg}
-    \caption{Законы школьной алгебры ностальгии ради~\cite{hinze2010reason}.}
+    \caption{Laws of school algebra for nostalgia's sake~\cite{hinze2010reason}.}
     \label{fig:school-alg}
 \end{figure}
 
 \begin{task}
-    Покажите, что $(a + b) + c \iso a + (b + c)$.
+    Show that $(a + b) + c \iso a + (b + c)$.
 \end{task}
 
 \begin{task}
-    Покажите, что $c^{a + b} \iso c^a\times c^b$.
+    Show that $c^{a + b} \iso c^a\times c^b$.
 \end{task}
 
-Интересным наблюдением может быть то, что функции можно использовать как структуры данных, в соответствие с изоморфизмом $c^{a + b} \iso c^a\times c^b$.
-Действительно, в таком случае аргумент функции выступает индексом (его кардинальность должна совпадать с размером коллекции).
+An interesting observation is that functions can be used as data structures, in accordance with the isomorphism $c^{a + b} \iso c^a\times c^b$.
+Indeed, in that case the function argument serves as an index (its cardinality must coincide with the size of the collection).
 \begin{minted}{haskell}
     -- ?$a \times a \iso a^2$?
     get :: (a, a) -> (Bool -> a)
@@ -269,63 +269,63 @@
     tabulate f = (f True, f False)
 \end{minted}
 
-\vocab{Каноническим предствлением типа (canonical representaion)} называют сумму произведений типов:
+The \vocab{canonical representation of a type} is a sum of products of types:
 \[
     \sum_{i}\prod_{j} t_{ij}
 \]
-Каноническое представление является своего рода нормальной формой, в которой можно записывать алгебраические типы (любой алгебраический тип можно по правилам привести к ней).
-Легко узнать в нём вид \mintinline{haskell}{data} деклараций в Haskell.
+The canonical representation is a kind of normal form in which algebraic types can be written (any algebraic type can be reduced to it using the rules).
+It is easy to recognize in it the form of \mintinline{haskell}{data} declarations in Haskell.
 
-Удивительно, но даже производная алгебраического типа имеет вполне понятную семантику.
-Это контекст зиппера (zipper), структуры данных наподобие итератора, позволяющей навигироваться по структуре данных произвольной формы~\cite{huet1997zipper, mcbride2001derivative, abbott2003derivatives}.
+Remarkably, even the derivative of an algebraic type has a perfectly understandable semantics.
+It is the context of a zipper, a data structure similar to an iterator that allows navigating through a data structure of arbitrary shape~\cite{huet1997zipper, mcbride2001derivative, abbott2003derivatives}.
 
-\subsection{Рекурсивные типы} \label{subsec:recursive-types}
+\subsection{Recursive types} \label{subsec:recursive-types}
 
-Рекурсивные типы, наподобие рекурсивным термам, могут включать себя в своих определениях.
-Иначе говоря, рекурсивный тип изоморфен какому-то другому типу, в который он сам входит как подтип.
+Recursive types, similarly to recursive terms, can include themselves in their definitions.
+In other words, a recursive type is isomorphic to some other type in which it itself appears as a subtype.
 \begin{minted}{haskell}
     fac n = if n <= 1 then 1 else n * ?\framebox{fac}? (n - 1)
     data Nat = Zero | Suc ?\framebox{Nat}?
 \end{minted}
 
-Мы в основном посмотрим на рекурсивные типы с практической точки зрения.
-Однако, их формальное теоретико-типовое описание, теоретико-категорная и теоретико-множественная интерпретации представляют отдельный интерес~\cite[часть 4]{pierce2002types}.
+We will mostly look at recursive types from a practical perspective.
+However, their formal type-theoretic description, category-theoretic and set-theoretic interpretations are of independent interest~\cite[part 4]{pierce2002types}.
 
-\subsubsection{Просто список}
+\subsubsection{Just a list}
 
-Рассмотрим классический функциональный список.
-Список это либо коллекция из нуля элементов, либо одного, либо двух\ldots
-Алгебраически это запишется следующим образом:
+Consider the classical functional list.
+A list is either a collection of zero elements, or one, or two\ldots
+Algebraically this can be written as follows:
 \[
     L = 1 + a + a^2 + a^3 + \ldots
 \]
-Фактически получили тип с бесконечной записью.
-Поработаем с ним как с формальным рядом.
-Вынесем $a$ за скобки:
+In effect we obtained a type with an infinite expression.
+Let us work with it as a formal series.
+Factor out $a$:
 \[
     L = 1 + a \times (1 + a + a^2 + \ldots)
 \]
-Заметим, что выражение в скобках представляет собой список, получим такое рекурсивное уравнение\footnote{Либо можно получить то же самое, заметив, что мы имеем дело с рядом Тейлора \url{https://codewords.recurse.com/issues/three/algebra-and-calculus-of-algebraic-data-types}.}:
+Notice that the expression in parentheses represents a list, yielding the following recursive equation\footnote{Alternatively, one can obtain the same result by noticing that we are dealing with a Taylor series \url{https://codewords.recurse.com/issues/three/algebra-and-calculus-of-algebraic-data-types}.}:
 \[
     L = 1 + a \times L
 \]
-Легко видеть, что это на самом деле знакомое нам определение списка из Haskell:
+It is easy to see that this is in fact the familiar list definition from Haskell:
 \begin{minted}{haskell}
     data List a = Nil | Cons a (List a)
 \end{minted}
 
-Получим конечное нерекурсивное представление типа $L$.
-Фактически, нам нужно получить тип изоморфный типу, включающему в себя исходный:
+Let us obtain a finite non-recursive representation of the type $L$.
+In effect, we need to obtain a type isomorphic to a type that includes the original:
 \[
     L \iso 1 + a \times L
 \]
-Расширим язык типов абстракцией (полиморфизмом) и решим полученное рекурсивное уравнение в стиле $\lambda$-исчисления, с помощью некоторого комбинатора неподвижной точки:
+Let us extend the type language with abstraction (polymorphism) and solve the resulting recursive equation in the style of $\lambda$-calculus, using a fixpoint combinator:
 \[
     L = FIX\ap\lambda r\ldotp 1 + a \times r
 \]
 
-Закодируем это на Haskell.
-В качестве комбинатора рекурсии возьмём \mintinline{haskell}{data FixList a}:
+Let us encode this in Haskell.
+As the recursion combinator we take \mintinline{haskell}{data FixList a}:
 \begin{minted}{haskell}
     type Shape a r = Either () (a, r) -- ?$\lambda a r\ldotp 1 + a\times r$?
     data FixList a = In (Shape a (FixList a))
@@ -335,40 +335,40 @@
     example = In (Right (1, In (Right (2, In (Right 3, Left ())))))
 \end{minted}
 
-% todo пошаговые картинки с работой свертки и развертки
+% todo step-by-step pictures showing fold and unfold in action
 
-Таким образом, мы разделили определение списка на две части: одна отвечает за форму типа, другая --- за рекурсию\footnote{Техника абстрагирования по ``рекурсивной ссылке на себя'' называется \vocab{открытой рекурсией}. Так, мы предоставляем пользователю больше контроля. Например, на уровне термов комбинатор рекурсии может подсчитывать количество рекурсивных вызовов и оборвать вычисление при привышении какого-то лимита.}.
-Форму можно переиспользовать, в определении свёртки:
+Thus, we have separated the list definition into two parts: one is responsible for the shape of the type, and the other for recursion\footnote{The technique of abstracting over the ``recursive self-reference'' is called \vocab{open recursion}. This gives the user more control. For example, at the term level, the recursion combinator can count the number of recursive calls and abort the computation when some limit is exceeded.}.
+The shape can be reused in the definition of a fold:
 \begin{minted}{haskell}
     foldr :: (Either () (a, r) -> r) -> FixList a -> r
     foldr phi (FixList shape) = case shape of
       Left () -> phi (Left ())
       Right (x, xs) -> phi (Right (x, foldr phi xs))
-    -- сравните с классическим определением
+    -- compare with the classical definition
     foldr :: r -> (a -> r -> r) -> [a] -> r
     foldr ini f list = case list of
       [] -> ini
       x:xs -> f x (foldr ini f xs)
 \end{minted}
 
-Действительно, свёртка в общем смысле позволяет заменить каждый конструктор данных в дереве на некоторую функцию.
-В результате получается вычисление, имеющее доступ ко всему содержимому структуры данных, и возвращающее результат агрегации:
+Indeed, a fold in the general sense allows replacing each data constructor in the tree with some function.
+The result is a computation that has access to the entire contents of the data structure and returns an aggregated result:
 \begin{center}
     \includegraphics[width=0.5\textwidth]{figs/foldr}
 \end{center}
 
-То есть количество и типы аргументов свёртки зависят от ``формы'' сворачиваемого типа.
-В случае списка требуется нольарная функция вместо \mintinline{haskell}{Nil} и бинарная вместо \mintinline{haskell}{Cons}.
-Мы же эти две функции представляем в как одну с помощью типа-формы.
-Сравните:
+That is, the number and types of arguments to the fold depend on the ``shape'' of the type being folded.
+In the case of a list, a nullary function is needed in place of \mintinline{haskell}{Nil} and a binary one in place of \mintinline{haskell}{Cons}.
+We represent these two functions as one using the shape type.
+Compare:
 \begin{minted}{haskell}
     foldr                   0 (      \e  r  -> e + r)
     foldr (\case Left () -> 0; Right (e, r) -> e + r)
 \end{minted}
 
-\subsubsection{Неподвижная точка функтора} \label{subsubsec:functor-fixpoint}
+\subsubsection{Fixpoint of a functor} \label{subsubsec:functor-fixpoint}
 
-Абстрагируем \mintinline{haskell}{FixList} по типу-форме:
+Let us abstract \mintinline{haskell}{FixList} over the shape type:
 \begin{minted}{haskell}
     newtype Fix :: (Type -> Type) -> Type
     newtype Fix f = In { out :: f (Fix f) }
@@ -378,10 +378,10 @@
 \end{minted}
 
 \begin{task}
-    Какие типы будут у \mintinline{haskell}|In| и \mintinline{haskell}|out|?
+    What will the types of \mintinline{haskell}|In| and \mintinline{haskell}|out| be?
 \end{task}
 
-Можно показать, что \mintinline{haskell}{[a] ?$\iso$? List a}:
+One can show that \mintinline{haskell}{[a] ?$\iso$? List a}:
 \begin{minted}{haskell}
     to :: [a] -> List a
     to = \case
@@ -394,8 +394,8 @@
       Cons x xs -> x : from xs
 \end{minted}
 
-Тип формы можно сделать функтором по последнему параметру.
-Это позволит нам в дальнейшем заменять вхождения поддеревьев на что-то полезное.
+The shape type can be made a functor in its last parameter.
+This will allow us to subsequently replace occurrences of subtrees with something useful.
 \begin{minted}{haskell}
     instance Functor (ListF a) where
       fmap :: (rec -> other) -> ListF a rec -> ListF a other
@@ -405,37 +405,37 @@
 \end{minted}
 
 \begin{task}
-    Выразите следующее дерево как неподвижную точку функтора.
-    Объявите инстанс функтора для типа-формы.
+    Express the following tree as a fixpoint of a functor.
+    Declare a functor instance for the shape type.
     \begin{minted}{haskell}
         data Tree a = Leaf a | Node a (Tree a) (Tree a)
     \end{minted}
 \end{task}
 
-\subsubsection{Схемы рекурсии} \label{subsubsec:recursion-schemas}
+\subsubsection{Recursion schemes} \label{subsubsec:recursion-schemas}
 
-Подобно тому, как структурное императивное программирование, в сравнении с беспорядочным использованием \texttt{goto}, помогает рассуждать о программах, так \vocab{схемы рекурсии} позволяют алгебраически описывать свойства рекурсивных функций, в отличие от ``неструктурной'' рекурсии\footnote{\url{https://reasonablypolymorphic.com/blog/recursion-schemes/index.html}}~\cite{meijer1991functional, meijer1995bananas}.
+Just as structured imperative programming, compared to undisciplined use of \texttt{goto}, helps in reasoning about programs, so \vocab{recursion schemes} allow one to algebraically describe properties of recursive functions, as opposed to ``unstructured'' recursion\footnote{\url{https://reasonablypolymorphic.com/blog/recursion-schemes/index.html}}~\cite{meijer1991functional, meijer1995bananas}.
 
-Глобальная идея состояла в том, чтобы формулировать требуемые свойства и вычислять нужные программы подобно тому, как математики находят решения дифференциальных уравнений.
-Однако, эта идея не нашла нужного развития и применения (однако, владеть алгебраическим подходом в целом полезно~\cite{maguire-algebra}).
-Тем не менее это знание, с одной стороны, даёт более глубокое понимание рекурсии, с другой, пригодится нам для рассмотрения и решения главной проблемы этого курса~--- expression problem.
+The overarching idea was to formulate required properties and compute the needed programs similarly to how mathematicians find solutions to differential equations.
+However, this idea did not gain the necessary development and adoption (though mastering the algebraic approach is generally useful~\cite{maguire-algebra}).
+Nevertheless, this knowledge, on the one hand, gives a deeper understanding of recursion, and on the other hand, will serve us when examining and solving the main problem of this course --- the expression problem.
 
-Универсальная свёртка называется \vocab{катаморфизмом}.
-Катаморфизм сначала рекурсивно сворачивает поддеревья, добираясь к ним с помощью \mintinline{haskell}|fmap|, и оставляет результаты свёртки типа \texttt{a} вместо бывших вхождений поддеревьев.
-Получается значение типа \texttt{f a}, где \texttt{f} --- какой-то функтор формы.
-Далее применяется функция типа \texttt{f a -> a}, которая определяет, как свернуть один слой рекурсивной структуры, когда поддеревья уже свёрнуты.
+The universal fold is called a \vocab{catamorphism}.
+A catamorphism first recursively folds the subtrees, reaching them via \mintinline{haskell}|fmap|, and leaves fold results of type \texttt{a} in place of the former occurrences of subtrees.
+The result is a value of type \texttt{f a}, where \texttt{f} is some shape functor.
+Then a function of type \texttt{f a -> a} is applied, which determines how to fold one layer of the recursive structure when the subtrees have already been folded.
 \begin{minted}{haskell}
     cata :: Functor f => (f a -> a) -> Fix f -> a
     cata phi = phi . fmap (cata phi) . out
 \end{minted}
 
-Иначе говоря, \mintinline{haskell}{cata} заменяет все конструкторы \mintinline{haskell}{In} на функцию \texttt{phi}, которая содержит информацию о том, как реагировать на разные варианты конструкторов в дереве:
+In other words, \mintinline{haskell}{cata} replaces all \mintinline{haskell}{In} constructors with the function \texttt{phi}, which contains information about how to react to different constructor variants in the tree:
 \begin{minted}{haskell}
     example           = In  (Cons 1 (In  (Cons 2 (In  (Cons 3  (In  Nil))))))
     cata phi example ?$\eqbeta$? phi (Cons 1 (phi (Cons 2 (phi (Cons 3 (phi Nil))))))
 \end{minted}
 
-Например, сумма списка будет выглядеть следующим образом (рис.~\ref{fig:cata-step}):
+For example, summing a list looks as follows (Fig.~\ref{fig:cata-step}):
 \begin{minted}{haskell}
     sum :: List Int -> Int
     sum = cata \case
@@ -446,12 +446,12 @@
 \begin{figure}
     \centering
     \includegraphics[width=0.8\textwidth]{figs/cataStep.excalidraw}
-    \caption{Катаморфизм переиспользует вхождения рекурсивных поддеревьев, чтобы хранить результаты свёртки соответствующих поддеревьев.}
+    \caption{A catamorphism reuses occurrences of recursive subtrees to store the fold results of the corresponding subtrees.}
     \label{fig:cata-step}
 \end{figure}
 
-Функцию \texttt{f a -> a} называют \vocab{f-алгеброй}.
-Действительно, если в качестве функтора \texttt{f} взять сигнатуру алгебры, а в качестве \texttt{a} носитель, то f-алгебра будет задавать некоторую интерпретацию сигнатуры:
+The function \texttt{f a -> a} is called an \vocab{f-algebra}.
+Indeed, if we take the signature of an algebra as the functor \texttt{f} and the carrier as \texttt{a}, then the f-algebra defines some interpretation of the signature:
 \begin{minted}{haskell}
     data MonoidSig carrier = Mempty | Mappend carrier carrier
 
@@ -460,50 +460,50 @@
 \end{minted}
 
 \begin{task}
-    С помощью какой алгебры можно скопировать структуру данных?
+    Which algebra can be used to copy a data structure?
 \end{task}
 
 \begin{task}
-    С помощью какой алгебры можно распечатать список в строчку?
+    Which algebra can be used to print a list as a string?
 \end{task}
 
-В противоположность универсальной свёртке, можно построить \vocab{анаморфизм}~--- универсальную развёртку (аналогично \texttt{unfold} для списка).
-Здесь f-коалгебра (стрелочка в обратную сторону) показывает, как из некоторого значения-зерна получить один слой структуры данных, где вместо рекурсивных ссылок будут зёрнышки, из которых потом прорастут поддеревья.
-Анаморфизм как раз сначала разворачивает один слой, а потом рекурсивно разворачивает все поддеревья:
+In contrast to the universal fold, one can construct an \vocab{anamorphism} --- a universal unfold (analogous to \texttt{unfold} for a list).
+Here the f-coalgebra (the arrow in the opposite direction) shows how to obtain one layer of a data structure from some seed value, where in place of recursive references there will be seeds from which subtrees will subsequently grow.
+The anamorphism first unfolds one layer, and then recursively unfolds all the subtrees:
 \begin{minted}{haskell}
     ana :: Functor f => (s -> f s) -> s -> Fix f
     ana psi = In . fmap (ana psi) . psi
-    -- сравните с классическим определением развёртки списка
+    -- compare with the classical definition of list unfold
     unfoldr :: (s -> Maybe (a, s)) -> s -> [a]
 \end{minted}
 
 \begin{task}
-    Реализуйте анаморфизм, строящий список от $0$ до заданного $n$.
+    Implement an anamorphism that builds a list from $0$ to a given $n$.
 \end{task}
 
-Также вводят \vocab{гиломорфизм (hylomorphism)}, которые позволяют описать произвольное рекурсивное вычисление.
-Гиломорфизм задаётся как композиция анаморфизма и катаморфизма.
-Сначала анаморфизм строит явное дерево, представляющее собой дерево вызовов некоторой рекурсивной процедуры, затем катаморфизм сворачивает его в результат.
+One also introduces the \vocab{hylomorphism}, which allows describing an arbitrary recursive computation.
+A hylomorphism is defined as a composition of an anamorphism and a catamorphism.
+First, the anamorphism builds an explicit tree representing the call tree of some recursive procedure, then the catamorphism folds it into the result.
 \begin{minted}{haskell}
     hylo :: Functor f => (a -> f a) -> (f b -> b) -> a -> b
     hylo psi phi = cata phi . ana psi
 \end{minted}
 
-Например, вычисление факториала может быть реализовано следующим образом:
+For example, computing factorial can be implemented as follows:
 \begin{minted}{haskell}
     fac n = hylo
       (\n -> if n > 0 then Cons n (n - 1) else Nil)
       (\case Nil -> 1; Cons n acc -> n * acc)
 \end{minted}
 
-Можно ввести ещё много различных рекурсивных схем\footnote{\url{https://wiki.haskell.org/Zygohistomorphic_prepromorphisms}} и описать их свойства.
-Однако, мы пока остановимся.
+One can introduce many more different recursion schemes\footnote{\url{https://wiki.haskell.org/Zygohistomorphic_prepromorphisms}} and describe their properties.
+However, we will stop here for now.
 
-Интересный факт: катаморфизм представляет собой теоретико-множественный принцип индукции, а анаморфизм~--- коиндукции, если в качестве вложения множеств взять функцию~\cite[глава 21]{pierce2002types}.
+An interesting fact: a catamorphism represents the set-theoretic principle of induction, and an anamorphism represents coinduction, if one takes the function as the set embedding~\cite[chapter 21]{pierce2002types}.
 
-\subsection{Всё через свёртки} \label{subsec:all-folds}
+\subsection{Everything through folds} \label{subsec:all-folds}
 
-Оказывается, что с помощью катаморфизма можно получить изоморфизм между структурами данных и их свёртками:
+It turns out that using a catamorphism one can obtain an isomorphism between data structures and their folds:
 \mintinline{haskell}|Fix f ?$\iso$? forall a . (f a -> a) -> a|.
 \begin{minted}{haskell}
     to :: Functor f => Fix f -> (forall a . (f a -> a) -> a)
@@ -513,7 +513,7 @@
     from g = g In
 \end{minted}
 
-Например, следующие два списка эквивалентны (все конструкторы \mintinline{haskell}{In} заменяем на данную алгебру):
+For example, the following two lists are equivalent (all \mintinline{haskell}{In} constructors are replaced with the given algebra):
 \begin{minted}{haskell}
     data ListF elem rec = Nil | Cons elem rec
 
@@ -527,17 +527,17 @@
     6
 \end{minted}
 
-Теперь избавимся от функтора формы.
-Это нерекурсивный тип, который можно представить в канонической форме (см.~\ref{subsubsec:type-algebra}):
+Now let us get rid of the shape functor.
+It is a non-recursive type that can be presented in canonical form (see~\ref{subsubsec:type-algebra}):
 \[
     f\ap a \iso \sum_{i}\prod_{j} (t_{ij}\ap a)
 \]
-Тогда алгебра может быть записана следующим образом:
+Then the algebra can be written as follows:
 \[
     f\ap a\to a\iso a^{\sum_{i}\prod_{j} (t_{ij}\ap a)} \iso \prod_{i}a^{\prod_{j} (t_{ij}\ap a)}
 \]
-Остались произведения, от которых можно избавиться с помощью каррирования, и получить \vocab{Church encoded} структуры данных.
-Например, для списка имеем:
+Products remain, which can be eliminated using currying, yielding \vocab{Church encoded} data structures.
+For example, for a list we have:
 \begin{align*}
     \text{\texttt{(ListF elem a -> a) -> a}}
     \iso a^{\displaystyle a^{\displaystyle 1 + elem\times a}}
@@ -546,77 +546,77 @@
     \iso \text{\texttt{a -> (elem -> a -> a) -> a}}
 \end{align*}
 
-Мы получили не что иное, как список Чёрча\footnote{\url{https://en.wikipedia.org/wiki/Church_encoding}}\footnote{\url{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}}.
-Структуру данных, без единого конструктора!\footnote{На самом деле в этом нет ничего удивительного, если вспомнить, что функции первого класса представляются как замыкания, содержащие данные. Мы получили тот же односвязный список, только на замыканиях.}
-Перепишем знакомый нам список ещё раз:
+We have obtained nothing other than a Church list\footnote{\url{https://en.wikipedia.org/wiki/Church_encoding}}\footnote{\url{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}}.
+A data structure without a single constructor!\footnote{In fact this is not at all surprising, if one recalls that first-class functions are represented as closures that contain data. We have obtained the same singly linked list, but using closures.}
+Let us rewrite the list we already know once more:
 \begin{minted}{haskell}
     xs3 :: a -> (Int -> a -> a) -> a
     xs3 = \ini f -> f 1 (f 2 (f 3 ini))
 \end{minted}
 
 \begin{task}
-    Какая знакомая вам стандартная функция работы со списками по \mintinline{haskell}{data} списку возвращает список Чёрча?
+    Which familiar standard list function on a \mintinline{haskell}{data} list returns a Church list?
 \end{task}
 
-Попробуем интуитивно понять, что это всё значит.
-Заметим, что список Чёрча принимает функции, соответствующие веткам паттерн-матчинга или аргументам сворачивающей функции.
-Вместо конструкторов же сразу вызываются соответствующие функции.
-То есть, вместо того, чтобы создать структуру данных и доставить её к месту деконструирования (паттерн-матчингу), мы \point{доставляем место деконструирования к месту конструирования} и оказывается, что ничего конструировать по итогу и не надо.
+Let us try to intuitively understand what all this means.
+Notice that a Church list accepts functions corresponding to pattern-matching branches or arguments of the folding function.
+Instead of constructors, the corresponding functions are called directly.
+That is, instead of creating a data structure and delivering it to the site of deconstruction (pattern matching), we \point{deliver the deconstruction site to the construction site}, and it turns out that there is nothing to construct after all.
 
-Мы уже работали с обратным процессом, дефункционализацией, когда функции первого класса превращались в вызовы конструкторов, а их тела --- в ветки паттерн-матчинга~\ref{subsubsec:defunctionalization}.
-Можно заметить, что тут мы имеем дело с обратным процессом, \vocab{рефункционализацией}, когда вместо вызовов конструкторов сразу вызывается соответствующий интерпретирующий код~\cite{DANVY2009534}.
+We have already worked with the reverse process, defunctionalization, when first-class functions were turned into constructor calls, and their bodies into pattern-matching branches~\ref{subsubsec:defunctionalization}.
+One can notice that here we are dealing with the reverse process, \vocab{refunctionalization}, when instead of constructor calls the corresponding interpreting code is called directly~\cite{DANVY2009534}.
 
-С технической точки зрения, мы поняли, что условное ветвление (if, паттерн-матчинг, конструкция switch) и виртуальные вызовы (вызовы замыканий, методов на интерфейсах) взаимозаменимы.
+From a technical perspective, we have understood that conditional branching (if, pattern matching, switch constructs) and virtual calls (closure calls, method calls on interfaces) are interchangeable.
 
-Стоит также отметить, что изоморфизм \mintinline{haskell}|Fix f ?$\simeq$? forall d . (f d -> d) -> d| является обобщением изоморфизма \mintinline{haskell}{a ?$\sim$? forall r . (a -> r) -> r} (при \mintinline{haskell}{f = Const a}), который является основой CPS трансформации, рассматриваемой нами далее в главе~\ref{sec:continuations}.
+It is also worth noting that the isomorphism \mintinline{haskell}|Fix f ?$\simeq$? forall d . (f d -> d) -> d| is a generalization of the isomorphism \mintinline{haskell}{a ?$\sim$? forall r . (a -> r) -> r} (with \mintinline{haskell}{f = Const a}), which is the foundation of the CPS transformation that we consider later in the chapter~\ref{sec:continuations}.
 
 \subsubsection{Deforestation \& list fusion} \label{subsubsec:deforestation-fusion}
 
-В функциональном программировании мы строим новые функции путём композирования имеющихся, более простых, функций.
-Этот подход позволяет переиспользовать реализованную функциональность, снижая сложность кода и вероятность ошибок.
-Однако, он может приводить к излишним накладным расходам на аллокацию и деконструирование промежуточных структур данных.
+In functional programming we build new functions by composing existing, simpler functions.
+This approach allows reusing implemented functionality, reducing code complexity and the probability of errors.
+However, it can lead to unnecessary overhead from allocation and deconstruction of intermediate data structures.
 
-Например, сравните следующие две реализации.
-Первая предпочтительна с точки зрения качества кода, однако она порождает промежуточный список во время работы:
+For example, compare the following two implementations.
+The first is preferable from a code quality standpoint, but it creates an intermediate list during execution:
 \begin{minted}{haskell}
     all p xs = and (map p xs)
-    -- или fused версия
+    -- or the fused version
     all p [] = True
     all p (x:xs) = p x && all p xs
 \end{minted}
 
-Очевидно, это задача оптимизирующего компилятора превращать хороший код с абстракциями в быстрый код.
-Оптимизация, избавляющая программы от (промежуточных) структур данных (деревьев) называется \vocab{дефорестацией (deforestation)}.
-В результате две функции, как говорят, ``сплавляются'' --- fuse.
+Obviously, this is the job of an optimizing compiler to turn good code with abstractions into fast code.
+The optimization that eliminates (intermediate) data structures (trees) from programs is called \vocab{deforestation}.
+As a result, two functions are said to ``fuse.''
 
-Термин и первый дефорестирующий алгоритм был предложен Philip Wadler~\cite{wadler1988deforestation}, он основан на нескольких простых правилах переписывания, нацеленных получить ситуацию \mintinline{haskell}{case K args of ...}, и агрессивном инлайнинге (см. примеры работы на рис.~\ref{fig:deforestation-examples}).
-Однако, этот алгоритм может приводить к экспоненциальному разбуханию кода и имеет шанс не завершится при наличии рекурсивных вызовов\footnote{Дефорестация является частным случаем суперкомпиляции~\cite{supercomp}, которая в свою очередь является обобщеним большого количества компиляторных оптимизаций.}.
-Чтобы алгоритм завершался программы должны быть написаны в некоторой строгой форме под названием treeless.
+The term and the first deforestation algorithm were proposed by Philip Wadler~\cite{wadler1988deforestation}; it is based on several simple rewriting rules aimed at obtaining the situation \mintinline{haskell}{case K args of ...}, and aggressive inlining (see examples of operation in Fig.~\ref{fig:deforestation-examples}).
+However, this algorithm can lead to exponential code blowup and may not terminate in the presence of recursive calls\footnote{Deforestation is a special case of supercompilation~\cite{supercomp}, which in turn is a generalization of a large number of compiler optimizations.}.
+For the algorithm to terminate, programs must be written in a certain strict form called treeless.
 
 \begin{figure}
     \centering
     \includegraphics[width=0.6\textwidth]{figs/deforestation-examples}
-    \caption{Примеры работы дефорестирующего алгоритма~\cite{wadler1988deforestation}.}
+    \caption{Examples of the deforestation algorithm in action~\cite{wadler1988deforestation}.}
     \label{fig:deforestation-examples}
 \end{figure}
 
-Сфокусируемся на списках и рассмотрим более практичные решения\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}.
-Первым очевидным решением было бы для каждой пары функций, работающих со списками, добавить специальное правило переписывания (см.~\ref{subsubsec:rules}), дефорестирующее с помощью алгебраических свойств списочных трансформаций.
-Однако, таких правил будет экспоненциально много.
+Let us focus on lists and consider more practical solutions\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}.
+The first obvious solution would be to add a special rewrite rule for each pair of list functions (see~\ref{subsubsec:rules}), deforesting using algebraic properties of list transformations.
+However, there would be exponentially many such rules.
 \begin{minted}{haskell}
     {-# RULES
     "map/map" forall f g xs. map f (map g xs) = map (f . g) xs
       #-}
 \end{minted}
 
-Современная техника дефорестирования в Haskell --- fold/build list fusion~\cite{gill1993short} --- вместо использования множества алгебраических правил, определяет универсальный способ конструирования и деконструирования списка.
-Деконструировать список будем с помощью \mintinline{haskell}|foldr|.
-Конструировать будем с помощью функции \mintinline{haskell}|build|:
+The modern deforestation technique in Haskell --- fold/build list fusion~\cite{gill1993short} --- instead of using many algebraic rules, defines a universal way of constructing and deconstructing a list.
+We deconstruct a list using \mintinline{haskell}|foldr|.
+We construct using the function \mintinline{haskell}|build|:
 \begin{minted}{haskell}
     build :: (forall b . (a -> b -> b) -> b -> b) -> [a]
     build g = g (:) []
 \end{minted}
-Например, список \mintinline{haskell}{[1, 2, 3]} и функция \mintinline{haskell}{map} теперь запишутся следующим образом\footnote{В стандартной библиотеке Haskell функции работы со списками написаны нормально, но рядом написаны правила \texttt{RULES} (см.~\ref{subsubsec:rules}), которые подменяют их реализацию на fold/build.}:
+For example, the list \mintinline{haskell}{[1, 2, 3]} and the function \mintinline{haskell}{map} are now written as follows\footnote{In the Haskell standard library, list functions are written normally, but alongside them are \texttt{RULES} rules (see~\ref{subsubsec:rules}) that substitute their implementation with fold/build versions.}:
 \begin{minted}{haskell}
     list123 :: [Int]
     list123 = build \s z -> s 1 (s 2 (s 3 z))
@@ -624,14 +624,14 @@
     map :: (a -> b) -> [a] -> [b]
     map f xs = build \s z -> foldr (\x acc -> s (f x) acc) z xs
 \end{minted}
-Можно заметить, что на вход \texttt{build} передаётся список Чёрча, отсюда не удивителен закон:
+One can notice that the input to \texttt{build} is a Church list, hence the unsurprising law:
 \begin{minted}{haskell}
     foldr f ini (build g) ?$\equiv$? g f ini
 \end{minted}
 
-Таким образом, мы избавились от конструирования списков путём замены вызовов конструкторов на вызовы сворачивающих функций.
+Thus, we eliminated list construction by replacing constructor calls with calls to folding functions.
 
-Дефорестацию также можно производить вручную (см.~\ref{fig:cpp-deforestation}).
+Deforestation can also be performed manually (see~\ref{fig:cpp-deforestation}).
 \begin{figure}
     \centering
     \begin{tabular}{p{0.5\textwidth} rl}
@@ -661,25 +661,25 @@
             \end{minted}
         \end{minipage}
     \end{tabular}
-    \caption{Ручная дефорестация в C++.}
+    \caption{Manual deforestation in C++.}
     \label{fig:cpp-deforestation}
 \end{figure}
 
 \subsubsection{Visitor pattern} \label{subsubsec:visitor}
 
-Рассмотрим некоторое дерево и его свёртку:
+Consider some tree and its fold:
 \begin{minted}{haskell}
     data Tree a = Leaf | Node a [Tree a]
     foldTree :: Tree a -> r -> (a -> [r] -> r) -> r
 \end{minted}
 
-Перепишем и переименуем:
+Let us rewrite and rename:
 \begin{minted}{haskell}
     data Visitor a r = Visitor { onLeaf :: r, onNode :: a -> [r] -> r }
     visitTree :: Tree a -> Visitor a r -> r
 \end{minted}
 
-Чтобы это ещё более выглядело в ООП стиле, само дерево должно задаваться свёрткой (как бы интерфейсом с функцией \texttt{visit}), а разные вершины --- конкретными её реализациями (объектами-наследниками):
+To make this look even more like OOP style, the tree itself should be given by a fold (as an interface with a \texttt{visit} function), and different nodes by concrete implementations (descendant objects):
 \begin{minted}{haskell}
     data Tree a = Tree { visit :: forall r . Visitor a r -> r }
 
@@ -690,7 +690,7 @@
     node x ts = Tree { visit = \v@Visitor{onNode} -> onNode x (map (`visit` v) ts) }
 \end{minted}
 
-Для наглядности, покажем этот код ещё и на Kotlin:
+For clarity, let us show this code in Kotlin as well:
 \begin{minted}{kotlin}
     interface Visitor<a, r> {
         fun onLeaf(): r
@@ -709,20 +709,20 @@
     }
 \end{minted}
 
-\subsection{Всё через развёртку} \label{subsec:all-unfolds}
+\subsection{Everything through unfolds} \label{subsec:all-unfolds}
 
-Вспомним, что существует универсальная развёртка --- анаморфизм, которая по генерирующей процедуре позволяет получить целую структуру данных (см.~\ref{subsubsec:recursion-schemas}).
+Recall that there exists a universal unfold --- the anamorphism, which from a generating procedure produces an entire data structure (see~\ref{subsubsec:recursion-schemas}).
 \begin{minted}{haskell}
     ana :: Functor f => forall s . (s -> f s) -> s -> Fix f
     ana psi = In . fmap (ana psi) . psi
 \end{minted}
 
-Приведём функцию \texttt{ana} к типу вида \mintinline{haskell}{A -> B}, чтобы затем проще было исследовать стрелку \mintinline{haskell}{B -> A}.
-Для этого сделаем \texttt{uncurry} и перенесём квантор налево от стрелки (он изменится на противоположный):
+Let us bring the function \texttt{ana} to a type of the form \mintinline{haskell}{A -> B}, so that it is then easier to study the arrow \mintinline{haskell}{B -> A}.
+To do this, we uncurry and move the quantifier to the left of the arrow (it changes to the opposite):
 \begin{minted}{haskell}
     ana :: Functor f => (exists s . (s, s -> f s)) -> Fix f
 \end{minted}
-Закодируем квантор существования с помощью нового типа (см.~\ref{subsubsec:existentials}) и перепишем анаморфизм на работу с ним:
+Let us encode the existential quantifier using a new type (see~\ref{subsubsec:existentials}) and rewrite the anamorphism to work with it:
 \begin{minted}{haskell}
     data Box f where
       --     exists s. (s,    s -> f s)
@@ -732,7 +732,7 @@
     ana' (Box currSeed psi) =
       In $ (\nextSeed -> ana' (Box nextSeed psi)) <$> psi currSeed
 \end{minted}
-Теперь построим изоморфизм между структурами данных и их тривиальными развёртками, возвращающими каждый раз следующий слой данной структуры, \mintinline{haskell}|Fix f ?$\simeq$? Box f|:
+Now let us build an isomorphism between data structures and their trivial unfolds, which each time return the next layer of the given structure, \mintinline{haskell}|Fix f ?$\simeq$? Box f|:
 \begin{minted}{haskell}
     to :: Fix f -> Box f
     to x = Box x out
@@ -740,43 +740,43 @@
     from :: Functor f => Box f -> Fix f
     from = ana'
 \end{minted}
-Таким образом, мы получили свидетельство того, что любую рекурсивную структуру данных можно хотя бы тривиальным образом представить как \mintinline{haskell}{Box f}.
-Иногда такое представление называют \vocab{co-Church encoding}~\cite{gibbons2008unfolding}.
+Thus, we have obtained evidence that any recursive data structure can be, at least trivially, represented as \mintinline{haskell}{Box f}.
+Such a representation is sometimes called \vocab{co-Church encoding}~\cite{gibbons2008unfolding}.
 
-Например, бесконечный ленивый список натуральных чисел может быть задан следующим образом.
-Заметьте, что тут мы \point{не полагаемся на ленивость Haskell}, а значит можем использовать эту технику и в энергичных языках.
+For example, an infinite lazy list of natural numbers can be defined as follows.
+Note that here we \point{do not rely on Haskell's laziness}, which means we can use this technique in eager languages as well.
 \begin{minted}{haskell}
     nats :: Box (ListF Int)
     nats = Box 0 \curr -> Cons curr (curr + 1)
 \end{minted}
 
 \begin{task}
-    Реализуйте ленивую функцию \\ \mintinline{haskell}{take :: Int -> Box (ListF Int) -> Box (ListF Int)}.
+    Implement a lazy function \\ \mintinline{haskell}{take :: Int -> Box (ListF Int) -> Box (ListF Int)}.
 \end{task}
 
-Иначе говоря, бесконечные структуры данных представимы как процедуры, лениво генерирующие слой рекурсивной структуры за слоем по запросу.
+In other words, infinite data structures can be represented as procedures that lazily generate one layer of a recursive structure at a time on demand.
 
-\subsubsection{Абстрактные типы данных} \label{subsubsec:abstract-data-types}
+\subsubsection{Abstract data types} \label{subsubsec:abstract-data-types}
 
-Рассмотрим случай, когда функтор формы представляет собой произведение:
+Consider the case when the shape functor is a product:
 \[
     \text{\texttt{s -> f s}} \iso \left( \prod_{i}(t_i\ap s) \right)^{\displaystyle s} \iso \prod_i(s\to t_i\ap s)
 \]
-То есть коалгебра эквивалентна кортежу функций.
-Таким образом, \mintinline{haskell}{Box} это не что иное, как \point{абстрактный тип данных (ADT)}: он включает в себя скрытое состояние неизвестной природы и набор операций для работы с ним~\cite{gibbons2008unfolding}.
-На самом деле мы уже встречали такую конструкцию ранее, когда говорили про экзистенциальные типы~\ref{subsubsec:existentials} (там мы использовали инстансы классы типов в качестве кортежей функций).
+That is, the coalgebra is equivalent to a tuple of functions.
+Thus, \mintinline{haskell}{Box} is nothing other than an \point{abstract data type (ADT)}: it contains hidden state of unknown nature and a set of operations for working with it~\cite{gibbons2008unfolding}.
+In fact, we have already encountered such a construction earlier, when we discussed existential types~\ref{subsubsec:existentials} (there we used type class instances as tuples of functions).
 
-ООП объекты тоже можно рассматривать через коалгебры.
-Подробнее про соотношение объектов и абстрактных типов данных можно почитать в~\cite{cook2009understanding}.
+OOP objects can also be viewed through coalgebras.
+More about the relationship between objects and abstract data types can be found in~\cite{cook2009understanding}.
 
 % todo Pierce about data abstraction
 
 \subsubsection{Stream fusion} \label{subsubsec:stream-fusion}
 
-Ранее мы рассматривали foldr/build list fusion оптимизацию, элиминирующую промежуточные списки (см.~\ref{subsubsec:deforestation-fusion}).
-Однако, эта техника не подходит для многих популярных функций, например, \texttt{zip} (нужно корутинить между двумя алгебрами) или \texttt{take} (нужно оборвать свёртку в определённый момент).
+Earlier we considered the foldr/build list fusion optimization that eliminates intermediate lists (see~\ref{subsubsec:deforestation-fusion}).
+However, this technique does not work for many popular functions, such as \texttt{zip} (one needs to coroutine between two algebras) or \texttt{take} (one needs to abort the fold at a certain point).
 
-Позднее была предложена техника использования ко-структуры списка --- развёртки или \mintinline{haskell}{Stream}\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}~\cite{coutts2007stream}:
+Later, a technique using the co-structure of a list --- an unfold or \mintinline{haskell}{Stream} --- was proposed\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}~\cite{coutts2007stream}:
 \begin{minted}{haskell}
     data ListF a r = Nil | Cons a r
     type MyStream a = Box (ListF a) -- ?$\exists$?s . (s -> ListF a s, s)
@@ -794,8 +794,8 @@
       Yield a s' -> a : unstream next s'
 \end{minted}
 
-Идея в том, что теперь \point{функции работы со стримами нерекурсивны} и легко подвергаются базовым компиляторным дефорестирующим трансформациям в стиле~\cite{wadler1988deforestation}.
-Действительно, вместо рекурсивного вызова мы запоминаем состояние для следующей итерации.
+The idea is that now \point{stream processing functions are non-recursive} and easily undergo basic compiler deforesting transformations in the style of~\cite{wadler1988deforestation}.
+Indeed, instead of a recursive call we remember the state for the next iteration.
 \begin{minted}{haskell}
     mapS :: (a -> b) -> Stream a -> Stream b
     mapS f (Stream next s) = Stream next' s
@@ -805,18 +805,18 @@
           Yield x s' -> Yield (f x) s'
 \end{minted}
 
-Общий пайплайн выглядит следующим образом:
+The overall pipeline looks as follows:
 \begin{enumerate}
-    \item Мы пишем все функции работы со списками через стримы:
+    \item We write all list functions through streams:
     \begin{minted}{haskell}
         map :: (a -> b) -> [a] -> [b]
         map f = unstream . mapS f . stream
     \end{minted}
-    \item С помощью RULES (см.~\ref{subsubsec:rules}) задаём правило переписывания stream/unstream, двойственное foldr/build: \texttt{stream . unstream = id}.
-    \item Далее справляются обычные компиляторные оптимизации.\footnote{Можно гарантировать полную дефорестацию с помощью staging (см. далее~\ref{sec:datatype-generic})~\cite{kiselyov2017stream}.}
+    \item Using RULES (see~\ref{subsubsec:rules}) we define a rewrite rule for stream/unstream, dual to foldr/build: \texttt{stream . unstream = id}.
+    \item Standard compiler optimizations take care of the rest.\footnote{Full deforestation can be guaranteed using staging (see later~\ref{sec:datatype-generic})~\cite{kiselyov2017stream}.}
 \end{enumerate}
 
-Чтобы поддержать нерекурсивную функцию фильтрации, обычно добавляют отдельный вид шагов:
+To support a non-recursive filter function, a separate kind of step is usually added:
 \begin{minted}{haskell}
     data Step a s = Done | Skip s | Yield a s
 
@@ -829,28 +829,28 @@
           Yield a s' -> if p a then Yield a s' else Skip s'
 \end{minted}
 
-В стандартной библиотеке Haskell всё-таки используется foldr/build fusion, однако существует множество промышленных библиотек стримов~\cite[глава 14]{bragilevsky-haskell}.
+The Haskell standard library still uses foldr/build fusion, but there exist many industrial stream libraries~\cite[chapter 14]{bragilevsky-haskell}.
 
-Больше про стримы можно почитать у Олега Киселёва\footnote{\url{https://okmij.org/ftp/Streams.html}}.
+More about streams can be found at Oleg Kiselyov's page\footnote{\url{https://okmij.org/ftp/Streams.html}}.
 
-\subsection{Вездесущий дуализм} \label{subsec:data-duality}
+\subsection{Ubiquitous duality} \label{subsec:data-duality}
 
-Мы рассмотрели три формы рекурсивных данных:
+We have considered three forms of recursive data:
 \begin{itemize}
-    \item \mintinline{haskell}{Fix f} --- обычные рекурсивные типы данных, конечные в энергичных языках;
-    \item \mintinline{haskell}{?$\forall$?a . (f a -> a) -> a} --- Church encoding, конечные структуры заданные свёртками;
-    \item \mintinline{haskell}{?$\exists$?s . (s -> f s, s)} --- co-Church encoding, потенциально бесконечные структуры данных, абстракции по данным (работаем через интерфейс над сокрытым представлением).
+    \item \mintinline{haskell}{Fix f} --- ordinary recursive data types, finite in eager languages;
+    \item \mintinline{haskell}{?$\forall$?a . (f a -> a) -> a} --- Church encoding, finite structures defined by folds;
+    \item \mintinline{haskell}{?$\exists$?s . (s -> f s, s)} --- co-Church encoding, potentially infinite data structures, data abstractions (working through an interface over a hidden representation).
 \end{itemize}
 
-В этом разделе мы рассмотрим некоторые практические примеры, в которых пространство решений задано дуальными представлениями коллекций.
+In this section we consider some practical examples in which the solution space is defined by dual representations of collections.
 
 \subsubsection{Push vs pull streaming} \label{subsubsec:push-pull}
 
-Рассмотрим различные представления списков или, как их иногда называют, потоков событий.
-Подробнее сравнение можно посмотреть тут~\cite[параграф 3]{kiselyov2017stream}.
+Let us consider various representations of lists or, as they are sometimes called, event streams.
+A more detailed comparison can be found here~\cite[section 3]{kiselyov2017stream}.
 
-Church encoding для списков даёт \vocab{push stream}, или \vocab{internal iteration}, или \vocab{Observer pattern}\footnote{\url{https://learn.microsoft.com/en-us/dotnet/api/system.iobserver-1?view=net-9.0}} (в некотором смысле частный случай Visitor pattern~\ref{subsubsec:visitor}), когда мы регистрируем обработчика событий, а коллекция вызывает (push) на нём методы.
-Примерами push потоков являются Java Stream API\footnote{\url{https://docs.oracle.com/javase/8/docs/api/java/util/stream/Stream.html}}, Closure Transducers\footnote{\url{https://clojure.org/reference/transducers}}.
+Church encoding for lists gives a \vocab{push stream}, or \vocab{internal iteration}, or \vocab{Observer pattern}\footnote{\url{https://learn.microsoft.com/en-us/dotnet/api/system.iobserver-1?view=net-9.0}} (in a sense a special case of the Visitor pattern~\ref{subsubsec:visitor}), where we register an event handler and the collection calls (pushes) methods on it.
+Examples of push streams include the Java Stream API\footnote{\url{https://docs.oracle.com/javase/8/docs/api/java/util/stream/Stream.html}}, Clojure Transducers\footnote{\url{https://clojure.org/reference/transducers}}.
 \begin{minted}{kotlin}
     events.observe(object : Observer<Event> {
         override fun onComplete() { .. }
@@ -858,25 +858,25 @@ Church encoding для списков даёт \vocab{push stream}, или \voca
     })
 \end{minted}
 
-co-Church encoding для списков даёт \vocab{pull stream}, или \vocab{external iteration}, или \vocab{Iterator pattern}.
-Чтобы получить следующий элемент, его нужно явно запросить (pull) потребляющему коду.
-Это представление часто гораздо удобнее с точки зрения использования (см.~\ref{subsubsec:stream-fusion})\footnote{\url{https://github.com/pulldown-cmark/pulldown-cmark/?tab=readme-ov-file\#why-a-pull-parser}}, однако сложнее на стороне имплементации, потому что нужно выделить и поддерживать экзистенциальное состояние в коалгебре.
-Генераторы призваны автоматизировать выделение этого состояния, так как можно заметить, что это continuation вычисления (см. далее~\ref{subsubsec:generators-coroutines}).
+co-Church encoding for lists gives a \vocab{pull stream}, or \vocab{external iteration}, or \vocab{Iterator pattern}.
+To get the next element, the consuming code must explicitly request (pull) it.
+This representation is often much more convenient from a usage perspective (see~\ref{subsubsec:stream-fusion})\footnote{\url{https://github.com/pulldown-cmark/pulldown-cmark/?tab=readme-ov-file\#why-a-pull-parser}}, but is more complex on the implementation side, because one needs to identify and maintain the existential state in the coalgebra.
+Generators are designed to automate the identification of this state, since one can notice that it is the continuation of the computation (see later~\ref{subsubsec:generators-coroutines}).
 
-% todo про коммуникацию двух кусков кода и инициацию этой коммуникации
+% todo about communication between two pieces of code and the initiation of that communication
 
-Нередко работу с потоками называют \vocab{реактивным программированием}\footnote{\href{https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx}{(youtube) React 2014 : Erik Meijer - What does it mean to be Reactive?}}.
-%Чистой версией является \vocab{functional reactive programming (FRP)}, представляющее потоки как функции от времени\footnote{\href{https://youtu.be/rfmkzp76M4M?si=TRBq8wWbcDOhSbIO}{(youtube) Conal Elliott - The Essence \& Origins of Functional Reactive Programming}}~\cite{elliott1997functional}.
+Working with streams is often called \vocab{reactive programming}\footnote{\href{https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx}{(youtube) React 2014 : Erik Meijer - What does it mean to be Reactive?}}.
+%The pure version is \vocab{functional reactive programming (FRP)}, which represents streams as functions of time\footnote{\href{https://youtu.be/rfmkzp76M4M?si=TRBq8wWbcDOhSbIO}{(youtube) Conal Elliott - The Essence \& Origins of Functional Reactive Programming}}~\cite{elliott1997functional}.
 
 \subsubsection{Data vs codata} \label{subsubsec:data-codata}
 
-Вспомним функтор-формы для списка:
+Recall the shape functor for lists:
 \begin{minted}{haskell}
     data ListF a r = Nil | Cons a r
 \end{minted}
 
-С помощью ключевого слова \mintinline{haskell}{data} мы определяем новый алгебраический тип данных через способы его сконструировать.
-Далее, с помощью pattern-matching мы можем деконструировать значения алгебраического типа данных и воспользоваться хранящейся в нём информацией.
+Using the \mintinline{haskell}{data} keyword we define a new algebraic data type through the ways to construct it.
+Then, using pattern matching we can deconstruct values of an algebraic data type and use the information stored in it.
 \begin{minted}{haskell}
     data List a where
       List :: ListF a (List a) -> List a
@@ -887,9 +887,9 @@ co-Church encoding для списков даёт \vocab{pull stream}, или \v
       Fix (Cons y ys) -> alg (Cons y (fold alg ys))
 \end{minted}
 
-Однако, также можно определять тип данных через способы его деконструировать с помощью ключевого слова \mintinline{haskell}{codata} (в воображаемом языке).
-Так, у ко-списка можно потребовать показать следующий слой структуры.
-Сконструировать такой тип данных можно с помощью co-pattern-matching'а, описав как деконструирующая функция должна вести себя на конструирующем терме (\texttt{unfold coalg s})\footnote{\href{https://youtu.be/ZCdYIEwcna0?si=XEQSBFhnehQFZPxy}{(youtube) CS410 2017 Lecture 15 Coinduction and Coalgebras}}.
+However, one can also define a data type through the ways to deconstruct it using the \mintinline{haskell}{codata} keyword (in an imaginary language).
+Thus, from a co-list one can request the next layer of the structure.
+Such a data type can be constructed using co-pattern matching, describing how the deconstructing function should behave on a constructing term (\texttt{unfold coalg s})\footnote{\href{https://youtu.be/ZCdYIEwcna0?si=XEQSBFhnehQFZPxy}{(youtube) CS410 2017 Lecture 15 Coinduction and Coalgebras}}.
 \begin{minted}{haskell}
     codata CoList a where
       force :: CoList a -> ListF a (CoList a)
@@ -900,9 +900,9 @@ co-Church encoding для списков даёт \vocab{pull stream}, или \v
       Cons x s' -> Cons x (unfold coalg s')
 \end{minted}
 
-По сути, \mintinline{haskell}{codata} представляет собой словарь функций, которые захватывают некоторое состояние, необходимое для генерации следующих слоёв структуры.
-Так, \mintinline{haskell}{codata} можно сравнить с ООП интерфейсами, а co-pattern-matching с анонимной реализацией интерфейса.
-Предыдущие два примера можно записать, например, в Kotlin следующим образом (форма списка кодируется как \mintinline[escapeinside=**]{kotlin}|Pair<a, r>?|, убедитесь самостоятельно, что этот тип изоморфен \mintinline{haskell}{ListF}).
+Essentially, \mintinline{haskell}{codata} represents a dictionary of functions that capture some state necessary for generating subsequent layers of the structure.
+Thus, \mintinline{haskell}{codata} can be compared to OOP interfaces, and co-pattern matching to an anonymous interface implementation.
+The two preceding examples can be written, for example, in Kotlin as follows (the list shape is encoded as \mintinline[escapeinside=**]{kotlin}|Pair<a, r>?|, verify for yourself that this type is isomorphic to \mintinline{haskell}{ListF}).
 \begin{minted}[escapeinside=**]{kotlin}
     class List<a>(val layer: Pair<a, List<a>>?)
 
@@ -922,89 +922,89 @@ co-Church encoding для списков даёт \vocab{pull stream}, или \v
         }
 \end{minted}
 
-Функциональный стиль программирование в основном оперирует напрямую наблюдаемыми данными \mintinline{haskell}{data}, а ООП --- скрывает данные за интерфейсами \mintinline{haskell}{codata}.
-Однако, обе конструкции имеют свои понятные области применения и ими не стоит пренебрегать вне зависимости от предпочитаемого стиля~\cite{downen2019codata}\footnote{\url{https://reasonablypolymorphic.com/blog/review-codata/}}.
+The functional style of programming primarily operates on directly observable data \mintinline{haskell}{data}, while OOP hides data behind interfaces \mintinline{haskell}{codata}.
+However, both constructs have their clear areas of application and should not be neglected regardless of preferred style~\cite{downen2019codata}\footnote{\url{https://reasonablypolymorphic.com/blog/review-codata/}}.
 
-В языках с проверкой тотальности функций разделяют индуктивные и коиндуктивные определения.
-Для них используются паттерн-матчинг и ко-паттерн-матчинг, принцип индукции (катаморфизм) и принцип коиндукции (анаморфизм).
-Индуктивные определения задают конечные структуры данных, проверка тотальности проверяет, что рекурсивные вызовы делаются на структурно меньших подтермах.
-Коиндуктивные определения задают потенициально бесконечные структуры данных, для них проверяется продуктивность --- порождающая функция всегда после рекурсивного вызова породит новый конструктор~\footnote{\url{https://rocq-prover.org/doc/V8.18.0/refman/language/core/coinductive.html}}.
+In languages with totality checking, inductive and coinductive definitions are distinguished.
+For them, pattern matching and co-pattern matching, the induction principle (catamorphism) and the coinduction principle (anamorphism) are used.
+Inductive definitions specify finite data structures; totality checking verifies that recursive calls are made on structurally smaller subterms.
+Coinductive definitions specify potentially infinite data structures; for them, productivity is checked --- the generating function always produces a new constructor after a recursive call\footnote{\url{https://rocq-prover.org/doc/V8.18.0/refman/language/core/coinductive.html}}.
 
-% todo \vocab{полярности}\footnote{\url{https://existentialtype.wordpress.com/2012/08/25/polarity-in-type-theory/}}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}}
+% todo \vocab{polarities}\footnote{\url{https://existentialtype.wordpress.com/2012/08/25/polarity-in-type-theory/}}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}}
 
-\subsection{Приложение: категория алгебр} \label{subsec:cats}
+\subsection{Appendix: category of algebras} \label{subsec:cats}
 
-Это факультативный раздел, не являющийся необходимым для понимания курса в дальнейшем.
-Однако, полезен для понимания часто употребимой терминологии.
+This is an optional section that is not necessary for understanding the rest of the course.
+However, it is useful for understanding frequently used terminology.
 
-\vocab{Категория} --- это коллекция объектов и коллекция стрелок.
-Для каждого объекта $X$ существует тождественная стрелка, а для каждой пары стрелок существует способ получить их композицию: $f : Y \to Z, g : X \to Y \Rightarrow f \circ g : X \to Z$.
+A \vocab{category} is a collection of objects and a collection of arrows.
+For each object $X$ there exists an identity arrow, and for each pair of arrows there exists a way to obtain their composition: $f : Y \to Z, g : X \to Y \Rightarrow f \circ g : X \to Z$.
 
-Определяют категорию, соответствующую Haskell --- $Hask$.
-На самом деле это плохая категория с точки зрения теории, но для наших нестрогих рассуждений подойдёт\footnote{\url{https://math.andrej.com/2016/08/06/hask-is-not-a-category/}}.
-Объектами в Hask являются типы языка Haskell, а морфизмами --- термы, задающие функции между соответствующими типами.
-Тождественный морфизм --- \mintinline{haskell}|id|, композиция задаётся как \mintinline{haskell}|f . g = \x -> f (g x)|.
+One defines a category corresponding to Haskell --- $Hask$.
+In reality this is a poor category from the theoretical standpoint, but it will suffice for our informal reasoning\footnote{\url{https://math.andrej.com/2016/08/06/hask-is-not-a-category/}}.
+Objects in Hask are types of the Haskell language, and morphisms are terms defining functions between the corresponding types.
+The identity morphism is \mintinline{haskell}|id|, and composition is defined as \mintinline{haskell}|f . g = \x -> f (g x)|.
 
 \begin{task}
-    Как в такой категории представить константы?
+    How does one represent constants in such a category?
 \end{task}
 
-\vocab{Функтором} называется отображение между категориями, которое объектам одной категории сопоставляет объекты другой, а стрелкам одной --- стрелки другой.
-В Haskell типовые конструкторы задают отображение между объектами, а \mintinline{haskell}|fmap| --- между стрелками.
-Функтор должен сохранять тождественный морфизм и композицию.
+A \vocab{functor} is a mapping between categories that maps objects of one category to objects of another, and arrows of one to arrows of the other.
+In Haskell, type constructors define the mapping between objects, and \mintinline{haskell}|fmap| defines the mapping between arrows.
+A functor must preserve the identity morphism and composition.
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.25\textwidth]{figs/functor}
 \end{figure}
 
-\vocab{Алгеброй} в категории $C$ называется пара из объекта категории $X \in Obj(C)$ и морфизма $\phi : F\ap X \to X$, где $F$ --- функтор.
-Сам морфизм $F\ap X \to X$ называют \vocab{f-алгеброй}.
-Алгебрами в смысле категорий можно описывать алгебры.
-Так, в качестве объекта $X$ берём носитель алгебры.
-В качестве функтора $F$ --- сигнатуру алгебры в виде типа-формы.
-Тогда морфизмом будет интерпретацией сигнатуры.
+An \vocab{algebra} in a category $C$ is a pair of an object of the category $X \in Obj(C)$ and a morphism $\phi : F\ap X \to X$, where $F$ is a functor.
+The morphism $F\ap X \to X$ itself is called an \vocab{f-algebra}.
+Algebras in the categorical sense can describe algebras.
+Thus, as the object $X$ we take the carrier of the algebra.
+As the functor $F$ --- the signature of the algebra in the form of a shape type.
+Then the morphism is the interpretation of the signature.
 
-\vocab{Морфизмом алгебр} называется такой морфизм между носителями $h : X \to Y$, что следующая диаграмма коммутирует.
-Говорят, что \vocab{диаграмма коммутирует}, если все возможные пути по стрелкам в ней равны.
+An \vocab{algebra morphism} is a morphism between carriers $h : X \to Y$ such that the following diagram commutes.
+A \vocab{diagram commutes} if all possible paths along the arrows in it are equal.
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.3\textwidth]{figs/alg-homomorphism}
 \end{figure}
 
-В морфизме алгебр можно обнаружить знакомые черты гомоморфизмов, то есть операций между носителями, которые ``уважают'' операции сигнатуры алгебраической теории.
+In an algebra morphism one can recognize familiar features of homomorphisms, that is, operations between carriers that ``respect'' the operations of the algebraic theory's signature.
 
-Алгебры над категорией $C$ образуют \vocab{категорию алгебр}, в которой объектами являются алгебры, а морфизмами --- морфизмы алгебр.
+Algebras over a category $C$ form a \vocab{category of algebras}, in which the objects are algebras and the morphisms are algebra morphisms.
 
-\vocab{Начальным (инициальным) объектом} категории называется объект, из которого в каждый другой объект существует уникальная стрелка.
-\vocab{Терминальным (финальным) объектом} категории называется объект, в который из каждого другого объекта категории существует уникальная стрелка.
+An \vocab{initial object} of a category is an object from which there exists a unique arrow to every other object.
+A \vocab{terminal (final) object} of a category is an object into which there exists a unique arrow from every other object.
 
-Инициальный и терминальный объекты категории не обязательно присутствуют в единственном экземпляре.
-Но все инициальные объекты изоморфны друг другу, как и все терминальные.
+Initial and terminal objects of a category do not necessarily exist in a single instance.
+But all initial objects are isomorphic to each other, as are all terminal objects.
 
 \begin{task}
-    Приведите начальный и терминальный объекты категории $Hask$.
+    Give the initial and terminal objects of the category $Hask$.
 \end{task}
 
-Рекурсивный тип --- это тип, значит ему соответствует объект в категории Hask.
-$X$ является рекурсивным типом с формой $F$, если имеет место следующий изоморфизм:
+A recursive type is a type, which means it corresponds to an object in the category Hask.
+$X$ is a recursive type with shape $F$ if the following isomorphism holds:
 \[X \simeq F\ap X\]
 
-Можно заметить, что свидетель изоморфизма справа налево напоминает f-алгебру, а слева направо --- f-коалгебру (всё то же самое, только все стрелки в обратную сторону).
-И действительно, подходящий объект $X$ должен быть либо начальным объектом категории алгебр, либо терминальным объектом категории коалгебр (с соответствующими морфизмами).
-Первый вариант соответствует конечным структурам данных, второй --- потенциально бесконечным.
+One can notice that the isomorphism witness from right to left resembles an f-algebra, and from left to right an f-coalgebra (everything is the same, but with all arrows reversed).
+And indeed, the appropriate object $X$ must be either the initial object of the category of algebras, or the terminal object of the category of coalgebras (with the corresponding morphisms).
+The first variant corresponds to finite data structures, and the second to potentially infinite ones.
 
-Начальным объектом категории алгебр над $Hask$ для функтора $f$ является следующая алгебра: \mintinline{haskell}|(Fix f, In)|\footnote{\url{https://bartoszmilewski.com/2017/02/28/f-algebras/}}\footnote{\url{https://ncatlab.org/nlab/show/catamorphism}}. % todo проверить инициальность свёрток
-Действительно, для каждого типа \texttt{a} и для каждой f-алгебры \texttt{phi} мы можем построить такой морфизм \mintinline{haskell}|cata phi :: Fix f -> a|, что следующая диаграмма будет коммутировать:
+The initial object of the category of algebras over $Hask$ for the functor $f$ is the following algebra: \mintinline{haskell}|(Fix f, In)|\footnote{\url{https://bartoszmilewski.com/2017/02/28/f-algebras/}}\footnote{\url{https://ncatlab.org/nlab/show/catamorphism}}. % todo verify initiality of folds
+Indeed, for every type \texttt{a} and for every f-algebra \texttt{phi} we can construct a morphism \mintinline{haskell}|cata phi :: Fix f -> a| such that the following diagram commutes:
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.4\textwidth]{figs/cata}
 \end{figure}
 
-Покажем, что \mintinline{haskell}|(Fix f, out)| является терминальным объектом категории коалгебр (благодаря ленивости Haskell). % todo как тут учитывается ленивость % todo проверить калгебраические стреллки
-Аналогично, для каждого объекта \texttt{a} и f-коалгебры \texttt{psi} найдётся морфизм \mintinline{haskell}|ana psi :: a -> Fix f|:
+Let us show that \mintinline{haskell}|(Fix f, out)| is the terminal object of the category of coalgebras (thanks to Haskell's laziness). % todo how does laziness factor in here % todo verify coalgebraic arrows
+Analogously, for every object \texttt{a} and f-coalgebra \texttt{psi} there exists a morphism \mintinline{haskell}|ana psi :: a -> Fix f|:
 \begin{figure}[h!]
     \centering
     \includegraphics[width=0.35\textwidth]{figs/ana}
 \end{figure}
 
-% todo про пределы и копределы
+% todo about limits and colimits

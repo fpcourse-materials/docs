@@ -1,21 +1,21 @@
 %! suppress = MissingLabel
 
-В этом разделе мы вспомним основные концепции функционального программирования и языка Haskell.
+In this section we will recall the main concepts of functional programming and the Haskell language.
 
-\subsection{Термы и редукция} \label{subsec:terms-reduction}
+\subsection{Terms and Reduction} \label{subsec:terms-reduction}
 
-В ФП программы представляют собой выражения.
-Выполнение программ --- редукция таких выражений до более ``простых''.
-Выражения можно представлять как в виде линейной записи символов, так и в виде дерева, для понимания которого не требуется знания вспомогательных правил ассоциативности и проч.
+In FP, programs are expressions.
+Program execution is the reduction of those expressions to simpler ones.
+Expressions can be represented either as a linear sequence of symbols or as a tree, which makes them easier to understand without requiring knowledge of auxiliary associativity rules and so on.
 
-Простейший функциональный язык --- $\lambda$-исчисление.
-Выражения в нём называются $\lambda$-термами, которые состоят из вершин трёх видов ($V$~--- множество валидных идентификаторов, $\Lambda$ ~--- множество $\lambda$-термов):
+The simplest functional language is the lambda calculus.
+Expressions in it are called lambda terms, which consist of nodes of three kinds ($V$ is the set of valid identifiers, $\Lambda$ is the set of lambda terms):
 \begin{description}
-    \item[Переменные] $x \in \Lambda$, если $x \in V$ \hspace{2em}
+    \item[Variables] $x \in \Lambda$, if $x \in V$ \hspace{2em}
     \begin{tikzpicture}
         \node [expr] (x) {x};
     \end{tikzpicture}
-    \item[Абстракция] $(\lambda x\ldotp M) \in \Lambda$, если $x \in V, M \in \Lambda$ \hspace{2em}
+    \item[Abstraction] $(\lambda x\ldotp M) \in \Lambda$, if $x \in V, M \in \Lambda$ \hspace{2em}
     \begin{tikzpicture}
         \node [expr] (lam) {$\lambda$};
         \node [decl] (x) [below right = of lam] {$x$};
@@ -23,7 +23,7 @@
         \draw[->] (m.north) -- (lam);
         \draw[->] (x) -- (lam);
     \end{tikzpicture}
-    \item[Аппликация] $(M~N) \in \Lambda$, если $M \in \Lambda, N \in \Lambda$ \hspace{2em}
+    \item[Application] $(M~N) \in \Lambda$, if $M \in \Lambda, N \in \Lambda$ \hspace{2em}
     \begin{tikzpicture}
         \node [expr] (dog) {$@$};
         \node [subtree] (m) [below left= of lam] {$M$};
@@ -33,9 +33,9 @@
     \end{tikzpicture}
 \end{description}
 
-В произвольном выражении можно заменить некоторый его фрагмент на формальный параметр, который должен быть задекларирован выше по дереву с помощью специальной вершины $\lambda$.
-Вместо формального параметра можно в дальнейшем подставлять различные конкретные параметры с помощью вершины-аппликации $@$, то есть переиспользовать это выражение для различных целей (например, см.\ рис.\ \ref{fig:lam}).
-Редукция как раз определяется как следующее правило переписывания: ищется применение $\lambda$-функции к аргументу и в её тело осуществляется подстановка аргумента во все свободные вхождения переменной, связанной лямбдой (рис.\ \ref{fig:reduction}).
+In an arbitrary expression, some subterm can be replaced with a formal parameter that must be declared higher in the tree by a special lambda node.
+Instead of the formal parameter, we can later substitute various concrete arguments using the application node $@$ and reuse the expression for different purposes (for example, see Fig. \ref{fig:lam}).
+Reduction is defined by the following rewriting rule: an application of a lambda function to an argument is found, and the argument is substituted for all free occurrences of the variable bound by the lambda in the function body (Fig. \ref{fig:reduction}).
 
 \begin{figure}
     \centering
@@ -82,7 +82,7 @@
         \draw[->] (ten) -- (mult);
         \draw[->] (four) -- (mult);
     \end{tikzpicture}
-    \caption{Выражение с помощью $\lambda$ вершины преобразуется в функцию одного аргумента.}
+    \caption{The expression represented with a lambda node is transformed into a one-argument function.}
     \label{fig:lam}
 \end{figure}
 
@@ -106,20 +106,20 @@
         \node [subtree] (bot) [below = of top] {$\subst{M}{x}{N}$};
         \draw[->] (bot) -- (top);
     \end{tikzpicture}
-    \caption{Редукция переписывает дерево путём подстановки конкретного аргумента вместо формального параметра.}
+    \caption{Reduction rewrites the tree by substituting a concrete argument for the formal parameter.}
     \label{fig:reduction}
 \end{figure}
 
-\subsection{Типы}
+\subsection{Types}
 
-Программное обеспечение --- это сложно.
-Поэтому постоянно и неизбежно в программах возникают ошибки.
-Их можно искать, в том числе, статически, то есть без запуска программы.
-Одним из видов статического анализа является анализ типов.
+Software is hard.
+Therefore, bugs constantly and inevitably appear in programs.
+They can be found, among other ways, statically, that is, without running the program.
+One form of static analysis is type checking.
 
-Идея анализа типов состоит в том, что каждой вершине дерева программы мы пытаемся приписать некоторую синтаксическую метку по определённым правилам.
-Если таким образом каждой вершине можно приписать метку, то мы считаем, что программа проходит проверку типов, и она ``хорошая''.
-Например, на рисунке\ \ref{fig:to-be-typed} представлено выражение, а на рисунке\ \ref{fig:typed} каждой вершине приписаны метки в согласие с некоторой системой типов.
+The idea of type analysis is that we attempt to assign a syntactic label to every node of the program tree according to certain rules.
+If every node can be labeled that way, then we say the program type-checks and is “good”.
+For example, Fig. \ref{fig:to-be-typed} shows an expression, and Fig. \ref{fig:typed} shows the same tree with labels assigned consistently with a type system.
 
 \begin{figure}
     \centering
@@ -142,7 +142,7 @@
         \draw[->] (param) -- (plus);
         \draw[->] (y) -- (lam);
     \end{tikzpicture}
-    \caption{Дерево соответствующее выражению $(\lambda y\ldotp x \div (y + 2)) \ap 3$.}
+    \caption{The tree corresponding to the expression $(\lambda y\ldotp x \div (y + 2)) \ap 3$.}
     \label{fig:to-be-typed}
 \end{figure}
 
@@ -167,13 +167,13 @@
         \draw[->] (param) -- (plus);
         \draw[->] (y) -- (lam);
     \end{tikzpicture}
-    \caption{Дерево выражения $(\lambda y\ldotp x \div (y + 2)) \ap 3$ после приписывания типовых меток.}
+    \caption{The tree for $(\lambda y\ldotp x \div (y + 2)) \ap 3$ after assigning type labels.}
     \label{fig:typed}
 \end{figure}
 
-\vocab{Система типов} определяет синтаксис типовых меток и правила, по которым их можно приписывать.
-Синтаксис обычно описывается в классических нотациях а ля BNF, а правила в виде типовых дробей.
-Например, так выглядят дроби для просто-типизированного $\lambda$-исчисления:
+\vocab{A type system} defines the syntax of type labels and the rules by which they can be assigned.
+Syntax is usually described in a classical BNF-like notation, and rules are expressed as typing judgments.
+For example, the rules for simply-typed lambda calculus look like this:
 \[
     %! suppress = EscapeAmpersand
     \begin{array}{l c r}
@@ -185,38 +185,38 @@
     \end{array}
 \]
 
-Типовые метки имеют чисто-синтаксическую природу, однако их можно проинтерпретировать.
-Самая популярная интерпретация~--- воспринимать типовую метку как множество.
-Так, метке $int \to int$ можно поставить в соответствие множество функций между множествами целых чисел $\mathbb{Z}\to\mathbb{Z}$.
+Type labels are purely syntactic, but they can be interpreted.
+The most popular interpretation is to treat a type label as a set.
+Thus, the label $int \to int$ can correspond to the set of functions between the sets of integers $\mathbb{Z} \to \mathbb{Z}$.
 
-\subsection{Функции в Haskell}
+\subsection{Functions in Haskell}
 
-В своей основе Haskell представляет собой расширенное типизированное $\lambda$-исчисление, дополненное примитивными типами, возможностью декларировать новые имена, структурами данных и классами типов.
+At its core, Haskell is an extended typed lambda calculus enriched with primitive types, the ability to declare new names, data structures, and type classes.
 
-Примеры $\lambda$-абстракций в REPL окружении GHCi:
+Examples of lambda abstractions in the GHCi REPL:
 
 \begin{minted}{haskell}
     ghci> (\x -> x + 1) 4
     5
 \end{minted}
 
-Можно узнать тип функции в интерпретаторе (в реальности числа полиморфные, но об этом далее):
+You can learn the type of a function in the interpreter (in reality numbers are polymorphic, but we will discuss that later):
 \begin{minted}{haskell}
     ghci> :t \x -> x + 1
     \x -> x + 1 :: Int -> Int
 \end{minted}
 
-Функциям можно давать имена.
-Именам можно приписывать типы, это рекомендуется делать явно для деклараций на верхнем уровне файлов исходного кода:
+Functions can be given names.
+Names can be annotated with types, and it is recommended to do so explicitly for top-level declarations in source files:
 \begin{minted}{haskell}
     f :: Int -> Int
     f x = x + 1
 \end{minted}
 
-Если имя типа начинается с маленькой буквы, то это не конкретный тип, а типовая переменная, способная принимать различные значения в зависимости от места вызова.
-Такая возможность называется \vocab{параметрическим полиморфизмом}.
-Так, функция, которая просто возвращает свой аргумент, никак не ограничивает тип аргумента.
-Но в то же время тип результата должен совпадать с типом аргумента:
+If a type name begins with a lowercase letter, it is not a concrete type but a type variable that can take different values depending on the call site.
+This capability is called \vocab{parametric polymorphism}.
+Thus, a function that simply returns its argument does not constrain the argument type.
+At the same time, the result type must match the argument type:
 \begin{minted}{haskell}
     id :: a -> a
     id x = x
@@ -225,14 +225,14 @@
     id 5 :: Int
 \end{minted}
 
-Функции могут принимать другие функции в качестве аргументов (такие функции называются \vocab{функциями высших порядков (higher-order functions)}.
-Имя функции может состоять из специальных символов, тогда она считается оператором и может применяться к своим операндам в инфиксном стиле:
+Functions can take other functions as arguments (such functions are called \vocab{higher-order functions}).
+A function name can consist of special symbols, in which case it is treated as an operator and can be used in infix form:
 \begin{minted}{haskell}
     ($) :: (a -> b) -> a -> b
     f $ x = f x
 \end{minted}
 
-Пример рекурсивной функции, использующей охранные выражения для отличения базового случая рекурсии:
+Example of a recursive function using guards to distinguish the base case:
 \begin{minted}{haskell}
     factorial :: Int -> Int
     factorial n
@@ -241,44 +241,44 @@
 \end{minted}
 
 \begin{task}
-    Что выведет запрос \mintinline{haskell}|ghci> :t uncurry (flip const)|?
+    What does the command \mintinline{haskell}|ghci> :t uncurry (flip const)| return?
 \end{task}
 
 \begin{task}
-    Что выведет запрос \mintinline{haskell}|ghci> :t first . first| при
+    What does \mintinline{haskell}|ghci> :t first . first| return given
     \begin{minted}{haskell}
         first :: (a -> a') -> (a, b) -> (a', b)
     \end{minted}
 \end{task}
 
 \begin{task}
-    Реализуйте факториал с помощью техники аккумулирующего параметра.
+    Implement factorial using the accumulator pattern.
 \end{task}
 
-\subsection{Данные в Haskell}
+\subsection{Data in Haskell}
 
-В Haskell есть встроенная возможность объявлять новые типы данных на основании других типов, а так же создавать их экземпляры.
+Haskell has built-in support for declaring new data types from other types and constructing values of those types.
 
-Зададим тип данных, описывающий животных:
+Define a data type describing animals:
 \begin{minted}{haskell}
     data Animal
       = Cat String Int
       | Dog String
 \end{minted}
 
-Мы задали тип данных \texttt{Animal} и два способа создать значения этого типа: для кошек и собак.
-\texttt{Cat} и \texttt{Dog}~--- это \vocab{конструкторы данных}.
-Они представляют собой функции, реализация которых находится на стороне языка.
-Они выделяют память под экземпляры данного типа и позиционно размещают компоненты.
-Кошек мы описываем именем и оставшимся количеством жизней, а собак~--- только именем.
+We defined the data type \texttt{Animal} and two ways to create values of this type: one for cats and one for dogs.
+\texttt{Cat} and \texttt{Dog} are \vocab{data constructors}.
+They are functions whose implementation is provided by the language.
+They allocate memory for instances of the type and place components positionally.
+Cats are described by a name and the remaining number of lives, while dogs are described only by a name.
 \begin{minted}{haskell}
     Cat :: String -> Int -> Animal
     Dog :: String -> Animal
 \end{minted}
 
-Чтобы воспользоваться информацией, сохранённой в структуре данных, требуется деконструировать её с помощью паттерн-матчинга.
-Мы сопоставляем значение типа с образцом.
-Если образец похож на то, как было сконструировано значение, то он выбирается среди других образцов и переменные, задекларированные в нём, начинают ссылаться на соответствующее позиционно содержимое структуры данных:
+To use the information stored in a data structure, it must be deconstructed using pattern matching.
+We match the value against a pattern.
+If the pattern resembles the way the value was constructed, it is selected among other alternatives and the variables declared in it bind to the corresponding positional contents of the data structure:
 \begin{minted}{haskell}
     show :: Animal -> String
     show animal = case animal of
@@ -286,46 +286,46 @@
       Dog name -> "This is dog " ++ name
 \end{minted}
 
-В Haskell есть специальный синтаксис для объявления полей с именованными метками.
+Haskell offers special syntax for declaring record fields with named labels.
 \begin{minted}{haskell}
     data Penguin = Penguin { getName :: String, getAge :: Int }
     penguin = Penguin { getName = "Andrey", getAge = 500 }
 \end{minted}
-Haskell генерирует функции-аксессоры для доступа к полям объекта:
+Haskell generates accessor functions for field access:
 \begin{minted}{haskell}
     ghci> :t getName :: Penguin -> String
 \end{minted}
 
-Часто функции в программировании частичные --- при некоторых значениях аргументов они могут вернуть результат, а при некоторых~--- нет.
-Давайте моделировать это с помощью специального типа данных.
-Если есть вещественный результат, будем возвращать его.
-Если нет, будем возвращать специально выделенное константное значение этого типа.
+Often functions in programming are partial — for some argument values they return a result, and for others they do not.
+Let us model this with a dedicated data type.
+If there is a real result, we return it.
+If there is none, we return a specially reserved constant value of that type.
 \begin{minted}{haskell}
     data MaybeD = NothingD | JustD Double
     sqrt :: Double -> MaybeD
     sqrt x = if x < 0 then NothingD else JustD (calcSqrt x)
 \end{minted}
 
-Можно заметить, что так нам придётся объявлять по типу \texttt{MaybeT} для каждого типа \texttt{T}.
-Поэтому Haskell позволяет абстрагироваться в типе, аналогично тому как можно абстрагироваться по значениям в терме.
+One can notice that this would require defining a separate type \texttt{MaybeT} for each type \texttt{T}.
+Therefore Haskell allows type-level abstraction, just as we can abstract over values in terms.
 \begin{minted}{haskell}
     data Maybe a = Nothing | Just a
     sqrt :: Double -> Maybe Double
     sqrt x = if x < 0 then Nothing else Just (calcSqrt x)
 \end{minted}
 
-Заметьте, что сейчас \texttt{Maybe} --- это не совсем тип, так как теперь нужно передать типовой параметр, чтобы получить конкретный тип.
-\texttt{Maybe} называют \vocab{типовым конструктором}.
+Note that \texttt{Maybe} is not a concrete type itself; it requires a type parameter to produce a concrete type.
+\texttt{Maybe} is called a \vocab{type constructor}.
 
-Вместе с абстракцией на уровне типов появилась и аппликация типа к типу.
-А что если дать меньше параметров типовому конструктору, чем ожидается?
-А что если больше?
-Контроль за корректностью типовых аппликаций обеспечивает \vocab{система кайндов}\footnote{Иногда в русскоязычной литературе кайнды называют родами типов, но мы не будем так говорить.}.
-Это простейшие ``типы для типов'', то есть синтаксические метки, контролирующие корректность записанных программистом типов.
-Так, обычные типы имеют метку (кайнд) \texttt{*}.
-Типовые конструкторы имеют стрелочные кайнды.
-Например, \texttt{Maybe :: * -> *}.
-Аппликация типового конструктора к типу подходящего кайнда убирает одну стрелку:
+With abstraction at the type level also comes application of types to types.
+What if a type constructor is given fewer parameters than expected?
+What if it is given more?
+Correctness of type applications is enforced by the \vocab{kind system}\footnote{In Russian literature, kinds are sometimes called “genera of types”, but we will not use that terminology.}.
+Kinds are the simplest “types for types”, syntactic labels that control whether the types written by the programmer are valid.
+Ordinary types have kind \texttt{*}.
+Type constructors have arrow kinds.
+For example, \texttt{Maybe :: * -> *}.
+Applying a type constructor to a type of the appropriate kind consumes one arrow:
 \begin{minted}{haskell}
     ghci> :k Int
     Int :: *
@@ -335,39 +335,39 @@ Haskell генерирует функции-аксессоры для досту
     Maybe Int :: *
 \end{minted}
 
-Кроме совершенно новых типов данных, в Haskell можно объявлять типовые синонимы.
-Это имена, которые можно использовать вместо других типов, если, например, запись оригинального типа слишком длинная для повсеместного написания:
+In addition to brand-new data types, Haskell allows type synonyms.
+These are names that can be used instead of other types when the original type expression is too long to write everywhere:
 \begin{minted}{haskell}
     type T a = VeryLongType Int (a -> AnotherLongType a)
 \end{minted}
 
-Если тип данных содержит только один конструктор и только одно поле, то отсутствует необходимость в аллокации новой памяти, содержащей тег конструктора и набор ссылок на поля.
-В таком случае, в качестве значения такого типа можно всегда просто использовать значение оборачиваемого типа, оставляя новый тип присутствовать исключительно во время компиляции, снижая нагрузку во время исполнения.
-Для объявления таких типов-обёрток нужно воспользоваться ключевым словом \texttt{newtype} вместо \texttt{data}:
+If a data type has only one constructor and only one field, there is no need to allocate runtime memory containing a constructor tag and field references.
+In that case, the value of the new type can be represented by the wrapped value itself, leaving the new type present only at compile time and reducing runtime overhead.
+To declare such wrapper types, use \texttt{newtype} instead of \texttt{data}:
 \begin{minted}{haskell}
     newtype CourseId = CourseId Int64
     newtype ModuleId = ModuleId Int64
 \end{minted}
 
 \begin{task}
-    Определите кайнд конструктора типа
+    Define the kind of the type constructor
     \begin{minted}{haskell}
         data Free f a = Pure a | Free (f (Free f a))
     \end{minted}
 \end{task}
 
-\subsection{Классы типов в Haskell}
+\subsection{Type Classes in Haskell}
 
-Параметрический полиморфизм позволяет использовать один и тот же код для различных типов входных данных.
-Классы типов же позволяют одному идентификатору ссылаться на разные реализации для разных типов данных (что аналогично механизму перегрузки (overloading) в других языках).
-Классы типов, как говорят, являются механизмом \vocab{специального (ad-hoc) полиморфизма}.
-Так, мы можем задекларировать символ \texttt{==}, выбор реализации которого зависит от выбора типа аргументов \texttt{a}:
+Parametric polymorphism allows the same code to work for different input types.
+Type classes allow one identifier to refer to different implementations for different data types (which is analogous to overloading in other languages).
+Type classes are, as they say, the mechanism of \vocab{ad-hoc polymorphism}.
+For example, we can declare the symbol \texttt{==}, whose implementation depends on the chosen type \texttt{a}:
 \begin{minted}{haskell}
     class Eq a where
       (==) :: a -> a -> Bool
 \end{minted}
 
-Для каждого типа можно объявить свою собственную реализацию \texttt{Eq}:
+For each type, one can declare its own implementation of \texttt{Eq}:
 \begin{minted}{haskell}
     instance Eq CourseId where
       CourseId x == CourseId y = x == y
@@ -377,7 +377,7 @@ Haskell генерирует функции-аксессоры для досту
       x:xs == y:ys = x == y && xs == ys
 \end{minted}
 
-Теперь в зависимости от конкретного типа \texttt{a} в месте вызова, будет выбрана подходящая реализация для этого типа:
+Now, depending on the concrete type \texttt{a} at the call site, the appropriate implementation for that type will be selected:
 \begin{minted}{haskell}
     ghci> CourseId 1 == CourseId 2
     False
@@ -385,33 +385,33 @@ Haskell генерирует функции-аксессоры для досту
     True
 \end{minted}
 
-Рассмотренные ранее параметрически-полиморфные функции ничего не могли делать со своими аргументами, кроме как возвращать их в качестве результата или передавать в другие полиморфные функции.
-Чтобы уметь делать что-то ещё, нужна какая-то дополнительная информация про тип, потому что иначе нет никакой гарантии, что над объектом данного типа можно делать все необходимые операции.
-Так, функция \texttt{suc n = n + 1} не будет работать для строчек, потому что для них, очевидно, не определена операция сложения.
-Поэтому некорректно будет приписать полиморфный тип \texttt{suc :: a -> a}.
+Earlier, parametrically polymorphic functions could only do one of two things with their arguments: return them or pass them to other polymorphic functions.
+To do anything else, additional information about the type is needed, because otherwise there is no guarantee that the required operations are defined for a value of that type.
+For example, the function \texttt{suc n = n + 1} will not work for strings, because addition is not defined for them.
+Therefore it would be incorrect to assign it the polymorphic type \texttt{suc :: a -> a}.
 
-Классы типов, в отличие от перегрузки, в том числе являются механизмом ограничения полиморфности функций.
-Мы можем явно задать, что функция требует не произвольный тип на вход, а произвольный тип, для которого определены обязательно нужные нам операции.
-Так, для типа \texttt{suc} достаточно ограничить тип условием наличия плюса для него (операция обозначаемая символом \texttt{+} объявлена в классе типов \mintinline{haskell}|Num|):
+Type classes, in addition to overloading, are also a mechanism for restricting polymorphism.
+We can explicitly specify that a function requires not any type as input, but any type for which the operations we need are defined.
+Thus, for the type of \texttt{suc} it is enough to constrain it with the presence of addition (the operation denoted by \texttt{+} is declared in the \mintinline{haskell}|Num| type class):
 \begin{minted}{haskell}
     suc :: Num a => a -> a
 \end{minted}
 
 \begin{task}
-    Реализуйте функцию, проверяющую равенство всех элементов данного списка.
+    Implement a function that checks whether all elements of a list are equal.
 \end{task}
 
 \begin{task}
-    Реализуйте инстанс полугруппы для функций.
+    Implement the semigroup instance for functions.
 \end{task}
 
 \begin{task}
-    Реализуйте проверку равенства функций.
+    Implement equality checking for functions.
 \end{task}
 
-\subsection{Монады в Haskell}
+\subsection{Monads in Haskell}
 
-Класс типов \texttt{Functor} объявляется для конструкторов типов и позволяет заменить в некотором контейнере все элементы одного типа на все элементы другого, оставляя структуру контейнера неизменной.
+The type class \texttt{Functor} is declared for type constructors and allows replacing every element of one type in a container with elements of another type while preserving the container structure.
 
 \begin{minted}{haskell}
     class Functor (f :: * -> *) where
@@ -423,23 +423,23 @@ Haskell генерирует функции-аксессоры для досту
       fmap f (x:xs) = f x : fmap f xs
 \end{minted}
 
-В Haskell любая функция просто вычисляет результат некоторого типа.
-Однако в программирования часто требуются функции, которые не только вычисляют результат, но и делают что-то ещё.
-Например, изменяют какое-то состояние или пишут в консоль.
-Иными словами, производят побочные эффекты.
-В любом случае в Haskell мы можем только вернуть из функции только результат, поэтому такие побочные эффекты мы кодируем в качестве дополнительной структуры, оборачивающей чистый результат.
-Т.е. если функция без побочных эффектов возвращала какой-то тип \texttt{a}, то после добавления побочных эффектов в её реализацию, она будет возвращать некоторый тип \point{вычислений} \texttt{f a}.
+In Haskell, every function simply produces a result of some type.
+However, in programming we often need functions that not only produce a result but also do something else.
+For example, modify some state or write to the console.
+In other words, they perform side effects.
+In any case, in Haskell we can only return a result from a function, so such side effects are encoded as additional structure wrapping the pure result.
+Thus, where a pure function would return a value of type \texttt{a}, after introducing effects it instead returns a \point{computation} of type \texttt{f a}.
 
 \begin{itemize}
-    \item Если функция кидает ошибку, то \texttt{f = Maybe}.
-    \item Если функция читает глобальное состояние типа \texttt{e}, то \texttt{f = e -> \_}.
-    \item Если функция читает глобальное состояние \texttt{s} и обновляет его, то \texttt{f = s -> (s, \_)}.
+    \item If a function can fail, then \texttt{f = Maybe}.
+    \item If a function reads global environment of type \texttt{e}, then \texttt{f = e -> \_}.
+    \item If a function reads and updates state \texttt{s}, then \texttt{f = s -> (s, \_)}.
 \end{itemize}
 
-Стандартная библиотека Haskell предоставляет несколько классов типов для работы со значениями вида \texttt{f a}.
-Они позволяют абстрагироваться от структуры \texttt{f} и работать со значениями \texttt{a} внутри, как будто нет никакой дополнительной структуры.
+The Haskell standard library provides several type classes for working with values of the form \texttt{f a}.
+They allow you to abstract away from the structure \texttt{f} and work with values of type \texttt{a} inside as if there were no additional structure.
 
-Первый такой класс типов позволяет писать выражения над вычислениями \texttt{f a}.
+The first such type class allows writing expressions over computations \texttt{f a}.
 \begin{minted}{haskell}
     class Functor f => Applicative (f :: * -> *) where
       pure :: a -> f a
@@ -455,7 +455,7 @@ Haskell генерирует функции-аксессоры для досту
       liftA2 f (Just x) (Just y) = Just (f x y)
 \end{minted}
 
-Второй класс типов позволяет делать последовательную композицию вычислений в императивном стиле:
+The second type class allows sequential composition of computations in an imperative style:
 \begin{minted}{haskell}
     class Applicative m => Monad (m :: * -> *) where
       (>>=) :: m a -> (a -> m b) -> m b
@@ -469,7 +469,7 @@ Haskell генерирует функции-аксессоры для досту
         runState (k x) s'
 \end{minted}
 
-Теперь если мы определим базовые операции работы с состоянием, мы сможем писать код в императивном стиле с побочными эффектами.
+Now, if we define the basic state operations, we can write code in an imperative style with effects.
 \begin{minted}{haskell}
     get :: State s s
     get = State \s -> (s, s)
@@ -488,7 +488,7 @@ Haskell генерирует функции-аксессоры для досту
     43
 \end{minted}
 
-Для таких монадических цепочек существует специальный синтаксический сахар:
+For such monadic chains there is special syntactic sugar:
 \begin{minted}{haskell}
     example :: State Int Int
     example = do
@@ -499,13 +499,13 @@ Haskell генерирует функции-аксессоры для досту
 \end{minted}
 
 \begin{task}
-    Реализуйте \mintinline{haskell}|liftA3| через \mintinline{haskell}|liftA2|.
+    Implement \mintinline{haskell}|liftA3| using \mintinline{haskell}|liftA2|.
 \end{task}
 
 \begin{task}
-    Реализуйте \mintinline{haskell}|>>=| через \mintinline{haskell}|join| и наоборот.
+    Implement \mintinline{haskell}|>>=| using \mintinline{haskell}|join| and vice versa.
 \end{task}
 
 \begin{task}
-    Два числа с консоли, поделите одно на другое нацело и распечатайте результат, если остаток не нулевой, распечатайте его тоже.
+    Read two numbers from the console, divide one by the other with integer division, and print the result; if the remainder is non-zero, print it too.
 \end{task}

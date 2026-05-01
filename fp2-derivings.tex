@@ -1,21 +1,21 @@
 %! suppress = MissingLabel
 
-Ранее мы говорили о том, что всё, что пишут программисты, --- интерпретаторы.
-Оказывается, многие из них можно получать автоматически, выйдя на новый уровень обобщения.
-А код, который может не быть написан, --- не должен быть написан.
+Earlier we said that everything programmers write is interpreters.
+It turns out that many of them can be obtained automatically by reaching a new level of generality.
+And code that does not have to be written --- should not be written.
 
-Как правило, такая ситуация возникает, когда интерпретация полностью определяется описанием (формой) типа.
-То есть тем, какие конструкторы данных для него определены, с какими полями, как они называются\ldots
-Такими интерпретациями являются, например, сериализация в конкретный формат (e.g. json), структурное равенство и т.д.
+As a rule, such a situation arises when the interpretation is fully determined by the description (the shape) of the type.
+That is, by which data constructors are defined for it, with which fields, how those fields are named\ldots
+Examples of such interpretations include serialisation into a particular format (e.g.\ json), structural equality, and so on.
 
-Решением является поддержка в языке \vocab{структурного полиморфизма} \vocab{(structural polymorphism)}~\cite[глава 13]{maguire-types} или \vocab{datatype-generic программирование}, как это иногда называют.
+The solution is for the language to support \vocab{structural polymorphism}~\cite[chapter 13]{maguire-types}, or \vocab{datatype-generic programming}, as it is sometimes called.
 
-% todo не хотим писать код, который можно не писать
+% todo we don't want to write code that doesn't need to be written
 
-Можно вообразить язык, в котором data-generic программирование является обычным программированием~\cite{chapman2010gentle}.
-Для этого берётся язык с зависимыми типами, с выделенной вселенной описаний \mintinline{haskell}|Desc|.
-Конкретные типы же получаются применением функции интерпретации \mintinline{haskell}|Desc -> Type|.
-Таким образом, параметрический полиморфизм воплощается обобщением по типу, а структурный полиморфизм --- обобщением по его описанию.
+One can imagine a language in which datatype-generic programming is just ordinary programming~\cite{chapman2010gentle}.
+To achieve this, one takes a language with dependent types together with a distinguished universe of descriptions \mintinline{haskell}|Desc|.
+Concrete types are then obtained by applying an interpretation function \mintinline{haskell}|Desc -> Type|.
+Thus, parametric polymorphism is embodied as generalisation over a type, while structural polymorphism is generalisation over its description.
 
 % todo generics and Gibbons paper about abstractions
 
@@ -23,13 +23,13 @@
 
 TODO % todo
 
-\subsection{Специализация}
+\subsection{Specialisation}
 
 \[
     \sembr{\sembr{spec}(p, x)}(y) \equiv \sembr{p}(x, y)
 \]
 
-% todo специализация в Haskell
+% todo specialisation in Haskell
 
 % todo staged programming
 
@@ -45,21 +45,21 @@ TODO % todo
 
 TODO\cite{liu2023incremental} % todo
 
-\subsection{Ad-hoc решения}
+\subsection{Ad-hoc solutions}
 
 % todo Kotlinx serialization
 
 TODO % todo
 
-\subsection{Подходы к datatype-generic в Haskell}
+\subsection{Approaches to datatype-generic programming in Haskell}
 
 TODO % todo https://ora.ox.ac.uk/objects/uuid:cd041aa0-8d69-4f18-bce2-6d75244b69b9/files/m7fd9779b27fcb70ae734e66bcd3ee79f
 
-\subsubsection{Template Haskel}
+\subsubsection{Template Haskell}
 
-% todo Рефлексия и реификация
+% todo reflection and reification
 
-% todo порядок на коде для поддержания реификации
+% todo ordering on code to support reification
 
 % todo hygene macro & dynamic scoping
 
@@ -92,6 +92,6 @@ TODO % todo SOP & variadics
 
 TODO % todo
 
-% todo datatype-generic для интерпретаторов зазеркалья
+% todo datatype-generic for the looking-glass interpreters
 
-% todo специализация и tagless final
+% todo specialisation and tagless final
