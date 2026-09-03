@@ -1,2 +1,6 @@
 {
+    "chat.tools.terminal.autoApprove": {
+        "printf": true,
+        "command": true
+    }
 }

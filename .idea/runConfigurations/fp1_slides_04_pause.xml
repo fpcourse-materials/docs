@@ -3,15 +3,17 @@
     <texify>
       <compiler>PDFLATEX</compiler>
       <compiler-path />
-      <sumatra-path />
       <pdf-viewer>BUILT-IN-PDF-VIEWER</pdf-viewer>
+      <require-focus>true</require-focus>
       <viewer-command />
       <compiler-arguments>-shell-escape</compiler-arguments>
       <envs />
+      <expand-macros-in-environment-variables>false</expand-macros-in-environment-variables>
       <before-run-command />
       <main-file>$PROJECT_DIR$/fp1-slides-04.tex</main-file>
       <output-path>$PROJECT_DIR$</output-path>
       <auxil-path>{projectDir}/auxil</auxil-path>
+      <working-directory>{mainFileParent}</working-directory>
       <compile-twice>false</compile-twice>
       <output-format>PDF</output-format>
       <latex-distribution>TEXLIVE</latex-distribution>
