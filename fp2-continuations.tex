@@ -701,11 +701,11 @@
     put :: s -> Cont (s -> r) ()
     put s' = Cont \k _s -> k () s'
 
-    runStateС :: (forall r . Cont (s -> r) a) -> s -> (a, s)
-    runStateС comp = runCont comp (,)
+    runStateC :: (forall r . Cont (s -> r) a) -> s -> (s, a)
+    runStateC comp = runCont comp \a s -> (s, a)
 
-    exampleState :: Int -> ((), Int)
-    exampleState = runStateС do
+    exampleState :: Int -> (Int, ())
+    exampleState = runStateC do
       s <- get
       put (s + 1)
 \end{minted}
@@ -741,16 +741,16 @@
 
 Например, для домена \mintinline{haskell}{State} реализация будет выглядеть следующим образом:
 \begin{minted}{haskell}
-    newtype State s a = State { runState :: s -> (a, s) }
+    newtype State s a = State { runState :: s -> (s, a) }
 
     instance MonadicReflection (State s) where
       reflect :: State s a -> (forall r . Cont (State s r) a)
       reflect comp = Cont \k -> State \s ->
-        let (a, s') = runState comp s in
+        let (s', a) = runState comp s in
         runState (k a) s'
 
       reify :: (forall r . Cont (State s r) a) -> State s a
-      reify comp = State $ runState (runCont comp (\x -> State (x,)))
+      reify comp = State $ runState (runCont comp (\x -> State (,x)))
 
     exampleStateReflection :: Int -> (Int, Int)
     exampleStateReflection = runState $ reify do
