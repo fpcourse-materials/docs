@@ -5,7 +5,7 @@
 
 % todo параметрический полиморфизм в домашку
 
-Никакое нетривиальное свойство программ не может быть алгоритмически проверено\footnote{\url{https://en.wikipedia.org/wiki/Rice\%27s_theorem}}.
+Никакое нетривиальное семантическое свойство программ не может быть алгоритмически проверено\footnote{\url{https://en.wikipedia.org/wiki/Rice\%27s_theorem}}.
 Чтобы оставаться разрешимыми (в смысле проверки типов и/или вывода), многие системы типов жертвуют полнотой и, помимо некорректных программ, отвергают много корректных.
 В то же время системы типов также стараются предоставлять различные возможности, позволяющие протипизировать как можно больше корректных программ.
 Одна из них --- параметрический полиморфизм.
@@ -19,6 +19,29 @@
 
 \subsection{Параметрический полиморфизм в языке} \label{subsec:lang-parametric-polumorphism}
 
+Начнём со знакомого примера из предыдущей главы:
+\begin{minted}{haskell}
+    id :: a -> a
+    id x = x
+\end{minted}
+Без полиморфизма нам пришлось бы написать отдельные \texttt{idInt}, \texttt{idChar} и так далее: корректные, но совершенно одинаковые программы.
+Типовая переменная \texttt{a} избавляет от дублирования, но оставляет вопрос: \point{кто и когда выбирает конкретный тип вместо \texttt{a}?}
+
+Тип выбирает вызывающий код, причём отдельно в каждом месте вызова.
+Иначе говоря, у \texttt{id} есть ещё один, скрытый аргумент --- сам тип.
+В Haskell этот аргумент можно сделать явным с обеих сторон: и принять его в определении функции, и передать в месте вызова\footnote{Расширения \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_abstractions.html}{TypeAbstractions} и \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_applications.html}{TypeApplications}; явный квантор в сигнатуре --- \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/explicit_forall.html\#extension-ExplicitForAll}{ExplicitForAll}.}:
+\begin{minted}{haskell}
+    id :: forall a . a -> a
+    id @a (x :: a) = x
+
+    ghci> :t id @Int
+    id @Int :: Int -> Int
+    ghci> id @Char 'x'
+    'x'
+\end{minted}
+
+Чтобы понять, откуда берётся скрытый аргумент, посмотрим, как полиморфизм описывают в самом простом виде --- в типизированном $\lambda$-исчислении.
+Вспомним правила просто типизированного $\lambda$-исчисления из предыдущей главы.
 $\lambda$-абстракция позволяет обобщать выражения по значениям, каждая абстракция добавляет стрелку в тип выражения, аппликация же снимает стрелку:
 \[
     \begin{array}{cc}
@@ -27,12 +50,15 @@ $\lambda$-абстракция позволяет обобщать выраже�
         \infer[App]{\Gamma\vdash M\ap N : \sigma}{\Gamma\vdash M : \tau\to\sigma & \Gamma\vdash N : \tau}
     \end{array}
 \]
-В то же время $\Lambda$-абстракция позволяет обобщать выражения по типам, добавляя квантор в тип ($\Pi$-абстракцию), а применение терма к типу (\vocab{универсальная аппликация (universal application)}) позволяет выбрать, с каким конкретным типом этот терм планируется использовать~\cite[глава 23]{pierce2002types}:
+Полиморфное $\lambda$-исчисление ($System~F$) добавляет точно такую же пару конструкций, только для типов~\cite[глава 23]{pierce2002types}.
+$\Lambda$-абстракция $\Lambda\alpha\ldotp M$ обобщает выражение по типу: это функция, аргументом которой является тип.
+Она добавляет в тип выражения квантор $\forall$ подобно тому, как $\lambda$ добавляет стрелку\footnote{В теории зависимых типов и стрелка, и квантор $\forall$ являются частными случаями одной конструкции --- $\Pi$-типа.}.
+Применение терма к типу $M\ap\sigma$ (\vocab{универсальная аппликация (universal application)}) снимает квантор: вызывающий код выбирает, с каким конкретным типом $\sigma$ он будет использовать терм, и $\sigma$ подставляется в тип вместо $\alpha$:
 \[
     \begin{array}{cc}
-        \infer[TLam]{\Gamma\vdash\Lambda\alpha\ldotp M : \forall\alpha\ldotp\tau}{\Gamma\vdash M : \tau}
+        \infer[TLam]{\Gamma\vdash\Lambda\alpha\ldotp M : \forall\alpha\ldotp\tau}{\alpha, \Gamma\vdash M : \tau}
         &
-        \infer[TApp]{\Gamma\vdash M\ap\sigma : [\alpha\to\sigma]\ap\tau}{\Gamma\vdash M : \forall\alpha\ldotp\tau}
+        \infer[TApp]{\Gamma\vdash M\ap\sigma : \subst{\tau}{\alpha}{\sigma}}{\Gamma\vdash M : \forall\alpha\ldotp\tau}
     \end{array}
 \]
 
@@ -46,25 +72,108 @@ $\lambda$-абстракция позволяет обобщать выраже�
     \end{array}
 \]
 
-В Haskell типовые абстракции и аппликации приписываются неявно механизмом вывода типов.
-Однако, есть расширения языка, которые позволяют их написать явно: \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_abstractions.html}{TypeAbstractions}, \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_applications.html}{TypeApplications}.
-Это может помочь, например, когда информации из терма не достаточно, чтобы вывести тип.
-Так, можно явно специализировать \texttt{id} на нужный тип:
+Сравните с записью на Haskell выше: определение \mintinline{haskell}|id @a (x :: a) = x| --- это в точности $\Lambda\alpha\ldotp\lambda x : \alpha\ldotp x$, а вызов \mintinline{haskell}|id @Int| --- это $id\ap nat$.
+
+В обычном коде на Haskell типовые абстракции и аппликации, как и кванторы в начале типа, расставляются неявно механизмом вывода типов.
+Достаточно конвенции именования: конкретные типы начинаются с большой буквы, а типовые переменные --- с маленькой.
+Писать их вручную приходится, когда информации из терма недостаточно, чтобы вывести тип, когда нужно задать порядок типовых параметров, или чтобы сослаться на абстрагированный тип в теле функции\footnote{Ссылаться из тела функции на типовые переменные из её сигнатуры позволяет расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/scoped_type_variables.html\#extension-ScopedTypeVariables}{ScopedTypeVariables}.}.
+
+\begin{task}
+    Какой тип у выражения \mintinline{haskell}|const @Int|?
+    А у \mintinline{haskell}|const @Int @Char|?
+    От чего зависит порядок, в котором передаются типы?
+\end{task}
+
+Цена такого полиморфизма на уровне типов невелика: пока кванторы стоят только снаружи типа, алгоритм Хиндли--Милнера выводит все типовые абстракции и аппликации сам.
+Платить приходится, когда кванторы появляются в других местах (\ref{subsubsec:first-class-polymorphism}), а также во время исполнения (\ref{subsec:parametric-implementation}).
+
+Полиморфными бывают не только функции, но и типы данных.
+В предыдущей главе мы видели, что \texttt{Maybe}~--- это не тип, а типовой конструктор: чтобы получить тип, ему нужно передать аргумент, например, \mintinline{haskell}|Maybe Int|.
+Если ранее мы управляли типом с уровня термов универсальной аппликацией, то теперь мы управляем типом на уровне типов.
+Иначе говоря, на уровне типов появляется своё маленькое $\lambda$-исчисление: $\lambda$-абстракция в типах, аппликация в типах и, соответственно, $\beta$-редукция.
+
+Для примера определим тип пары по Чёрчу, абстрагированный от конкретных типов компонент, чтобы пользователь мог выбрать нужные ему.
+Сначала на Haskell, где вычислительную семантику типов можно проследить в синонимах типов:
 \begin{minted}{haskell}
-    id :: forall a . a -> a
-    ghci> :t id @Int
-    id @Int :: Int -> Int
+    type Pair a b = forall c . (a -> b -> c) -> c
+
+    pair :: a -> b -> Pair a b
+    pair x y = \f -> f x y
+
+    fst :: Pair a b -> a
+    fst p = p (\x _ -> x)
 \end{minted}
+Пара здесь закодирована по Чёрчу: это функция, которая отдаёт обе компоненты любому, кто скажет, что с ними делать.
+Синоним \texttt{Pair}~--- функция на типах: \mintinline{haskell}|Pair Int Int| вычисляется в \mintinline{haskell}|forall c . (Int -> Int -> c) -> c|.
+Обычные конструкторы типов, напротив, номинативны: \mintinline{haskell}{(Int, Int)} или \mintinline{haskell}{Maybe Int} никуда далее не вычисляются.
 
-Кванторы также приписываются неявно в начале типа, следуя конвенции именования: конкретные типы начинаются с большой буквы, а полиморфные --- с маленькой.
-Аналогично, у пользователя есть возможность явно приписывать \mintinline{haskell}|forall|'ы с помощью расширения \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/explicit_forall.html\#extension-ExplicitForAll}{ExplicitForAll}.
-Это может понадобиться либо за тем, чтобы задать вручную порядок типовых абстракций, либо, чтобы иметь возможность сослаться на абстрагированный тип в теле функции (расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/scoped_type_variables.html#extension-ScopedTypeVariables}{ScopedTypeVariables}).
+А раз на уровне типов есть функции и аппликации, то и типы можно составить неправильно: \mintinline{haskell}|Maybe Maybe| или \mintinline{haskell}|Int Bool|.
+Значит, типам нужна своя система типов.
+Это уже знакомая нам система кайндов: она (пока) представляет собой простейшую ``систему типов для типов'' и обеспечивает well-formedness типов и строгую нормализуемость\footnote{\vocab{Строгая нормализуемость} --- любой порядок редукций приводит к нормальной форме.}.
+Получается двухэтажная конструкция (рис.~\ref{fig:terms-types-kinds}): вершинам дерева терма приписаны типы, но типы~--- тоже деревья, и уже их вершинам приписаны кайнды.
+Кайнды, в свою очередь, тоже деревья (например, \mintinline{haskell}|Type -> Type|); что приписывается их вершинам, мы увидим в конце этого раздела (рис.~\ref{fig:types-eq-kinds}).
 
-Полиморфные типы данных задаются с помощью другой конструкции.
-Если ранее мы управляли типом с уровня термов универсальной аппликацией, то теперь мы хотим управлять типом на уровне типов.
-Для этого мы вводим $\lambda$ абстракцию в типах, аппликацию в типах и, соответственно, $\beta$-редукцию.
-Система кайндов (пока) представляет собой простейшую ``систему типов для типов'' и обеспечивает well-formedness типов и строгую нормализуемость\footnote{\vocab{Строгая нормализуемость} --- любой порядок редукций приводит к нормальной форме.}.
-Например, мы можем написать тип пары, абстрагированный от конкретных типов компонент, чтобы пользователь мог выбрать нужные ему:
+\begin{figure}[ht]
+    \centering
+    \begin{tikzpicture}[
+        tm/.style={ellipse, draw=gray!60, fill=gray!5, very thick, minimum size=7mm},
+        ty/.style={rectangle, rounded corners=4pt, draw=blue!50, fill=blue!6, very thick, minimum size=7mm},
+        zoom/.style={->, dashed, thick, blue!50},
+    ]
+        % этаж термов: вершинам приписаны типы
+        \node [tm] (app) at (0, 0) {$@ {\color{blue!70!black}~: \mathit{Maybe}\ap\mathit{Bool}}$};
+        \node [tm] (just) at (-3.2, -1.6) {$\mathit{Just} {\color{blue!70!black}~: \mathit{Bool} \to \mathit{Maybe}\ap\mathit{Bool}}$};
+        \node [tm] (true) at (3.2, -1.6) {$\mathit{True} {\color{blue!70!black}~: \mathit{Bool}}$};
+        \draw[->] (just) -- (app);
+        \draw[->] (true) -- (app);
+
+        % этаж типов: вершинам приписаны кайнды
+        \node [ty] (arr) at (-3.2, -3.8) {$\to {\color{red!70!black}~: \mathit{Type}}$};
+        \node [ty] (bool1) at (-5.4, -5.3) {$\mathit{Bool} {\color{red!70!black}~: \mathit{Type}}$};
+        \node [ty] (tapp) at (-1.0, -5.3) {$@ {\color{red!70!black}~: \mathit{Type}}$};
+        \node [ty] (maybe) at (-3.0, -6.8) {$\mathit{Maybe} {\color{red!70!black}~: \mathit{Type} \to \mathit{Type}}$};
+        \node [ty] (bool2) at (1.0, -6.8) {$\mathit{Bool} {\color{red!70!black}~: \mathit{Type}}$};
+        \draw[->] (bool1) -- (arr);
+        \draw[->] (tapp) -- (arr);
+        \draw[->] (maybe) -- (tapp);
+        \draw[->] (bool2) -- (tapp);
+
+        \node [ty] (bool3) at (3.2, -3.8) {$\mathit{Bool} {\color{red!70!black}~: \mathit{Type}}$};
+
+        \draw[zoom] (just) -- (arr);
+        \draw[zoom] (true) -- (bool3);
+
+        \node [anchor=west, text=gray] at (5.6, -0.8) {\small термы};
+        \node [anchor=west, text=gray] at (5.6, -5.3) {\small типы};
+    \end{tikzpicture}
+    \caption{Два этажа типизации выражения \texttt{Just True}. Вершинам дерева терма приписаны типы (синим). Каждый тип сам является деревом (пунктирные стрелки), и его вершинам приписаны кайнды (красным).}
+    \label{fig:terms-types-kinds}
+\end{figure}
+
+Правила приписывания кайндов устроены в точности как правила $Lam$ и $App$ для термов, только этажом выше: абстракция по типовой переменной добавляет стрелку в кайнд, аппликация типа к типу её снимает~\cite[глава 29]{pierce2002types}\footnote{В формулах кайнд \texttt{Type} обозначаем традиционной звёздочкой, как это принято в литературе~\cite{pierce2002types}.}:
+\[
+    \begin{array}{cc}
+        \infer[KLam]{\Gamma\vdash \lambda\alpha : \kappa_1\ldotp \tau : \kappa_1\to\kappa_2}{\alpha : \kappa_1, \Gamma\vdash \tau : \kappa_2}
+        &
+        \infer[KApp]{\Gamma\vdash \tau\ap\sigma : \kappa_2}{\Gamma\vdash \tau : \kappa_1\to\kappa_2 & \Gamma\vdash \sigma : \kappa_1}
+    \end{array}
+\]
+Аппликация абстракции к аргументу редуцируется подстановкой, как и на уровне термов:
+\[
+    (\lambda\alpha : \kappa\ldotp \tau)\ap\sigma \step \subst{\tau}{\alpha}{\sigma}
+\]
+Кроме того, нужны правила для конструкций, которые строят обычные типы: стрелка и квантор из типов кайнда $*$ делают тип кайнда $*$.
+Квантор при этом связывает типовую переменную любого кайнда:
+\[
+    \begin{array}{cc}
+        \infer[KArrow]{\Gamma\vdash \tau\to\sigma : *}{\Gamma\vdash \tau : * & \Gamma\vdash \sigma : *}
+        &
+        \infer[KAll]{\Gamma\vdash \forall\alpha : \kappa\ldotp\tau : *}{\alpha : \kappa, \Gamma\vdash \tau : *}
+    \end{array}
+\]
+В Haskell кайнды, как и типы, выводятся автоматически, а посмотреть их можно командой \texttt{:k}, как мы делали в предыдущей главе.
+
+В исчислении то же самое записывается с явными абстракциями и аппликациями на обоих уровнях (кайнды связанных типовых переменных указаны верхним индексом):
 \begin{align*}
     &Pair : * \rightarrow * \rightarrow * \\
     &Pair = \lambda \tau^*~\sigma^*\ldotp\forall \gamma\ldotp(\tau\rightarrow\sigma\rightarrow\gamma)\to\gamma \\
@@ -74,52 +183,35 @@ $\lambda$-абстракция позволяет обобщать выраже�
     &fst = \Lambda \alpha^*~\beta^*\ldotp\lambda p^{Pair~\alpha~\beta}\ldotp p~\alpha~(\mathbf{K}\ap\alpha\ap\beta)
 \end{align*}
 
-В Haskell вычислительную семантику полиморфных типов можно проследить в синонимах типов:
-\begin{minted}{haskell}
-    type Pair a b = forall c . (a -> b -> c) -> c
-    intPair :: Pair Int Int -- forall c . (Int -> Int -> c) -> c
-\end{minted}
-Обычные конструкторы типов номинативны.
-Например, \mintinline{haskell}{(Int, Int)} или \mintinline{haskell}{Maybe Int} никуда далее не вычисляются.
+Прочитаем определение $fst$.
+Принимаем два типа и пару $p$.
+Пара~--- полиморфная функция, поэтому сначала выбираем для неё тип результата $\alpha$, а затем передаём ей функцию $\mathbf{K}$, возвращающую первый из двух аргументов.
+
+\begin{task}
+    Постройте по правилам кайндизации дерево вывода $Pair : * \to * \to *$.
+    Какие правила и в каком порядке в нём применяются?
+    Поредуцируйте тип $Pair\ap nat\ap bool$ до нормальной формы.
+\end{task}
+
+\begin{task}
+    Реализуйте на Haskell функции \texttt{snd} и \mintinline{haskell}|swap :: Pair a b -> Pair b a|.
+    Запишите \texttt{snd} в исчислении с явными типовыми абстракциями и аппликациями.
+\end{task}
 
 Haskell не позволяет создавать функции на типах по месту с помощью явной типовой лямбды\footnote{\url{https://stackoverflow.com/questions/4069840/lambda-for-type-expressions-in-haskell}} ввиду проблематичности этой конструкции для вывода типов.
 Однако именованные функции на типах есть, и мы рассмотрим их далее~\ref{subsec:families}.
 В Scala существует нетривиальный трюк\footnote{\href{https://stackoverflow.com/questions/8736164/what-are-type-lambdas-in-scala-and-what-are-their-benefits}{(stackoverflow) Scala type lambdas.}}\footnote{\url{https://stackoverflow.com/questions/9443004/what-does-the-operator-mean-in-scala}}, который позволяет этого добиться.
 Scala3, однако, включила эту возможность непосредственно в язык\footnote{\url{https://docs.scala-lang.org/scala3/reference/new-types/type-lambdas.html}}.
 
-\subsubsection{Эмуляция типовых абстракций и аппликаций (\mintinline{haskell}{Proxy})} \label{subsubsec:proxy}
-
-В Haskell расширения, позволяющие вручную задавать типовые аппликации и абстракции появились сравнительно недавно\footnote{\href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_applications.html\#extension-TypeApplications}{TypeApplications}, \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_abstractions.html\#extension-TypeAbstractions}{TypeAbstractions}.}.
-До этого пользовались следующей техникой.
-
-В стандартной библиотеке определён тип \mintinline{haskell}|Proxy| с одним параметром.
-Это \vocab{фантомный типовой параметр}~--- значения соответствующего типа не хранятся в структуре данных, он только позволяет размещать дополнительную информацию на уровне типов\footnote{\url{https://wiki.haskell.org/Phantom_type}}.
-Соответственно, неинформативную константу \mintinline{haskell}|Proxy| можно проаннотировать нужным типом и передать в функцию, чтобы специализировать типовой параметр на нужный тип.
-Или можно принять \mintinline{haskell}|Proxy| и воспользоваться \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/scoped_type_variables.html\#pattern-type-signatures}{ScopedTypeVariables} для типовых сигнатур в паттернах\footnote{Типовый параметр на самом деле имеет полиморфные кайнд \mintinline{haskell}{data Proxy (a :: k) = Proxy}, чтобы эта техника работала с типами произвольных кайндов (см. далее\ \ref{subsubsec:promotion}).}.
-\begin{minted}{haskell}
-    data Proxy a = Proxy
-
-    id :: Proxy a -> a -> a
-    ghci> :t id (Proxy :: Proxy Int)
-    id (Proxy :: Proxy Int) :: Int -> Int
-
-    id (Proxy :: Proxy ?\framebox{a}?) x = (x :: ?\framebox{a}?)
-\end{minted}
-
-Иногда прокси-тип оставляют полиморфным, чтобы не зависеть от \mintinline{haskell}{Data.Proxy}.
-Вместо конкретного значения иногда передают специализированное значение $\bot$, а получатель, не зная тип, не сможет его форсировать (однако, любые вхождения $\bot$ в терм слишком настораживают, поэтому это скорее не очень хорошая практика).
-\begin{minted}{haskell}
-    id :: proxy a -> a -> a
-    id (_ :: proxy a) x = (x :: a)
-
-    ghci> :t id (undefined :: Proxy Int)
-    id (undefined :: Proxy Int) :: Int -> Int
-\end{minted}
-
 \subsubsection{First-class polymorphism} \label{subsubsec:first-class-polymorphism}
 
-Существует возможность писать функции, которые принимают другие полиморфные функции в качестве аргументов.
-Типы таких функций называются \vocab{типами высшего ранга (higher-rank types)}, их можно использовать с расширением \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/rank_polymorphism.html}{RankNTypes}.
+Рассмотрим функцию \mintinline{haskell}|f g = (g 42, g 'a')|.
+Программа корректна, если передать в неё, например, \texttt{id}.
+Однако алгоритм Хиндли--Милнера её отвергает: аргумент функции он считает мономорфным, а \texttt{g} применяется и к числу, и к символу.
+Чтобы протипизировать такую программу, нужно разрешить квантору стоять не только снаружи типа, но и слева от стрелки.
+
+Иначе говоря, нужна возможность писать функции, которые принимают другие полиморфные функции в качестве аргументов.
+Типы таких функций называются \vocab{типами высшего ранга (higher-rank types)}\footnote{В Haskell их включает расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/rank_polymorphism.html}{RankNTypes}.}.
 Так, типовой параметр функции \texttt{g} определяет функция \texttt{f}, а не вызывающий функцию \texttt{f}:
 \begin{minted}{haskell}
     f :: (forall a . a -> a) -> (Int, Char)
@@ -127,13 +219,18 @@ Scala3, однако, включила эту возможность непос�
     ghci> f (\x -> x)
 \end{minted}
 
-Проблема типов высшего ранга в том, что их вывод неразрешим, то есть глобальный вывод типов Haskell в этом случае перестаёт работать.
+Цена типов высшего ранга в том, то есть глобальный вывод типов Haskell в этом случае перестаёт работать.
 Но если типы высшего ранга приписать вручную, остальной вывод будет работать как раньше.
-Например, числа Чёрча имеют высший ранг\footnote{\url{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}}\footnote{Любому интересующемуся языками программирования предлагается провести на сайте Олега Киселёва не один месяц жизни: \url{https://okmij.org/ftp/README.html}.}:
+Например, тип числа Чёрча полиморфен, поэтому функции над числами Чёрча имеют высший ранг\footnote{\url{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}}\footnote{Любому интересующемуся языками программирования предлагается провести на сайте Олега Киселёва не один месяц жизни: \url{https://okmij.org/ftp/README.html}.}:
 \begin{minted}{haskell}
-    suc :: (forall a . (a -> a) -> a -> a) -> (a -> a) -> a -> a
+    suc :: (forall a . (a -> a) -> a -> a) -> (b -> b) -> b -> b
     suc n s z = s (n s z)
 \end{minted}
+
+\begin{task}
+    Какую ошибку выдаст GHC, если убрать у функции \texttt{f} сигнатуру и типовые аппликации?
+    Какой тип для \texttt{g} он пытался вывести?
+\end{task}
 
 %! suppress = LineBreak
 \begin{task}
@@ -147,7 +244,7 @@ Scala3, однако, включила эту возможность непос�
     newtype Church = Church (forall a . (a -> a) -> a -> a)
     (+) :: Church -> Church -> Church -- rank 1
 \end{minted}
-Аналогичный код можно написать и в Java (Kotlin):
+Аналогичный код можно написать и на Java или Kotlin:
 \begin{minted}{kotlin}
     interface Church { fun <a> fold(s: (a) -> a, z: a): a }
     fun plus(n: Church, m: Church): Church = object : Church {
@@ -156,17 +253,19 @@ Scala3, однако, включила эту возможность непос�
 \end{minted}
 
 По умолчанию типовые параметры можно специализировать только на конкретные типы.
-Расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/impredicative_types.html}{ImpredicativeTypes} позволяет специализировать типовые параметры на полиморфные типы (включающие \mintinline{haskell}|forall|'ы внутри себя) --- \vocab{импредикативное применение}.
+Специализацию типовых параметров на полиморфные типы (включающие \mintinline{haskell}|forall|'ы внутри себя) называют \vocab{импредикативным применением}\footnote{В Haskell его включает расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/impredicative_types.html}{ImpredicativeTypes}.}.
 \begin{minted}{haskell}
-    runST :: (forall s. ST s a) -> a
+    runST :: (forall s. ST s c) -> c
     ($) :: forall a b . (a -> b) -> a -> b
-    foo = runST $ ... -- типизируется только с ImpredicativeTypes
+    foo = runST $ ... -- a специализируется на (forall s. ST s c)
 \end{minted}
+Этот пример настолько частый, что GHC делает для оператора \mintinline{haskell}|$| исключение и типизирует его без расширения.
+Для любой другой функции с таким же типом, например, собственного оператора аппликации \texttt{app}, потребуется само расширение; с ним GHC применяет алгоритм Quick Look, о котором ниже.
 
 Higher-rank типы можно использовать как type-based escape analysis, иначе говоря, не позволять пользователю передавать некоторое значение вовне определённого скоупа.
 Так, например, Haskell предоставляет эффективную монаду \mintinline{haskell}{ST}, позволяющую в рамках ограниченного скоупа работать с мутабельными ячейками памяти~\cite{launchbury1995state}\cite[7.2, ST trick]{maguire-types}:
 \begin{minted}{haskell}
-    newtype ST s a = ST (IO a)
+    newtype ST s a = ST (IO a) -- упрощённо, в GHC устроено сложнее
     runST :: (forall s. ST s a) -> a
 
     sumTo :: Int -> Int
@@ -175,34 +274,44 @@ Higher-rank типы можно использовать как type-based escap
       forM [0..n] \i -> modifySTRef ref (+ i)
       readSTRef ref
 \end{minted}
-Заметим, что если попытаться вернуть из \texttt{runST} ссылку на мутабельную ячейку, то результирующий тип не пройдёт well-formedness проверку, так как будет содержать фантомный параметр \texttt{s}, который не будет нигде связан:
+Заметим, что если попытаться вернуть из \texttt{runST} ссылку на мутабельную ячейку, то тип результата должен будет содержать фантомный параметр \texttt{s}.
+Но в сигнатуре \texttt{runST} тип результата \texttt{a} стоит вне области действия квантора по \texttt{s}: этот квантор связан внутри аргумента, и снаружи \texttt{s} просто не существует.
+Поэтому такая программа не проходит проверку типов:
 \begin{minted}{haskell}
-    newSTRef :: a -> ST s (Ref s a)
-    ghci> runST (newSTRef 0) :: Ref s Int -- ошибка
+    newSTRef :: v -> ST s (STRef s v)
+    ghci> runST (newSTRef True) -- ошибка типизации
 \end{minted}
-На практике, чтобы отличать такие локально связанные типовые переменные, используют концепцию уровней\footnote{\url{https://okmij.org/ftp/ML/generalization.html}}~\cite{peytonjones2019typeinference}.
+На практике, чтобы отличать такие локально связанные типовые переменные, используют концепцию уровней\footnote{\url{https://okmij.org/ftp/ML/generalization.html}}~\cite{spj-type-inference}.
 
 Типы высших рангов вместе с импредикативным применением образуют \vocab{полиморфизм первого класса (first-class polymorphism)}, когда полиморфные типы могут использоваться почти так же свободно, как и любые другие.
 Классический алгоритм глобального вывода Хиндли-Милнера не справляется (и в общем случае задача неразрешима), так что существует большое количество решений, делающих различные компромиссы.
 Можно сделать вывод типов локальным, опирающемся только на соседние ноды AST и вспомогательные типовые аннотации~\cite{pierce2000local, christiansen2013bidirectional, dunfield2019sound}.
-Либо же можно попытаться помочь глобальному выводу дополнительной предобработкой (Quick Look\footnote{\href{https://youtu.be/ZuNMo136QqI?si=qp8PAEeeF-bioCB_}{(youtube) A Quick Look at Impredicativity (Simon Peyton Jones)}}~\cite{serrano2020quick}, реализованный в Haskell с недавнего времени) или дополнительными регулирующими конструкциями (FreezeML~\cite{emrich2020freezeml}).
+Либо же можно попытаться помочь глобальному выводу дополнительной предобработкой (Quick Look\footnote{\href{https://youtu.be/ZuNMo136QqI?si=qp8PAEeeF-bioCB_}{(youtube) A Quick Look at Impredicativity (Simon Peyton Jones)}}~\cite{serrano2020quick}, реализованный в GHC начиная с версии 9.2 и включаемый расширением ImpredicativeTypes) или дополнительными регулирующими конструкциями (FreezeML~\cite{emrich2020freezeml}).
 
 \subsubsection{Higher-order/kinded polymorphism}
 
+Функция \texttt{fmap} работает одинаково для списков, \texttt{Maybe} и деревьев.
+Чтобы записать её тип, нужно абстрагироваться уже не по типу элементов, а по самому контейнеру, то есть по типовому конструктору кайнда \mintinline{haskell}|Type -> Type|.
+
 Haskell позволяет также абстрагироваться по типам произвольных кайндов, а не только \mintinline{haskell}|Type|, как в \mintinline{haskell}{data} декларациях (\vocab{higher-order/kinded types (HKT)}\footnote{\url{https://serokell.io/blog/kinds-and-hkts-in-haskell}}), так и в полиморфных функциях.
 Далее мы встретим немало примеров.
-Так, \mintinline{haskell}{Fix} имеет кайнд \mintinline{haskell}{(Type -> Type) -> Type}, а катаморфизм абстрагирован по типу стрелочного кайнда:
+Так, тип \mintinline{haskell}{Fix}, с которым мы подробно познакомимся в~\ref{subsubsec:functor-fixpoint}, параметризован не типом, а типовым конструктором, и потому имеет кайнд \mintinline{haskell}{(Type -> Type) -> Type}.
+Катаморфизм же абстрагирован по типу стрелочного кайнда:
 \begin{minted}{haskell}
     newtype Fix f = Fix (f (Fix f))
     cata :: forall (f :: Type -> Type) a . Functor f => (f a -> a) -> Fix f -> a
 \end{minted}
 
-Далее мы рассмотрим технику, позволяющую типы высших порядков закодировать в языке, их не поддерживающем (см.~\ref{subsubsec:simulating-hkt}).
+\begin{task}
+    Какой кайнд у \mintinline{haskell}|Fix Maybe|?
+    Приведите несколько значений этого типа.
+    Какой знакомый тип они напоминают?
+\end{task}
 
-% todo kan extensions
-%Функции, возвращающие значение какого-то такого вида \texttt{m a} --- слишком полиморфные.
-%Код, использующий такие функции может сталкиваться с серьёзными проблемами в производительности, так как компилятор не знает конкретного типа и не может заинлайнить соответствующие вызовы \texttt{fmap}, bind, и т.д.
-%Чтобы обойти эту проблему, рекомендуется пользоваться либо конкретными типами, либо воспользоваться библиотекой kan-extensions\footnote{\url{https://hackage.haskell.org/package/kan-extensions}}\footnote{\url{https://bartoszmilewski.com/2017/04/17/kan-extensions/}}~\cite[13.5]{maguire-types}.
+Цена: чтобы вывод типов оставался простым, Haskell требует, чтобы на месте \texttt{f} стоял именно типовой конструктор, а не произвольная функция на типах (мы вернёмся к этому в~\ref{subsec:families}).
+Во многих же промышленных языках полиморфизма высших порядков нет вовсе, и далее мы рассмотрим технику, позволяющую закодировать его в таком языке (см.~\ref{subsubsec:simulating-hkt}).
+
+% todo kan extensions: код, полиморфный по m, плохо инлайнится (компилятор не знает конкретный fmap/bind); лекарство --- конкретные типы или библиотека kan-extensions (hackage.haskell.org/package/kan-extensions, bartoszmilewski.com/2017/04/17/kan-extensions, maguire-types 13.5)
 
 \subsubsection{Обобщённые алгебраические типы данных (GADTs)} \label{subsubsec:gadts}
 
@@ -212,6 +321,7 @@ Haskell позволяет также абстрагироваться по ти
 \begin{minted}{haskell}
     data Expr = Const Int | IsZero Expr | If Expr Expr Expr
 \end{minted}
+Сейчас ничто не мешает составить бессмысленную программу вроде \mintinline{haskell}|IsZero (IsZero (Const 1))|: некорректная программа на нашем языке является совершенно корректным значением Haskell.
 
 Как мы знаем, конструкторы данных в Haskell --- это обычные функции с той лишь разницей, что их реализация генерируется компилятором (аллокация памяти, размещение полей\ldots).
 У функций есть тип.
@@ -256,7 +366,14 @@ Haskell позволяет также абстрагироваться по ти
       If c t e -> if eval c then eval t else eval e
 \end{minted}
 
-Далее мы рассмотрим как GADT в Haskell выражаются через более базовые механизмы языка~\ref{subsubsec:system-fc}.
+Цена: вывод типов при сопоставлении с образцом по GADT без подсказки не работает, поэтому функциям вроде \texttt{eval} сигнатура обязательна.
+Далее мы рассмотрим, как GADT в Haskell выражаются через более базовые механизмы языка и почему вывод типов для них сложнее~(\ref{subsubsec:system-fc}).
+
+\begin{task}
+    Добавьте в язык пары: конструкторы \mintinline{haskell}|MkPair :: Expr a -> Expr b -> Expr (a, b)| и \mintinline{haskell}|Fst :: Expr (a, b) -> Expr a|.
+    Допишите \texttt{eval}.
+    Какие равенства типов возникают в новых ветках?
+\end{task}
 
 \subsubsection{Структуры на уровне типов, data promotion} \label{subsubsec:promotion}
 
@@ -302,7 +419,7 @@ Haskell позволяет также абстрагироваться по ти
 Действительно, кайнд \mintinline{haskell}|Suc| --- \mintinline{haskell}|Suc :: Type -> Type|, соответственно ничто не мешает написать, например, \mintinline{haskell}|Suc (Maybe Int)|.
 В то же время он слишком ограничивающий, поскольку не поддерживает полиморфизм, что дало начало большому количеству дублирований а ля \\ \mintinline{haskell}|Typeable (ty :: Type)|, \mintinline{haskell}|Typeable1 (ty :: Type -> Type)|\ldots
 
-Современный Haskell имеет расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_data.html#extension-TypeData}{TypeData}, позволяющее объявлять новые типы и кайнды подобно тому, как \mintinline{haskell}{data} позволяет объявлять новые типы.
+Современный Haskell позволяет объявлять новые типы и кайнды подобно тому, как \mintinline{haskell}{data} позволяет объявлять новые типы\footnote{Расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_data.html\#extension-TypeData}{TypeData}.}.
 \begin{minted}{haskell}
     type data Nat = Zero | Suc Nat
 \end{minted}
@@ -318,13 +435,13 @@ Haskell позволяет также абстрагироваться по ти
     Что выведет \mintinline{haskell}|ghci> :k Vec|?
 \end{task}
 
-Другим вариантом добиться того же самого является использование \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/data_kinds.html#extension-DataKinds}{DataKinds}~\cite{yorgey2012giving}.
-Это расширение автоматически продвигает (promotion) все \mintinline{haskell}|data| декларации на уровень выше.
+Другой вариант добиться того же самого --- автоматически продвигать (promotion) все \mintinline{haskell}|data| декларации на уровень выше\footnote{Расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/data_kinds.html\#extension-DataKinds}{DataKinds}.}~\cite{yorgey2012giving}.
 А именно: любой конструктор типа также становится кайндом, а конструктор данных --- конструктором типа.
 Так, в примере с числами, мы можем задекларировать натуральные числа как обычно и использовать на уровне типов:
 \begin{minted}{haskell}
     data Nat = Zero | Suc Nat
-    ghci> :k Suc :: Nat -> Nat -- тут понятно что Suc используется как тип
+    ghci> :k Suc -- тут понятно, что Suc используется как тип
+    Suc :: Nat -> Nat
 \end{minted}
 
 Поскольку типы и термы в Haskell живут в разных пространствах имён, можно называть конструкторы типов и данных одинаково.
@@ -340,7 +457,7 @@ Haskell позволяет указать явно, что речь идёт о 
 
 Не любые \mintinline{haskell}|data| декларации подходят для продвижения, в то же время \mintinline{haskell}|type data| декларации позволяют явно запросить структуру уровня типов и получить внятные ошибки, если декларация написана неправильно.
 
-В случае продвижения полиморфного типа, мы получаем полиморфные кайнды (\href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/poly_kinds.html}{PolyKinds}):
+В случае продвижения полиморфного типа, мы получаем полиморфные кайнды\footnote{Расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/poly_kinds.html}{PolyKinds}.}:
 \begin{minted}{haskell}
     data [a] = [] | (:) a [a]
     ghci> :k '(:)
@@ -383,7 +500,7 @@ Haskell позволяет указать явно, что речь идёт о 
 
 Структуры данных тоже могут быть полиморфными по кайндам.
 Рассмотрим тип \href{https://hackage.haskell.org/package/tagged-0.8.8/docs/Data-Tagged.html#t:Tagged}{\mintinline{haskell}|Tagged|}, позволяющий дополнить тип значения дополнительным типовым тегом.
-Кайнд тега может быть произвольным, поэтому, например, можем использовать встроенные в систему типов константы \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_literals.html}{TypeLits} (другой пример использования полиморфных кайндов мы видели ранее\ \ref{subsubsec:proxy}):
+Кайнд тега может быть произвольным, поэтому, например, можем использовать встроенные в систему типов строковые и числовые константы\footnote{\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/type_literals.html}{TypeLits}: литералы уровня типов кайндов \texttt{Symbol} и \texttt{Nat}.} (другой пример использования полиморфных кайндов~--- тип \texttt{Proxy}, см.~\ref{subsubsec:proxy}):
 \begin{minted}{haskell}
     newtype Tagged (tag :: k) (a :: Type) = Tagged a
     ghci> :t Tagged
@@ -395,8 +512,8 @@ Haskell позволяет указать явно, что речь идёт о 
 
 Современный Haskell в итоге пришёл к тому, что система типов не делает различий между типами и кайндами (рис.~\ref{fig:types-eq-kinds}).
 В частности, \mintinline{haskell}|Type :: Type|.
-Это нужно для расширения возможностей Haskell в сторону программирования с зависимыми типами путём добавления несинтаксических эквивалентностей для кайндов (\href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/poly_kinds.html#extension-TypeInType}{TypeInType}).
-$System~FC$ была представлена в работе~\cite{weirich2013system}\footnote{\href{https://www.youtube.com/watch?v=ISGENChlA4M&list=PLvPsfYrGz3wufQguebnCduYgQQ9UMeJRt}{(youtube) Мини-курс на русском языке про развитие Haskell в сторону зависимой типизации.}}\footnote{\href{https://www.youtube.com/watch?v=_HYI7zjkrEs&list=PLvPsfYrGz3wuVAGhNf6-i7uafXg56oqM5&index=1}{(youtube) Мини-курс на русском языке --- система вывода типов Haskell.}}. % todo при чём тут FC
+Это нужно для расширения возможностей Haskell в сторону программирования с зависимыми типами путём добавления несинтаксических эквивалентностей для кайндов\footnote{Расширение \href{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/poly_kinds.html\#extension-TypeInType}{TypeInType}, ныне часть PolyKinds.}.
+Соответствующее расширение $System~FC$, внутреннего языка GHC (см.\ далее~\ref{subsubsec:system-fc}), равенствами кайндов описано в работе~\cite{weirich2013system}\footnote{\href{https://www.youtube.com/watch?v=ISGENChlA4M&list=PLvPsfYrGz3wufQguebnCduYgQQ9UMeJRt}{(youtube) Мини-курс на русском языке про развитие Haskell в сторону зависимой типизации.}}\footnote{\href{https://www.youtube.com/watch?v=_HYI7zjkrEs&list=PLvPsfYrGz3wuVAGhNf6-i7uafXg56oqM5&index=1}{(youtube) Мини-курс на русском языке --- система вывода типов Haskell.}}.
 
 \begin{figure}[ht]
     \centering
@@ -405,7 +522,42 @@ $System~FC$ была представлена в работе~\cite{weirich2013s
     \label{fig:types-eq-kinds}
 \end{figure}
 
-\subsection{Реализация параметрического полиморфизма}
+\subsubsection{Факультативно: эмуляция типовых абстракций и аппликаций (\mintinline{haskell}{Proxy})} \label{subsubsec:proxy}
+
+Это факультативный и специфичный для Haskell материал.
+Его можно пропустить при первом чтении и вернуться, когда тип \texttt{Proxy} встретится в коде следующих глав.
+
+Проблема здесь историческая: расширения, позволяющие вручную задавать типовые аппликации и абстракции, появились в Haskell сравнительно недавно\footnote{\href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_applications.html\#extension-TypeApplications}{TypeApplications}, \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/type_abstractions.html\#extension-TypeAbstractions}{TypeAbstractions}.}.
+До этого явно передать тип в функцию было нельзя, и пользовались следующей техникой, которая до сих пор встречается во многих библиотеках.
+
+В стандартной библиотеке определён тип \mintinline{haskell}|Proxy| с одним параметром.
+Это \vocab{фантомный типовой параметр}~--- значения соответствующего типа не хранятся в структуре данных, он только позволяет размещать дополнительную информацию на уровне типов\footnote{\url{https://wiki.haskell.org/Phantom_type}}.
+Соответственно, неинформативную константу \mintinline{haskell}|Proxy| можно проаннотировать нужным типом и передать в функцию, чтобы специализировать типовой параметр на нужный тип.
+Или можно принять \mintinline{haskell}|Proxy| и воспользоваться \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/scoped_type_variables.html\#pattern-type-signatures}{ScopedTypeVariables} для типовых сигнатур в паттернах\footnote{Типовой параметр на самом деле имеет полиморфный кайнд: \mintinline{haskell}{data Proxy (a :: k) = Proxy}, чтобы эта техника работала с типами произвольных кайндов (см.~\ref{subsubsec:promotion}).}.
+\begin{minted}{haskell}
+    data Proxy a = Proxy
+
+    id :: Proxy a -> a -> a
+    ghci> :t id (Proxy :: Proxy Int)
+    id (Proxy :: Proxy Int) :: Int -> Int
+
+    id (Proxy :: Proxy ?\framebox{a}?) x = (x :: ?\framebox{a}?)
+\end{minted}
+
+Иногда прокси-тип оставляют полиморфным, чтобы не зависеть от \mintinline{haskell}{Data.Proxy}.
+Вместо конкретного значения иногда передают специализированное значение $\bot$, а получатель, не зная тип, не сможет его форсировать (однако, любые вхождения $\bot$ в терм слишком настораживают, поэтому это скорее не очень хорошая практика).
+\begin{minted}{haskell}
+    id :: proxy a -> a -> a
+    id (_ :: proxy a) x = (x :: a)
+
+    ghci> :t id (undefined :: Proxy Int)
+    id (undefined :: Proxy Int) :: Int -> Int
+\end{minted}
+
+\subsection{Реализация параметрического полиморфизма} \label{subsec:parametric-implementation}
+
+До сих пор полиморфизм был для нас свойством системы типов: мы обсуждали, какие программы он позволяет протипизировать.
+Теперь посмотрим, сколько он стоит во время исполнения.
 
 \vocab{Конвенция вызова}\footnote{\url{https://en.wikipedia.org/wiki/Calling_convention}} представляет собой набор соглашений между тем как функция компилируется и как должна вызываться.
 Например, функция принимает два аргумента, каждый размером в машинное слово, и возвращает один результат размером в машинное слово.
@@ -521,7 +673,25 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
     \item[\negative] Серьёзный константный оверхед на динамические вызовы через таблицу, эффективность очень сильно зависит от компиляторных оптимизаций.
 \end{itemize}
 
-Своего рода реализация параметрического полиморфизма через специальный.
+Это своего рода реализация параметрического полиморфизма через специальный.
+Вместе с типом в функцию неявно передаётся таблица операций, которые умеет этот тип: узнать размер, скопировать, переместить.
+В следующей главе мы увидим, что ровно так же, передачей словарей функций, реализуются классы типов (\ref{subsubsec:tc-dict}), только набор операций там задаёт программист, а не компилятор.
+
+\begin{task}
+    В Kotlin (JVM, стирание типов) проверка \mintinline{kotlin}|x is T| для типового параметра \texttt{T} разрешена только внутри \mintinline{kotlin}|inline|-функций, где параметр помечен как \mintinline{kotlin}|reified|.
+    Объясните это ограничение.
+    Какой из рассмотренных подходов к реализации полиморфизма здесь локально применяется?
+\end{task}
+
+\begin{task}
+    В Rust (мономорфизация) трейт с обобщённым методом нельзя использовать как trait object (\mintinline{rust}|dyn Trait|).
+    Каким из перечисленных недостатков мономорфизации это объясняется?
+\end{task}
+
+\begin{task}
+    Приложение подгружает плагин, скомпилированный отдельно, и хочет вызвать из него обобщённую функцию с типом, о котором автор плагина не знал.
+    Для каждого из четырёх подходов определите, возможно ли это, и почему.
+\end{task}
 
 \subsection{Полиморфизм по конвенции вызова} \label{subsec:representation-polymorphism}
 
@@ -563,9 +733,9 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
     divMod# :: Int -> Int -> (# Int, Int #)
     case divMod# n k of (# quot, rem #) -> ...
 \end{minted}
-Соответственно, нет никакого различия между по-разному вложенными unboxed кортежами:
+Соответственно, во время исполнения нет никакого различия между по-разному вложенными unboxed кортежами, все они представлены одним и тем же набором значений:
 \begin{minted}{haskell}
-    (# A, (# B, C #)) ?$\equiv$? (# #( A, B #), C #) ?$\equiv$? (# A, B, C #)
+    (# A, (# B, C #) #) ?$\equiv$? (# (# A, B #), C #) ?$\equiv$? (# A, B, C #)
 \end{minted}
 
 \subsubsection{Классификация значений по runtime представлению}
@@ -573,9 +743,9 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
 Значения различных типов могут быть на этапе исполнения устроены по-разному.
 То есть нам нужна некоторая система классификации типов.
 Но такая система в Haskell уж есть --- кайнды.
-Опишем в виде структур данных предметную область, а потом продвинем на нужный уровень с помощью DataKinds~\ref{subsubsec:promotion}.
+Опишем в виде структур данных предметную область, а потом продвинем на нужный уровень (\ref{subsubsec:promotion}).
 
-Стандартная библиотека Haskell \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/representation_polymorphism.html}{предоставляет} следующие типы данных:
+Стандартная библиотека Haskell предоставляет следующие типы данных\footnote{\url{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/representation_polymorphism.html}}:
 \begin{minted}{haskell}
     TYPE :: RuntimeRep -> Type
 
@@ -604,12 +774,17 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
     \item \mintinline{haskell}|Maybe :: Type -> Type|
     \item \mintinline{haskell}|TupleRep| и \mintinline{haskell}|SumRep| --- unboxed алгебраические типы, представления параметризованы представлениями хранимых значений\\
     \mintinline{haskell}|(# Int, Bool #) :: TYPE (TupleRep '[LiftedRep, LiftedRep])|
-    \item Для простоты, типы вложенных кортежей не унифицируются
+    \item Хотя во время исполнения вложенность кортежей неразличима, на уровне кайндов она для простоты сохраняется, и типы по-разному вложенных кортежей не унифицируются
     \begin{minted}{haskell}
         (# Int#, (# Int, Double# #) #)
           :: TYPE (TupleRep '[IntRep, TupleRep '[LiftedRep, DoubleRep]])
     \end{minted}
 \end{itemize}
+
+\begin{task}
+    Какой кайнд у типа \mintinline{haskell}|(# Int#, Bool #)|?
+    Проверьте себя в GHCi, включив расширения MagicHash и UnboxedTuples.
+\end{task}
 
 \subsubsection{Representation polymorphism}
 
@@ -642,6 +817,14 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
     ($) :: forall ra rb (a :: TYPE ra) (b :: TYPE rb). (a -> b) -> a -> b
     ($) f = f
 \end{minted}
+
+\begin{task}
+    Функция \texttt{error} полиморфна по представлению результата:
+    \begin{minted}{haskell}
+        error :: forall (r :: RuntimeRep) (a :: TYPE r). String -> a
+    \end{minted}
+    Почему это не нарушает ограничение на связыватели?
+\end{task}
 
 Таким образом, в Haskell полиморфизм по представлениям несколько вырожден и помогает лишь в небольшом количестве случаев, однако немаловажных.
 Если позволить мономорфизацию по \mintinline{haskell}{RuntimeRep} параметрам, получится система аналогичная гибридной реализации параметрического полиморфизма~\ref{subsubsec:hybrid}, только с большим контролем со стороны программиста над мономорфизацией.
