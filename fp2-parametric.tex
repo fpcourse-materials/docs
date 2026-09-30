@@ -678,6 +678,39 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
 В следующей главе мы увидим, что ровно так же, передачей словарей функций, реализуются классы типов (\ref{subsubsec:tc-dict}), только набор операций там задаёт программист, а не компилятор.
 
 \begin{task}
+\subsubsection{Сравнение подходов} \label{subsubsec:poly-impl-comparison}
+
+Сведём четыре подхода в таблицу~\ref{fig:poly-impl-comparison}.
+Ни один из них не выигрывает по всем строкам: каждый язык выбирает, чем платить.
+
+\begin{figure}[!ht]
+    \centering
+    \small
+    \renewcommand{\arraystretch}{1.3}
+    % \leavevmode: без него цвет в начале ячейки-абзаца сдвигает её содержимое на строку вниз
+    \newcommand{\yes}{\leavevmode\positive}
+    \newcommand{\no}{\leavevmode\negative}
+    \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.17\textwidth}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
+        \hline
+        & Мономор\-физация (\ref{subsubsec:monomorphization}) & Стирание типа (\ref{subsubsec:type-erasure}) & Гибридный подход (\ref{subsubsec:hybrid}) & Таблица свойств типа (\ref{subsubsec:swift-generics}) \\
+        \hline
+        Языки & C++, Rust & JVM, Haskell & C\# & Swift \\
+        \hline
+        Скорость кода & \yes~лучшая & \no~боксинг, индирекции & \yes~для value-типов & \no~вызовы через таблицу \\
+        \hline
+        Время компиляции, размер бинарного файла & \no & \yes & \yes & \yes \\
+        \hline
+        Динамическая загрузка полиморфного кода & \no & \yes & \yes & \yes \\
+        \hline
+        Полиморфные методы в интерфейсах, higher-rank & \no & \yes & \yes & \yes \\
+        \hline
+        Тип известен во время исполнения & \no~только статически & \no~стёрт & \yes & \yes \\
+        \hline
+    \end{tabularx}
+    \caption{Сравнение реализаций параметрического полиморфизма.}
+    \label{fig:poly-impl-comparison}
+\end{figure}
+
     В Kotlin (JVM, стирание типов) проверка \mintinline{kotlin}|x is T| для типового параметра \texttt{T} разрешена только внутри \mintinline{kotlin}|inline|-функций, где параметр помечен как \mintinline{kotlin}|reified|.
     Объясните это ограничение.
     Какой из рассмотренных подходов к реализации полиморфизма здесь локально применяется?
