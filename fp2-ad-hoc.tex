@@ -48,7 +48,7 @@ Christopher Strachey ввёл классификацию полиморфизм�
 \end{minted}
 
 Если сравнивать классы типов с переопределением (overriding) в ООП языках, то разрешение вызова виртуальной функции происходит с использованием таблицы, хранящейся объекте первого параметра (получателя вызова, receiver).
-Классы типов же опираются исключительно на тип, поэтому, например, возможно определение констант в классах типов\footnote{Современные ООП языки, тем не менее, стремятся поддержать статические функции в интерфейсах, что делает их ближе к классам типов и позволяет делать похожие вещи. Например, Swift.}: % todo reference
+Классы типов же опираются исключительно на тип, поэтому, например, возможно определение констант в классах типов\footnote{Современные ООП языки, тем не менее, стремятся поддержать статические члены в интерфейсах, что делает их ближе к классам типов и позволяет делать похожие вещи. Например, статические требования в протоколах Swift (\url{https://docs.swift.org/swift-book/documentation/the-swift-programming-language/protocols/}) или статические абстрактные члены интерфейсов в C\# (\url{https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/tutorials/static-virtual-interface-members}).}:
 \begin{minted}{haskell}
     class Enum a => Bounded a where
       minBound :: a
@@ -632,9 +632,41 @@ Haskell предоставляет явный синтаксис для объя
 
 Одним из способов обойти это ограничение является дефункционализация семейств~\cite{defunctionalization-slides, eisenberg2014promoting}.
 Как мы и обсуждали ранее~\ref{subsubsec:defunctionalization}, вместо функции первого класса заводится некоторый символ, обозначающий её, и функция интерпретации, умеющая сделать действие, соответствующее этому символу.
-В данном случае функцией интерпретации будет открытое семейство \mintinline{haskell}|Apply|~\cite[глава 10]{maguire-types}.
+В данном случае функцией интерпретации будет открытое семейство \texttt{Eval}~\cite[глава 10]{maguire-types}.
 
-% todo example from maguire
+Символ функции, вычисляющей результат кайнда \texttt{a}, будем представлять типовым конструктором, результат которого имеет кайнд \mintinline{haskell}|Exp a|.
+Реализацию функции зададим инстансом семейства \texttt{Eval} для этого символа:
+\begin{minted}{haskell}
+    type Exp a = a -> Type
+    type family Eval (e :: Exp a) :: a
+
+    data Snd :: (a, b) -> Exp b
+    type instance Eval (Snd '(a, b)) = b
+\end{minted}
+Декларация \mintinline{haskell}|data| обязана в итоге возвращать кайнд \mintinline{haskell}|Type|, поэтому объявить символ с кайндом \mintinline{haskell}|(a, b) -> b| нельзя.
+Вместо этого результирующий кайнд выражения записан фантомным параметром при \texttt{Exp}, который никогда не применяется: полный кайнд символа~--- \mintinline{haskell}|Snd :: (a, b) -> b -> Type|.
+По этому параметру семейство \texttt{Eval} и узнаёт, какого кайнда результат вернуть.
+Таким образом, кайнд \texttt{Exp}~--- это чисто трюк, позволяющий приписать кайнды таким программам на уровне типов.
+
+Символы~--- обычные типовые конструкторы, поэтому их, в отличие от семейств, можно передавать в другие функции не до конца применёнными.
+Так, можно написать функцию высшего порядка на типах:
+\begin{minted}{haskell}
+    data Map :: (a -> Exp b) -> [a] -> Exp [b]
+    type instance Eval (Map f '[]) = '[]
+    type instance Eval (Map f (x : xs)) = Eval (f x) : Eval (Map f xs)
+
+    ghci> :k! Eval (Map Snd '[ '(Int, Bool), '(Char, Double) ])
+    = [Bool, Double]
+\end{minted}
+Сравните с дефункционализацией на уровне термов: конструкторам \texttt{F1} и \texttt{F2} соответствуют декларации \texttt{Snd} и \texttt{Map}, а функции \texttt{apply}~--- семейство \texttt{Eval}.
+Поскольку семейство открытое, новые функции можно добавлять, не трогая уже написанные.
+
+\begin{task}
+    Реализуйте в этом стиле свёртку списка типов:
+    \begin{minted}{haskell}
+        data Foldr :: (a -> b -> Exp b) -> b -> [a] -> Exp b
+    \end{minted}
+\end{task}
 
 В Haskell ведутся работы\footnote{\href{https://ghc-proposals.readthedocs.io/en/latest/proposals/0242-unsaturated-type-families.html}{GHC proposal: Unsaturated Type Families}.} по устранению saturation ограничения~\cite{kiss2019higher}.
 Для этого нужно различать matchable и unmatchable типовые функции.
@@ -713,13 +745,19 @@ Haskell предоставляет явный синтаксис для объя
       Rose x1 rs1 == Rose x2 rs2 = x1 == x2 && rs1 == rs2
 \end{minted}
 
-%Также, как и типы, констреинты параметризованы представлением\footnote{\url{https://hackage.haskell.org/package/base-4.21.0.0/docs/GHC-Exts.html\#t:CONSTRAINT}}: % todo пояснить зачем это
-%\begin{minted}{haskell}
-%    data CONSTRAINT (a :: RuntimeRep)
-%    type Constraint = CONSTRAINT LiftedRep
-%\end{minted}
+Типовые переменные, обозначающие констреинты, компилятор не выводит.
+Обычную типовую переменную он восстанавливает по типам аргументов, а переменная-констреинт встречается только слева от \mintinline{haskell}|=>|, и подсказать её значение нечему: компилятор ищет свидетельство для уже известного констреинта, но не подбирает констреинт под имеющиеся свидетельства.
+Поэтому, если в типе функции есть \mintinline{haskell}|forall (c :: Constraint) . c => ...|, значение \texttt{c} приходится указывать вручную типовой аппликацией.
+Именно так мы вызывали \texttt{hmap}: без \mintinline{haskell}|@Show| вызов не типизируется, хотя первым аргументом и передана функция \texttt{show}.
 
-% todo Типы кайнда Constraint не выводятся
+Словари существуют во время исполнения, а значит, у констреинтов, как и у типов, есть рантайм-представление (\ref{subsec:representation-polymorphism})\footnote{\url{https://hackage.haskell.org/package/base-4.21.0.0/docs/GHC-Exts.html\#t:CONSTRAINT}}:
+\begin{minted}{haskell}
+    CONSTRAINT :: RuntimeRep -> Type
+    type Constraint = CONSTRAINT LiftedRep
+\end{minted}
+Обычный словарь представлен указателем на структуру в куче, отсюда \mintinline{haskell}|LiftedRep|.
+Параметр позволяет свидетельству иметь и другое представление, как \mintinline{haskell}|TYPE| позволяет это обычным значениям.
+Задуманные применения~--- неявные параметры неупакованных типов, передаваемые без упаковки, и строгие классы, словари которых не бывают отложенными вычислениями\footnote{\href{https://ghc-proposals.readthedocs.io/en/latest/proposals/0518-type-vs-constraint.html}{GHC proposal: Generalising Type and Constraint}. На момент GHC 9.10 эти возможности ещё не реализованы.}.
 
 \subsection{Использование ad-hoc полиморфизма}
 
@@ -981,8 +1019,6 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 
 Подробнее можно прочитать в~\cite{breitner2014safe} и~\cite[глава 8]{maguire-types}.
 
-% todo про value types
-
 \subsubsection{Type reflection} \label{subsubsec:type-reflection}
 
 Рефлексия --- это языковой механизм получения информации о типах во время исполнения (на уровне термов).
@@ -1092,7 +1128,7 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 
 Более того, статически типизированные ошибки это активная область исследований, будем говорить об этом в рамках систем эффектов (см. далее~\ref{sec:effect-systems}).
 Классические исключения же динамически типизированные.
-Особенно хорошо этот вариант подходит для ошибок программиста, которые по-хорошему не должны обрабатываться в программе кроме как закрытием ресурсов. % todo citations
+Особенно хорошо этот вариант подходит для ошибок программиста, которые по-хорошему не должны обрабатываться в программе кроме как закрытием ресурсов\footnote{\href{https://joeduffyblog.com/2016/02/07/the-error-model/}{Joe Duffy --- The Error Model}: ошибки программиста отделяются от ожидаемых ошибок и приводят к аварийному завершению.}\footnote{\url{https://wiki.haskell.org/Error_vs._Exception}}.
 
 Поддержка исключений присутствует в системе исполнения Haskell как простого и привычного способа обработки исключительных ситуаций: ошибок программиста, исполнения неполного паттерн-матчинга, асинхронных системных сигналов~\cite{marlow2001asynchronous}\ldots
 Исключения динамически типизированные и образуют иерархию~\cite{marlow2006extensible}.
