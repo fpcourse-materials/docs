@@ -1,11 +1,26 @@
 all: slides
 
+# Конспект FP2 целиком: fp2.pdf
+fp2:
+	latexmk -pdf -shell-escape -interaction=nonstopmode fp2.tex
+
+# Студенческая версия конспекта с главами 1..N: fp2-ch1-N.pdf
+#   make fp2-students N=2        главы 1 и 2 целиком
+#   make fp2-students N=2 S=1    глава 1 и раздел 2.1 (точки разреза — \fpcutafter в файлах глав)
+# Сначала собирается полный конспект: ссылки на невошедшие главы берутся из его меток (fp2-labels.aux).
+N ?= 2
+S ?= 99
+STUDENTS = fp2-ch1-$(N)$(if $(filter 99,$(S)),,.$(S))
+fp2-students: fp2
+	grep '^\\newlabel' fp2.aux > fp2-labels.aux
+	latexmk -pdf -shell-escape -interaction=nonstopmode -jobname=$(STUDENTS) -usepretex -pretex='\def\maxchapter{$(N)}\def\maxsection{$(S)}' fp2.tex
+
 slides:
 	git pull origin main:main
-	make clean-slides
+	make clean-meta
 	make sem-all
 	make sem-all
-	make clean-slides
+	make clean-meta
 
 clean-meta:
 	rm -i --force flags.tex

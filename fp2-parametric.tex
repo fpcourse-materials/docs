@@ -554,6 +554,7 @@ Haskell позволяет указать явно, что речь идёт о 
     id (undefined :: Proxy Int) :: Int -> Int
 \end{minted}
 
+\fpcutafter{1}
 \subsection{Реализация параметрического полиморфизма} \label{subsec:parametric-implementation}
 
 До сих пор полиморфизм был для нас свойством системы типов: мы обсуждали, какие программы он позволяет протипизировать.
@@ -677,7 +678,6 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
 Вместе с типом в функцию неявно передаётся таблица операций, которые умеет этот тип: узнать размер, скопировать, переместить.
 В следующей главе мы увидим, что ровно так же, передачей словарей функций, реализуются классы типов (\ref{subsubsec:tc-dict}), только набор операций там задаёт программист, а не компилятор.
 
-\begin{task}
 \subsubsection{Сравнение подходов} \label{subsubsec:poly-impl-comparison}
 
 Сведём четыре подхода в таблицу~\ref{fig:poly-impl-comparison}.
@@ -711,6 +711,7 @@ Swift\footnote{\href{https://youtu.be/ctS8FzqcRug?si=y_ZYnuUOulA33d_X}{(youtube)
     \label{fig:poly-impl-comparison}
 \end{figure}
 
+\begin{task}
     В Kotlin (JVM, стирание типов) проверка \mintinline{kotlin}|x is T| для типового параметра \texttt{T} разрешена только внутри \mintinline{kotlin}|inline|-функций, где параметр помечен как \mintinline{kotlin}|reified|.
     Объясните это ограничение.
     Какой из рассмотренных подходов к реализации полиморфизма здесь локально применяется?

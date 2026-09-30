@@ -97,6 +97,35 @@
 \newtheorem{task}{Упражнение}
 % ------------------------------------------------
 
+% Студенческая версия: только главы 1..N.
+% Собирается как  make fp2-students N=2  (см. Makefile): перед fp2.tex подставляется \def\maxchapter{N},
+% а ссылки на невошедшие главы берутся из полной сборки через пакет xr-hyper.
+% Импортируется не fp2.aux целиком, а только его строки \newlabel (fp2-labels.aux, делает Makefile):
+% остальное содержимое aux (\catcode от babel и т.п.) ломает xr.
+% Второй параметр \maxsection обрывает последнюю включённую главу после раздела с этим номером:
+% make fp2-students N=2 S=1  даёт главу 1 и раздел 2.1. Точки разреза расставлены в файлах глав командой \fpcutafter.
+\providecommand{\maxchapter}{99}
+\providecommand{\maxsection}{99}
+\ifnum\maxchapter<99
+    \usepackage{xr-hyper}
+    \externaldocument{fp2-labels}
+\fi
+
+% \fpcutafter{n} ставится в файле главы перед \subsection номер n+1: если это последняя включённая глава
+% и \maxsection не больше n, чтение файла главы на этом обрывается
+\newcommand{\fpcutafter}[1]{\ifnum\value{fpchapter}=\maxchapter\ifnum\maxsection>#1\else\endinput\fi\fi}
+
+% \fpchapter{заголовок}{\label{...} или пусто}{файл}: глава входит в документ, только если её номер не больше \maxchapter
+\newcounter{fpchapter}
+\newcommand{\fpchapter}[3]{%
+    \stepcounter{fpchapter}%
+    \ifnum\value{fpchapter}>\maxchapter\else
+        \clearpage
+        \section{#1}#2
+        \input{#3}
+    \fi
+}
+
 % Head
 \usepackage{hyperref}
 \usepackage{fancyhdr}
@@ -174,75 +203,25 @@
     Дополнительно будет полезным умение читать типовые дроби, знакомство с полиморфным $\lambda$-исчислением и кодированием Чёрча.
 
 
-    \clearpage
+    \fpchapter{Воспоминания о ФП}{}{fp2-remember}
 
+    \fpchapter{Параметрический полиморфизм}{\label{sec:parametric-polymorphism}}{fp2-parametric}
 
-    \section{Воспоминания о ФП}
+    \fpchapter{Специальный (ad-hoc) полиморфизм}{\label{sec:ad-hoc}}{fp2-ad-hoc}
 
-    \input{fp2-remember}
+    \fpchapter{Типы данных}{\label{sec:data-common}}{fp2-data-types}
 
-    \clearpage
+    \fpchapter{Интерпретаторы}{}{fp2-interpreters}
 
+    \fpchapter{Продолжения (continuations)}{\label{sec:continuations}}{fp2-continuations}
 
-    \section{Параметрический полиморфизм} \label{sec:parametric-polymorphism}
+    \fpchapter{Эффекты и модульные интерпретаторы}{\label{sec:effects}}{fp2-effects}
 
-    \input{fp2-parametric}
+    \fpchapter{Системы эффектов TODO}{\label{sec:effect-systems}}{fp2-effect-systems}
 
-    \clearpage
+    \fpchapter{Datatype-generic programming TODO}{\label{sec:datatype-generic}}{fp2-derivings}
 
-
-    \section{Специальный (ad-hoc) полиморфизм} \label{sec:ad-hoc}
-
-    \input{fp2-ad-hoc}
-
-    \clearpage
-
-
-    \section{Типы данных} \label{sec:data-common}
-
-    \input{fp2-data-types}
-
-    \clearpage
-
-
-    \section{Интерпретаторы}
-
-    \input{fp2-interpreters}
-
-    \clearpage
-
-
-    \section{Продолжения (continuations)} \label{sec:continuations}
-
-    \input{fp2-continuations}
-
-    \clearpage
-
-
-    \section{Эффекты и модульные интерпретаторы} \label{sec:effects}
-
-    \input{fp2-effects}
-
-    \clearpage
-
-
-    \section{Системы эффектов TODO} \label{sec:effect-systems}
-
-    \input{fp2-effect-systems}
-
-    \clearpage
-
-
-    \section{Datatype-generic programming TODO} \label{sec:datatype-generic}
-
-    \input{fp2-derivings}
-
-    \clearpage
-
-
-    \section{Персистентность и оптика TODO}
-
-    \input{fp2-optics}
+    \fpchapter{Персистентность и оптика TODO}{}{fp2-optics}
 
 %    \clearpage
 
