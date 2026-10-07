@@ -40,9 +40,8 @@ Christopher Strachey ввёл классификацию полиморфизм�
       ...
 \end{minted}
 
-Также, в отличие от перегрузки, классы типов совместимы с параметрическим полиморфизмом.
-Так, в типе полиморфной функции нельзя указать, что для типа должна присутствовать определённая перегрузка.
-Классы типов же позволяют ограничить набор возможных типовых аргументов теми, для которых реализован инстанс нужного класса типов:
+Классы типов позволяют ограничить набор возможных типовых аргументов теми, для которых реализован инстанс нужного класса типов.
+Обычная перегрузка сама по себе такого механизма не задаёт, но языки могут сочетать её с полиморфизмом и дополнительными ограничениями: например, concepts и \texttt{requires} в C++ позволяют потребовать корректность определённых выражений\footnote{\url{https://eel.is/c++draft/expr.prim.req}}.
 \begin{minted}{haskell}
     showPrefixed :: Show a => a -> String -> String
 \end{minted}
@@ -50,7 +49,7 @@ Christopher Strachey ввёл классификацию полиморфизм�
 Если сравнивать классы типов с переопределением (overriding) в ООП языках, то разрешение вызова виртуальной функции происходит с использованием таблицы, хранящейся объекте первого параметра (получателя вызова, receiver).
 Классы типов же опираются исключительно на тип, поэтому, например, возможно определение констант в классах типов\footnote{Современные ООП языки, тем не менее, стремятся поддержать статические члены в интерфейсах, что делает их ближе к классам типов и позволяет делать похожие вещи. Например, статические требования в протоколах Swift (\url{https://docs.swift.org/swift-book/documentation/the-swift-programming-language/protocols/}) или статические абстрактные члены интерфейсов в C\# (\url{https://learn.microsoft.com/en-us/dotnet/csharp/whats-new/tutorials/static-virtual-interface-members}).}:
 \begin{minted}{haskell}
-    class Enum a => Bounded a where
+    class Bounded a where
       minBound :: a
       maxBound :: a
 \end{minted}
@@ -217,8 +216,8 @@ Haskell также предоставляет возможность сохра�
 \begin{task}
     Аргумент \texttt{x} имеет тип \mintinline{haskell}|Show b => b|, то есть ждёт словарь.
     В какой момент он его получает?
-    Возможна ли именно такая семантика в энергичном языке?
-    Почему?
+    Требует ли такая передача словаря ленивости языка, или достаточно передать функцию от словаря?
+    Что вычисляется до вызова \texttt{f} в энергичном языке?
 \end{task}
 
 \subsubsection{Вывод инстансов} \label{subsubsec:instance-inference}
@@ -231,11 +230,33 @@ Haskell также предоставляет возможность сохра�
 У нас в контексте имеются конкретные словари и функции, позволяющие из одних словарей получать другие.
 Требуется найти терм, конструирующий словарь нужного типа.
 
-Пусть, например, внутри функции \mintinline{haskell}|f :: Show a => ..| происходит вызов ограниченно--полиморфной функции
-\mintinline{haskell}|g :: Show [a] => ..|.
-То есть у нас имеется словарь \mintinline{haskell}|d1 :: ShowDict a|, а также функция \mintinline{haskell}|d2 :: ShowDict a -> ShowDict [a]|, пришедшая из импортов\footnote{Инстансы можно импортировать пустым импортом: \mintinline{haskell}|import Module ()|.}.
-Необходимо сконструировать терм типа \mintinline{haskell}|ShowDict [a]|.
-Очевидно, это будет просто аппликация одного к другому: \texttt{d2 d1}.
+Пусть внутри функции \mintinline{haskell}|f :: Show a => ..| вызывается функция \mintinline{haskell}|g :: Show [a] => ..|, а инстанс для списков доступен из импортов\footnote{Инстансы можно импортировать пустым импортом: \mintinline{haskell}|import Module ()|.}.
+Нужный словарь строится применением функции из инстанса к словарю из контекста (рис.~\ref{fig:dictionary-inhabitation}).
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        dictinput/.style={rectangle, rounded corners=4pt, draw=orange!70!black, fill=orange!7, thick, text width=6.3cm, minimum height=1.3cm, align=center, inner sep=5pt},
+        dictresult/.style={rectangle, rounded corners=4pt, draw=green!50!black, fill=green!6, thick, text width=6.3cm, minimum height=1.5cm, align=center, inner sep=5pt},
+        dictcall/.style={rectangle, rounded corners=4pt, draw=gray!60, fill=gray!5, thick, text width=6.3cm, minimum height=1.0cm, align=center, inner sep=5pt},
+        dictflow/.style={->, >=stealth, thick, draw=gray!75},
+        dictlabel/.style={font=\small, text=gray!80!black, fill=white, inner sep=2pt},
+    ]
+        \node[font=\small, align=center] at (-3.75, 1.15) {Из ограничения \texttt{Show a} у \texttt{f}};
+        \node[font=\small, align=center] at (3.75, 1.15) {Из инстанса \texttt{Show a => Show [a]}};
+
+        \node[dictinput] (d1) at (-3.75, 0) {\texttt{\textbf{d1}}\\[4pt]{\small\color{blue!70!black}\texttt{:: ShowDict a}}};
+        \node[dictinput] (d2) at (3.75, 0) {\texttt{\textbf{d2}}\\[4pt]{\small\color{blue!70!black}\texttt{:: ShowDict a -> ShowDict [a]}}};
+        \node[dictresult] (result) at (0, -2.2) {{\small Населяем ожидаемый тип}\\[5pt]\texttt{\textbf{d2 d1}}\\[4pt]{\small\color{blue!70!black}\texttt{:: ShowDict [a]}}};
+        \node[dictcall] (call) at (0, -4.8) {{\small Вызов \texttt{g} со словарём}\\[5pt]\texttt{g (d2 d1) ...}};
+
+        \draw[dictflow] (d1.south) -- node[dictlabel, left=3pt] {аргумент} (result.north west);
+        \draw[dictflow] (d2.south) -- node[dictlabel, right=3pt] {функция} (result.north east);
+        \draw[dictflow] (result.south) -- node[dictlabel, right=5pt] {неявный аргумент \texttt{g}} (call.north);
+    \end{tikzpicture}
+    \caption{Население типа словаря: компилятор находит терм \texttt{d2 d1} типа \texttt{ShowDict [a]} и подставляет его в вызов \texttt{g} (вызов со словарём показан схематично).}
+    \label{fig:dictionary-inhabitation}
+\end{figure}
 
 Вывод инстансов происходит рекурсивно.
 Чтобы вывести \mintinline{haskell}|ShowDict [a]|, выводится сначала посылка \mintinline{haskell}|ShowDict a|.
@@ -277,6 +298,9 @@ Haskell также предоставляет возможность сохра�
     ghci> showReverse @'[] @'[Char, Int, Double]
     "Double Int Char"
 \end{minted}
+
+При компиляции вывод инстансов определяет порядок типов в аккумуляторе и строит терм, передающий нужные словари в \texttt{showReverse} и \texttt{showTypes}.
+Методы этих словарей --- обычный код, который при исполнении строит строку; оптимизатор может дополнительно упростить его, если располагает нужной информацией.
 
 Можно заметить, что процесс вывода классов типов очень похож на вычисление логических программ, например, на Prolog, только без backtracking'а (перебора различных вариантов решений в поисках подходящего).
 Как, впрочем, и вывод типов в Haskell~\cite{spj-type-inference} в целом: собранные по программе эквивалентности можно рассматривать как логическую программу, решение этой системы типовых уравнений --- как исполнение этой программы.
@@ -372,8 +396,8 @@ Haskell также предоставляет возможность сохра�
 
 Как мы увидим далее, неявные параметры сами по себе тоже нужны как статическая аппроксимация динамических свободных переменных для реализации системы эффектов (см. далее~\ref{sec:effect-systems}).
 Однако, иметь классы типов отдельной языковой возможностью всё же полезно, несмотря на то, что они, вроде бы, представляют собой те же неявные параметры (пусть и с рекурсивным механизмом населения).
-Так, можно поддержать важное свойство при соблюдении всех ограничений, т.е. при отсутствии \vocab{orphan instances}\footnote{\url{https://stackoverflow.com/questions/3079537/orphaned-instances-in-haskell}}.
-\vocab{Когерентность инстансов (coherence)} --- для одного типа все инстансы данного класса типов, полученные разными способами, неотличимы (рис.~\ref{fig:coherence}).
+Так, можно поддержать важное свойство --- \vocab{когерентность инстансов (coherence)}: словари для одного и того же ограничения, полученные разными способами, неотличимы (рис.~\ref{fig:coherence}).
+В обычной модели классов типов декларации инстансов глобальны, а выбор реализации однозначен; расширения, допускающие перекрывающиеся или некогерентные инстансы, могут нарушить это свойство\footnote{\url{https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/instances.html\#overlapping-instances}}.
 Соответственно, не имеет значения происхождение того или иного инстанса.
 Иначе говоря, об этом можно не думать, это снимает существенное количество когнитивной нагрузки и упрощает рефакторинг\footnote{\href{https://youtu.be/hIZxTQP1ifo?si=aG2Lk2eb-5E5SOLb}{Edward Kmett - Type Classes vs. the World.}}.
 В то время как остальные подходы требуют трепетного отношения к контексту вызова, потому что из него может прийти неожиданная реализация.
@@ -381,7 +405,7 @@ Haskell также предоставляет возможность сохра�
 \begin{task}
     Множество \mintinline{haskell}|Set a| хранит элементы упорядоченными и при вставке и поиске пользуется порядком \mintinline{haskell}|Ord a|.
     Что произойдёт, если множество построить с одним порядком на элементах, а искать в нём с другим?
-    Почему в Haskell такая ситуация невозможна, а в языке с имплиситами возможна?
+    Почему обычная когерентная модель классов типов в Haskell исключает такую ситуацию, а выбор имплисита из локального контекста допускает её?
 \end{task}
 
 \subsubsection{Правила (rules) и специализация} \label{subsubsec:rules}
@@ -1062,7 +1086,7 @@ Haskell имеет поддержку \vocab{generative type abstractions} в в
 
 \subsubsection{Data reflection} \label{subsubsec:data-reflection}
 
-Как мы обсуждали ранее, свойство когерентности гарантирует, что каждому типу в Haskell соответствует ровно один инстанс определённого класса типов.
+Как мы обсуждали ранее, в обычной когерентной модели классов типов выбор реализации для данного ограничения однозначен, а полученные разными путями словари неотличимы.
 И единственный способ объявить инстанс в Haskell --- декларацией на верхнем уровне, то есть он не может зависеть ни от каких локальных данных.
 Однако в Haskell есть библиотека \href{https://hackage.haskell.org/package/reflection-2.1.6/docs/Data-Reflection.html}{Data.Reflection}\footnote{\url{https://www.tweag.io/blog/2017-12-21-reflection-tutorial/}}, которая позволяет создавать локальные инстансы для свежих, чёрной магией сгенерированных\footnote{\url{https://www.schoolofhaskell.com/user/thoughtpolice/using-reflection}}, типов.
 
@@ -1308,7 +1332,10 @@ Haskell ленив: значение вычисляется только тог�
 
 Цена: \texttt{rnf} обходит значение целиком, даже если оно уже вычислено, и каждый следующий вызов обходит его заново.
 Для функций же инстанс вычисляет только до WHNF: заглянуть в замыкание нельзя.
-Альтернатива~--- не допускать отложенных вычислений в структуре изначально, объявив её поля строгими\footnote{Расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/strict.html}{StrictData} делает строгими все поля в модуле.}.
+Строгие поля помогают контролировать отложенные вычисления при построении структуры\footnote{Расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/strict.html}{StrictData} делает строгими по умолчанию поля типов данных, объявленных в данном модуле.}.
+Однако строгость поля требует лишь WHNF, а вложенные значения могут оставаться ленивыми.
+Например, в \mintinline{haskell}|data Box = Box ![Int]| поле списка строгое, но значение \mintinline{haskell}|Box [1, undefined]| можно вычислить до WHNF: достаточно первого конструктора списка, а его элементы ещё не понадобились.
+Чтобы гарантировать полную нормализацию структуры, нужно контролировать строгость всех вложенных данных или явно выполнять \texttt{rnf}.
 
 Можно заметить, что инстансы \mintinline{haskell}|NFData| полностью определяются формой типа: нужно обойти все поля всех конструкторов.
 Писать такой код руками не приходится, его порождает компилятор (см.~\ref{sec:datatype-generic}).

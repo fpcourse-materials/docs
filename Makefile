@@ -4,6 +4,13 @@ all: slides
 fp2:
 	latexmk -pdf -shell-escape -interaction=nonstopmode fp2.tex
 
+# Проверить страницу конспекта глазами: make fp2-page PAGE=43 (PNG в out/fp2/).
+PAGE ?= 1
+.PHONY: fp2-page
+fp2-page: fp2
+	mkdir -p out/fp2
+	pdftoppm -f $(PAGE) -l $(PAGE) -scale-to 1800 -singlefile -png fp2.pdf out/fp2/page-$(PAGE)
+
 # Студенческая версия конспекта с главами 1..N: fp2-ch1-N.pdf
 #   make fp2-students N=2        главы 1 и 2 целиком
 #   make fp2-students N=2 S=1    глава 1 и раздел 2.1 (точки разреза — \fpcutafter в файлах глав)
