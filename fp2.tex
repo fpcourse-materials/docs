@@ -106,6 +106,9 @@
 % make fp2-students N=2 S=1  даёт главу 1 и раздел 2.1. Точки разреза расставлены в файлах глав командой \fpcutafter.
 \providecommand{\maxchapter}{99}
 \providecommand{\maxsection}{99}
+% Третий параметр \maxsubsection обрывает раздел \maxsection после подраздела с этим номером:
+% make fp2-students N=3 S=1 SS=4  даёт главы 1–2 и подразделы 3.1.1–3.1.4. Точки разреза — \fpcutafterss.
+\providecommand{\maxsubsection}{99}
 \ifnum\maxchapter<99
     \usepackage{xr-hyper}
     \externaldocument{fp2-labels}
@@ -113,7 +116,12 @@
 
 % \fpcutafter{n} ставится в файле главы перед \subsection номер n+1: если это последняя включённая глава
 % и \maxsection не больше n, чтение файла главы на этом обрывается
-\newcommand{\fpcutafter}[1]{\ifnum\value{fpchapter}=\maxchapter\ifnum\maxsection>#1\else\endinput\fi\fi}
+% \relax после чисел обязателен: иначе следующий \ifnum раскрывается ещё при чтении числа, и обрыв срабатывает в любой главе
+\newcommand{\fpcutafter}[1]{\ifnum\value{fpchapter}=\maxchapter\relax\ifnum\maxsection>#1\relax\else\endinput\fi\fi}
+
+% \fpcutafterss{n}{m} ставится в файле главы перед \subsubsection номер n.(m+1): если это последняя включённая глава,
+% раздел n --- последний включённый и \maxsubsection не больше m, чтение файла главы на этом обрывается
+\newcommand{\fpcutafterss}[2]{\ifnum\value{fpchapter}=\maxchapter\relax\ifnum\maxsection=#1\relax\ifnum\maxsubsection>#2\relax\else\endinput\fi\fi\fi}
 
 % \fpchapter{заголовок}{\label{...} или пусто}{файл}: глава входит в документ, только если её номер не больше \maxchapter
 \newcounter{fpchapter}

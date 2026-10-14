@@ -3,8 +3,6 @@
 % todo http://adam.chlipala.net/cpdt/html/Hoas.html
 % todo Parametric Higher-Order Abstract Syntax for Mechanized Semantics
 
-% todo параметрический полиморфизм в домашку
-
 Никакое нетривиальное семантическое свойство программ не может быть алгоритмически проверено\footnote{\url{https://en.wikipedia.org/wiki/Rice\%27s_theorem}}.
 Чтобы оставаться разрешимыми (в смысле проверки типов и/или вывода), многие системы типов жертвуют полнотой и, помимо некорректных программ, отвергают много корректных.
 В то же время системы типов также стараются предоставлять различные возможности, позволяющие протипизировать как можно больше корректных программ.
@@ -18,6 +16,10 @@
 И в завершение рассмотрим полиморфизм по рантайм-представлению, ``полиморфизм по полиморфизму''.
 
 \subsection{Параметрический полиморфизм в языке} \label{subsec:lang-parametric-polumorphism}
+
+Рассмотрим, что нужно, чтобы получить полиморфизм в языке программирования и какие возможности это даёт.
+
+\subsubsection{Полиморфизм функций}
 
 Начнём со знакомого примера из предыдущей главы:
 \begin{minted}{haskell}
@@ -86,6 +88,95 @@ $\Lambda$-абстракция $\Lambda\alpha\ldotp M$ обобщает выра
 
 Цена такого полиморфизма на уровне типов невелика: пока кванторы стоят только снаружи типа, алгоритм Хиндли--Милнера выводит все типовые абстракции и аппликации сам.
 Платить приходится, когда кванторы появляются в других местах (\ref{subsubsec:first-class-polymorphism}), а также во время исполнения (\ref{subsec:parametric-implementation}).
+
+
+\subsubsection{First-class polymorphism} \label{subsubsec:first-class-polymorphism}
+
+Рассмотрим функцию \mintinline{haskell}|f g = (g 42, g 'a')|.
+Программа корректна, если передать в неё, например, \texttt{id}.
+Однако алгоритм Хиндли--Милнера её отвергает: аргумент функции он считает мономорфным, а \texttt{g} применяется и к числу, и к символу.
+Чтобы протипизировать такую программу, нужно разрешить квантору стоять не только снаружи типа, но и слева от стрелки.
+
+Иначе говоря, нужна возможность писать функции, которые принимают другие полиморфные функции в качестве аргументов.
+Типы таких функций называются \vocab{типами высшего ранга (higher-rank types)}\footnote{В Haskell их включает расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/rank_polymorphism.html}{RankNTypes}.}.
+Так, типовой параметр функции \texttt{g} определяет функция \texttt{f}, а не вызывающий функцию \texttt{f}:
+\begin{minted}{haskell}
+    f :: (forall a . a -> a) -> (Int, Char)
+    f g = (g @Int 42, g @Char 'a') -- универсальная аппликация для наглядности
+    ghci> f (\x -> x)
+\end{minted}
+
+Цена типов высшего ранга в том, то есть глобальный вывод типов Haskell в этом случае перестаёт работать.
+Но если типы высшего ранга приписать вручную, остальной вывод будет работать как раньше.
+Например, тип числа Чёрча полиморфен, поэтому функции над числами Чёрча имеют высший ранг\footnote{\url{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}}\footnote{Любому интересующемуся языками программирования предлагается провести на сайте Олега Киселёва не один месяц жизни: \url{https://okmij.org/ftp/README.html}.}:
+\begin{minted}{haskell}
+    suc :: (forall a . (a -> a) -> a -> a) -> (b -> b) -> b -> b
+    suc n s z = s (n s z)
+\end{minted}
+
+\begin{task}
+    Какую ошибку выдаст GHC, если убрать у функции \texttt{f} сигнатуру и типовые аппликации?
+    Какой тип для \texttt{g} он пытался вывести?
+\end{task}
+
+%! suppress = LineBreak
+\begin{task}
+    Какой ранг имеет тип \mintinline{haskell}|Int -> (forall a . a -> a)|?
+\end{task}
+
+От многих проблем сопутствующих типам высших рангов можно избавиться, если создавать для них обёртки.
+Например, для чисел Чёрча можно создать обёртку \mintinline{haskell}{newtype Church}.
+Теперь код, работающий с обёрткой, может быть протипизирован типами первого ранга, только конструктор имеет тип высшего ранга:
+\begin{minted}{haskell}
+    newtype Church = Church (forall a . (a -> a) -> a -> a)
+    (+) :: Church -> Church -> Church -- rank 1
+\end{minted}
+Аналогичный код можно написать и на Java или Kotlin:
+\begin{minted}{kotlin}
+    interface Church { fun <a> fold(s: (a) -> a, z: a): a }
+    fun plus(n: Church, m: Church): Church = object : Church {
+        override fun <a> fold(s: (a) -> a, z: a): a = n.fold(s, m.fold(s, z))
+    }
+\end{minted}
+
+По умолчанию типовые параметры можно специализировать только на конкретные типы.
+Специализацию типовых параметров на полиморфные типы (включающие \mintinline{haskell}|forall|'ы внутри себя) называют \vocab{импредикативным применением}\footnote{В Haskell его включает расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/impredicative_types.html}{ImpredicativeTypes}.}.
+\begin{minted}{haskell}
+    runST :: (forall s. ST s c) -> c
+    ($) :: forall a b . (a -> b) -> a -> b
+    foo = runST $ ... -- a специализируется на (forall s. ST s c)
+\end{minted}
+Этот пример настолько частый, что GHC делает для оператора \mintinline{haskell}|$| исключение и типизирует его без расширения.
+Для любой другой функции с таким же типом, например, собственного оператора аппликации \texttt{app}, потребуется само расширение; с ним GHC применяет алгоритм Quick Look, о котором ниже.
+
+Higher-rank типы можно использовать как type-based escape analysis, иначе говоря, не позволять пользователю передавать некоторое значение вовне определённого скоупа.
+Так, например, Haskell предоставляет эффективную монаду \mintinline{haskell}{ST}, позволяющую в рамках ограниченного скоупа работать с мутабельными ячейками памяти~\cite{launchbury1995state}\cite[7.2, ST trick]{maguire-types}:
+\begin{minted}{haskell}
+    newtype ST s a = ST (IO a) -- упрощённо, в GHC устроено сложнее
+    runST :: (forall s. ST s a) -> a
+
+    sumTo :: Int -> Int
+    sumTo n = runST do
+      ref <- newSTRef 0
+      forM [0..n] \i -> modifySTRef ref (+ i)
+      readSTRef ref
+\end{minted}
+Заметим, что если попытаться вернуть из \texttt{runST} ссылку на мутабельную ячейку, то тип результата должен будет содержать фантомный параметр \texttt{s}.
+Но в сигнатуре \texttt{runST} тип результата \texttt{a} стоит вне области действия квантора по \texttt{s}: этот квантор связан внутри аргумента, и снаружи \texttt{s} просто не существует.
+Поэтому такая программа не проходит проверку типов:
+\begin{minted}{haskell}
+    newSTRef :: v -> ST s (STRef s v)
+    ghci> runST (newSTRef True) -- ошибка типизации
+\end{minted}
+На практике, чтобы отличать такие локально связанные типовые переменные, используют концепцию уровней\footnote{\url{https://okmij.org/ftp/ML/generalization.html}}~\cite{spj-type-inference}.
+
+Типы высших рангов вместе с импредикативным применением образуют \vocab{полиморфизм первого класса (first-class polymorphism)}, когда полиморфные типы могут использоваться почти так же свободно, как и любые другие.
+Классический алгоритм глобального вывода Хиндли-Милнера не справляется (и в общем случае задача неразрешима), так что существует большое количество решений, делающих различные компромиссы.
+Можно сделать вывод типов локальным, опирающемся только на соседние ноды AST и вспомогательные типовые аннотации~\cite{pierce2000local, christiansen2013bidirectional, dunfield2019sound}.
+Либо же можно попытаться помочь глобальному выводу дополнительной предобработкой (Quick Look\footnote{\href{https://youtu.be/ZuNMo136QqI?si=qp8PAEeeF-bioCB_}{(youtube) A Quick Look at Impredicativity (Simon Peyton Jones)}}~\cite{serrano2020quick}, реализованный в GHC начиная с версии 9.2 и включаемый расширением ImpredicativeTypes) или дополнительными регулирующими конструкциями (FreezeML~\cite{emrich2020freezeml}).
+
+
+\subsubsection{Полиморфизм данных}
 
 Полиморфными бывают не только функции, но и типы данных.
 В предыдущей главе мы видели, что \texttt{Maybe}~--- это не тип, а типовой конструктор: чтобы получить тип, ему нужно передать аргумент, например, \mintinline{haskell}|Maybe Int|.
@@ -202,91 +293,6 @@ Haskell не позволяет создавать функции на типа�
 Однако именованные функции на типах есть, и мы рассмотрим их далее~\ref{subsec:families}.
 В Scala существует нетривиальный трюк\footnote{\href{https://stackoverflow.com/questions/8736164/what-are-type-lambdas-in-scala-and-what-are-their-benefits}{(stackoverflow) Scala type lambdas.}}\footnote{\url{https://stackoverflow.com/questions/9443004/what-does-the-operator-mean-in-scala}}, который позволяет этого добиться.
 Scala3, однако, включила эту возможность непосредственно в язык\footnote{\url{https://docs.scala-lang.org/scala3/reference/new-types/type-lambdas.html}}.
-
-\subsubsection{First-class polymorphism} \label{subsubsec:first-class-polymorphism}
-
-Рассмотрим функцию \mintinline{haskell}|f g = (g 42, g 'a')|.
-Программа корректна, если передать в неё, например, \texttt{id}.
-Однако алгоритм Хиндли--Милнера её отвергает: аргумент функции он считает мономорфным, а \texttt{g} применяется и к числу, и к символу.
-Чтобы протипизировать такую программу, нужно разрешить квантору стоять не только снаружи типа, но и слева от стрелки.
-
-Иначе говоря, нужна возможность писать функции, которые принимают другие полиморфные функции в качестве аргументов.
-Типы таких функций называются \vocab{типами высшего ранга (higher-rank types)}\footnote{В Haskell их включает расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/rank_polymorphism.html}{RankNTypes}.}.
-Так, типовой параметр функции \texttt{g} определяет функция \texttt{f}, а не вызывающий функцию \texttt{f}:
-\begin{minted}{haskell}
-    f :: (forall a . a -> a) -> (Int, Char)
-    f g = (g @Int 42, g @Char 'a') -- универсальная аппликация для наглядности
-    ghci> f (\x -> x)
-\end{minted}
-
-Цена типов высшего ранга в том, то есть глобальный вывод типов Haskell в этом случае перестаёт работать.
-Но если типы высшего ранга приписать вручную, остальной вывод будет работать как раньше.
-Например, тип числа Чёрча полиморфен, поэтому функции над числами Чёрча имеют высший ранг\footnote{\url{https://okmij.org/ftp/tagless-final/course/Boehm-Berarducci.html}}\footnote{Любому интересующемуся языками программирования предлагается провести на сайте Олега Киселёва не один месяц жизни: \url{https://okmij.org/ftp/README.html}.}:
-\begin{minted}{haskell}
-    suc :: (forall a . (a -> a) -> a -> a) -> (b -> b) -> b -> b
-    suc n s z = s (n s z)
-\end{minted}
-
-\begin{task}
-    Какую ошибку выдаст GHC, если убрать у функции \texttt{f} сигнатуру и типовые аппликации?
-    Какой тип для \texttt{g} он пытался вывести?
-\end{task}
-
-%! suppress = LineBreak
-\begin{task}
-    Какой ранг имеет тип \mintinline{haskell}|Int -> (forall a . a -> a)|?
-\end{task}
-
-От многих проблем сопутствующих типам высших рангов можно избавиться, если создавать для них обёртки.
-Например, для чисел Чёрча можно создать обёртку \mintinline{haskell}{newtype Church}.
-Теперь код, работающий с обёрткой, может быть протипизирован типами первого ранга, только конструктор имеет тип высшего ранга:
-\begin{minted}{haskell}
-    newtype Church = Church (forall a . (a -> a) -> a -> a)
-    (+) :: Church -> Church -> Church -- rank 1
-\end{minted}
-Аналогичный код можно написать и на Java или Kotlin:
-\begin{minted}{kotlin}
-    interface Church { fun <a> fold(s: (a) -> a, z: a): a }
-    fun plus(n: Church, m: Church): Church = object : Church {
-        override fun <a> fold(s: (a) -> a, z: a): a = n.fold(s, m.fold(s, z))
-    }
-\end{minted}
-
-По умолчанию типовые параметры можно специализировать только на конкретные типы.
-Специализацию типовых параметров на полиморфные типы (включающие \mintinline{haskell}|forall|'ы внутри себя) называют \vocab{импредикативным применением}\footnote{В Haskell его включает расширение \href{https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/impredicative_types.html}{ImpredicativeTypes}.}.
-\begin{minted}{haskell}
-    runST :: (forall s. ST s c) -> c
-    ($) :: forall a b . (a -> b) -> a -> b
-    foo = runST $ ... -- a специализируется на (forall s. ST s c)
-\end{minted}
-Этот пример настолько частый, что GHC делает для оператора \mintinline{haskell}|$| исключение и типизирует его без расширения.
-Для любой другой функции с таким же типом, например, собственного оператора аппликации \texttt{app}, потребуется само расширение; с ним GHC применяет алгоритм Quick Look, о котором ниже.
-
-Higher-rank типы можно использовать как type-based escape analysis, иначе говоря, не позволять пользователю передавать некоторое значение вовне определённого скоупа.
-Так, например, Haskell предоставляет эффективную монаду \mintinline{haskell}{ST}, позволяющую в рамках ограниченного скоупа работать с мутабельными ячейками памяти~\cite{launchbury1995state}\cite[7.2, ST trick]{maguire-types}:
-\begin{minted}{haskell}
-    newtype ST s a = ST (IO a) -- упрощённо, в GHC устроено сложнее
-    runST :: (forall s. ST s a) -> a
-
-    sumTo :: Int -> Int
-    sumTo n = runST do
-      ref <- newSTRef 0
-      forM [0..n] \i -> modifySTRef ref (+ i)
-      readSTRef ref
-\end{minted}
-Заметим, что если попытаться вернуть из \texttt{runST} ссылку на мутабельную ячейку, то тип результата должен будет содержать фантомный параметр \texttt{s}.
-Но в сигнатуре \texttt{runST} тип результата \texttt{a} стоит вне области действия квантора по \texttt{s}: этот квантор связан внутри аргумента, и снаружи \texttt{s} просто не существует.
-Поэтому такая программа не проходит проверку типов:
-\begin{minted}{haskell}
-    newSTRef :: v -> ST s (STRef s v)
-    ghci> runST (newSTRef True) -- ошибка типизации
-\end{minted}
-На практике, чтобы отличать такие локально связанные типовые переменные, используют концепцию уровней\footnote{\url{https://okmij.org/ftp/ML/generalization.html}}~\cite{spj-type-inference}.
-
-Типы высших рангов вместе с импредикативным применением образуют \vocab{полиморфизм первого класса (first-class polymorphism)}, когда полиморфные типы могут использоваться почти так же свободно, как и любые другие.
-Классический алгоритм глобального вывода Хиндли-Милнера не справляется (и в общем случае задача неразрешима), так что существует большое количество решений, делающих различные компромиссы.
-Можно сделать вывод типов локальным, опирающемся только на соседние ноды AST и вспомогательные типовые аннотации~\cite{pierce2000local, christiansen2013bidirectional, dunfield2019sound}.
-Либо же можно попытаться помочь глобальному выводу дополнительной предобработкой (Quick Look\footnote{\href{https://youtu.be/ZuNMo136QqI?si=qp8PAEeeF-bioCB_}{(youtube) A Quick Look at Impredicativity (Simon Peyton Jones)}}~\cite{serrano2020quick}, реализованный в GHC начиная с версии 9.2 и включаемый расширением ImpredicativeTypes) или дополнительными регулирующими конструкциями (FreezeML~\cite{emrich2020freezeml}).
 
 \subsubsection{Higher-order/kinded polymorphism}
 
