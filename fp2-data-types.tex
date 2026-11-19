@@ -187,13 +187,13 @@
     Убедитесь в вашем любимом языке с подтипизацией и поддержкой вариантности, что минус на минус даёт плюс.
 \end{task}
 
-\subsection{Изоморфизм} \label{subsec:isomorphism}э
+\subsection{Изоморфизм} \label{subsec:isomorphism}
 
 Один и тот же смысл можно представить разными типами.
 При проектировании функции или модели данных полезно понимать, какие типы несут одинаковое ``количество информации''.
 Для этого введём понятие изоморфизма, а затем воспользуемся алгеброй типов, чтобы навигироваться в пространстве решений.
 
-В этом разделе рассматриваем полностью определённые значения и тотальные функции, то есть функции, определённые на всех входах\footnote{Это упрощённая модель, а не полная семантика Haskell: мы не учитываем незавершающиеся вычисления и частично определённые значения. Например, у типа \mintinline{haskell}|Maybe ()| есть значение \mintinline{haskell}|Just undefined|. Для приведённых ниже функций преобразование туда и обратно теряет даже его внешний конструктор: \mintinline{haskell}|to (from (Just undefined))| даёт неопределённое вычисление целиком. Поэтому законы изоморфизма здесь утверждаются в выбранной модели.}.
+В этом разделе рассматриваем полностью определённые значения и тотальные функции, то есть функции, определённые на всех входах\footnote{Здесь и далее в этой главе при обсуждении изоморфизмов и законов преобразования программ отвлекаемся от тонкостей полной семантики Haskell: незавершающихся вычислений, частично определённых значений вроде \mintinline{haskell}|Just undefined| и проверки строгости через \texttt{seq}. Их учёт потребовал бы дополнительных условий к формулировкам законов.}.
 
 Два типа \texttt{A} и \texttt{B} называются \vocab{изоморфными} (обозначают \texttt{A $\iso$ B}) тогда и только тогда, когда существует такая пара функций \texttt{to :: A -> B} и \texttt{from :: B -> A}, что\footnote{Под равенством термов можно понимать разное, например, $\alpha\beta\eta$-эквивалентность. Мы будем пользоваться \vocab{экстенсиональным равенством} для функций~--- две функции равны, когда равны их результаты на всех входах. \url{https://ncatlab.org/nlab/show/function+extensionality}}
 \begin{minted}{c}
@@ -428,10 +428,10 @@
     data Nat = Zero | Suc ?\framebox{Nat}?
 \end{minted}
 
-Мы в основном посмотрим на рекурсивные типы с практической точки зрения.
-Наша цель --- отделить форму одного слоя структуры от рекурсивных ссылок на её подструктуры.
-Тогда обработку слоя можно будет задавать отдельно, а саму схему рекурсии переиспользовать для списков, деревьев и других типов.
-Однако, их формальное теоретико-типовое описание, теоретико-категорная и теоретико-множественная интерпретации представляют отдельный интерес~\cite[часть 4]{pierce2002types}.
+Наша цель~--- отделить форму одного слоя структуры от рекурсивных ссылок на её подструктуры.
+Это позволит нам построить несколько важных изоморфизмов, и увидеть, как ещё можно по-разному представлять рекурсивные структуры данных (а, следовательно, и программы).
+
+Формальное теоретико-типовое описание рекурсивных типов, теоретико-категорная и теоретико-множественная интерпретации представляют отдельный интерес~\cite[часть 4]{pierce2002types}.
 
 \subsubsection{Просто список}
 
@@ -458,14 +458,20 @@
 \end{minted}
 
 Мы получили конечную запись определения, но рекурсия в ней осталась.
-Теперь выделим нерекурсивную форму одного слоя, заменив в ней хвост на параметр.
-Сам тип списка должен быть изоморфен этой форме, в которую снова подставлен список\footnote{Само уравнение ещё не выбирает конечные списки. В модели множеств конечные списки образуют наименьшую неподвижную точку соответствующего конструктора типов. Ленивый Haskell допускает также бесконечные и частично определённые значения; здесь вывод по длинам относится к конечным, полностью определённым спискам.}:
+Давайте получим такое нерекурсивное определение $L$, что
 \[
     L \iso 1 + a \times L
 \]
+
 Расширим язык типов абстракцией (полиморфизмом) и решим полученное рекурсивное уравнение в стиле $\lambda$-исчисления, с помощью некоторого комбинатора неподвижной точки:
 \[
     L = FIX\ap\lambda r\ldotp 1 + a \times r
+\]
+
+Если $FIX$ на уровне типов удовлетворяет уравнению комбинатора неподвижной точки с точностью до изоморфизма, $FIX\ap f \iso f\ap(FIX\ap f)$, то такое определение $L$ действительно даёт искомый изоморфизм.
+Достаточно подставить $f = \lambda r\ldotp 1 + a \times r$ и раскрыть один шаг:
+\[
+    L = FIX\ap f \iso f\ap(FIX\ap f) = f\ap L =_\beta 1 + a \times L
 \]
 
 Закодируем это на Haskell.
@@ -477,8 +483,9 @@
 
     example :: FixList Int -- [1, 2, 3]
     example = In (Right (1,
-                In (Right (2,
-                In (Right (3, In (Left ())))))))
+              In (Right (2,
+              In (Right (3,
+              In (Left ())))))))
 \end{minted}
 
 У параметров \mintinline{haskell}{Shape a r} разные роли: \texttt{a} --- тип элемента, а \texttt{r} --- место для хвоста.
@@ -594,7 +601,7 @@
 
 Иначе говоря, \mintinline{haskell}{cata} заменяет все конструкторы \mintinline{haskell}{In} на функцию \texttt{phi}, которая содержит информацию о том, как реагировать на разные варианты конструкторов в дереве:
 \begin{minted}{text}
-    example           = In  (Cons 1 (In  (Cons 2 (In  (Cons 3  (In  Nil))))))
+    example           = In  (Cons 1 (In  (Cons 2 (In  (Cons 3 (In  Nil))))))
     cata phi example ?$\rightsquigarrow$? phi (Cons 1 (phi (Cons 2 (phi (Cons 3 (phi Nil))))))
 \end{minted}
 
@@ -710,8 +717,8 @@
 \subsection{Всё через свёртки} \label{subsec:all-folds}
 
 Вместо хранения рекурсивной структуры можно описать, как свернуть её с любой выбранной алгеброй.
-Потребитель передаёт обработчики конструкторов, а представление структуры связывает их вызовы в нужном порядке.
-Так с помощью катаморфизма получаем изоморфизм между данными и их представлением через свёртку\footnote{Здесь рассматриваем индуктивные структуры с обычными функторами формы, построенными из сумм и произведений, и параметрические функции. Изоморфизм понимается экстенсионально; частичные значения и операции Haskell вроде \texttt{seq} требуют дополнительных оговорок.}:
+Потребитель передаёт обработчики конструкторов, а представление структуры вычисляет результат, применяя эти обработчики вместо конструкторов.
+Так с помощью катаморфизма получаем изоморфизм между данными и их представлением через свёртку\footnote{Здесь рассматриваем индуктивные структуры с обычными функторами формы, построенными из сумм и произведений, и параметрические функции.}:
 \[
     \texttt{Fix f} \iso \texttt{forall r . (f r -> r) -> r}.
 \]
@@ -787,8 +794,7 @@
 Заметим, что список Чёрча принимает функции, соответствующие веткам паттерн-матчинга или аргументам сворачивающей функции.
 Вместо конструкторов же сразу вызываются соответствующие функции.
 То есть, вместо того, чтобы создать структуру данных и доставить её к месту деконструирования (паттерн-матчингу), мы \point{доставляем место деконструирования к месту конструирования}.
-Например, \mintinline{haskell}{xs3 (+) 0} сразу связывает сложения, а \mintinline{haskell}{xs3 (:) []} связывает вызовы конструкторов списка.
-Само функциональное представление может хранить данные в замыканиях; при совмещении построения с потреблением промежуточное представление иногда удаётся устранить полностью.
+Например, \mintinline{haskell}{xs3 (+) 0} сразу суммирует элементы списка, а \mintinline{haskell}{xs3 (:) []} восстанавливает классический \mintinline{haskell}{data}-список.
 
 Мы уже работали с обратным процессом, дефункционализацией, когда функции первого класса превращались в вызовы конструкторов, а их тела --- в ветки паттерн-матчинга~\ref{subsubsec:defunctionalization}.
 Можно заметить, что тут мы имеем дело с обратным процессом, \vocab{рефункционализацией}, когда вместо вызовов конструкторов сразу вызывается соответствующий интерпретирующий код~\cite{DANVY2009534}.
@@ -854,7 +860,7 @@
     map f xs = build \s z -> foldr (\x acc -> s (f x) acc) z xs
 \end{minted}
 На вход \texttt{build} передаётся список Чёрча.
-Квантор \texttt{forall b} гарантирует, что производитель параметричен по типу результата: он связывает переданные шаг и базу, поэтому вместо построения списка с последующей свёрткой можно сразу передать нужные обработчики\footnote{Это следствие параметричности, а не только раскрытия определений. Для Haskell правило требует корректного производителя: использование \texttt{seq} для исследования строгости переданных обработчиков может нарушить закон.}~\cite{gill1993short}:
+Квантор \texttt{forall b} гарантирует, что производитель параметричен по типу результата: он связывает переданные шаг и базу, поэтому вместо построения списка с последующей свёрткой можно сразу передать нужные обработчики~\cite{gill1993short}:
 \begin{minted}{text}
     foldr f ini (build g) ?$\equiv$? g f ini
 \end{minted}
@@ -922,6 +928,7 @@
 Рассмотрим некоторое дерево и его свёртку:
 \begin{minted}{haskell}
     data Tree a = Leaf | Node a [Tree a]
+
     foldTree :: Tree a -> r -> (a -> [r] -> r) -> r
     foldTree tree z f = case tree of
       Leaf -> z
@@ -931,6 +938,7 @@
 Перепишем и переименуем:
 \begin{minted}{haskell}
     data Visitor a r = Visitor { onLeaf :: r, onNode :: a -> [r] -> r }
+
     visitTree :: Tree a -> Visitor a r -> r
     visitTree t (Visitor z f) = foldTree t z f
 \end{minted}
@@ -1008,30 +1016,61 @@
 \end{minted}
 
 Чтобы описать развёртку, достаточно начального состояния и функции одного шага.
-Тип состояния нужен этой функции, но пользователю получившейся структуры знать его необязательно.
-Упакуем состояние вместе с коалгеброй, скрыв их общий тип \texttt{s}.
-Функция \texttt{ana} умеет работать с любым типом состояния, а конкретная упаковка содержит некоторый выбранный тип.
-Формально это соответствует каррированию в обратную сторону и переносу квантора через стрелку; математическая запись получившегося типа такова (\texttt{exists} здесь не синтаксис Haskell):
+Объединим все три аргумента (тип, коалгебру, начальное зерно) в одну упаковку.
+Функция \texttt{ana} умеет работать с любым типом состояния, а в конкретной упаковке этот тип уже выбран.
+Формально сначала объединим два аргумента-значения в пару, а затем перенесём квантор через стрелку.
+Перенос возможен, поскольку тип результата \texttt{Fix f} не зависит от $s$:
+\[
+    \begin{aligned}
+        &\forall s\ldotp (s\to f\ap s)\to s\to \texttt{Fix}\ap f \\
+        &\quad\iso \forall s\ldotp ((s\to f\ap s)\times s)\to \texttt{Fix}\ap f \\
+        &\quad\iso (\exists s\ldotp (s\to f\ap s)\times s)\to \texttt{Fix}\ap f.
+    \end{aligned}
+\]
+Создатель упаковки выбирает тип состояния, а потребитель умеет работать с любым таким выбором.
+Переставив компоненты пары, получаем следующую математическую запись типа (\texttt{exists} здесь не синтаксис Haskell):
 \begin{minted}{text}
     ana :: Functor f => (exists s . (s, s -> f s)) -> Fix f
 \end{minted}
 Закодируем квантор существования с помощью нового типа (см.~\ref{subsubsec:existentials}):
 \begin{minted}{haskell}
     data Box f where
-      --     exists s. (s,    s -> f s)
+      --     exists   s. (s,    s -> f s)
       Box :: forall f s . s -> (s -> f s) -> Box f
 \end{minted}
+При разборе упаковки мы получаем состояние и коалгебру с одним и тем же неизвестным типом \texttt{s}.
 Главная операция такого представления --- наблюдение одного слоя:
 \begin{minted}{haskell}
     step :: Functor f => Box f -> f (Box f)
     step (Box s psi) = fmap (\s' -> Box s' psi) (psi s)
-
-    ana' :: Functor f => Box f -> Fix f
-    ana' = In . fmap ana' . step
 \end{minted}
 Функция \texttt{step} открывает упаковку, применяет коалгебру к состоянию и упаковывает каждое новое состояние с той же коалгеброй.
 Внешний код получает слой с новыми \texttt{Box f} в рекурсивных позициях, а тип состояния остаётся скрыт.
-Повторяя эту операцию, \texttt{ana'} строит обычную рекурсивную структуру.
+По типам этот шаг выглядит так:
+\[
+    s \xrightarrow{\psi} f\ap s
+    \xrightarrow{\texttt{fmap}\ap(\lambda s'\ldotp\texttt{Box}\ap s'\ap\psi)}
+    f\ap(\texttt{Box}\ap f).
+\]
+
+Например, бесконечный список натуральных чисел можно описать состоянием-счётчиком.
+Для хранения описания и запроса отдельного слоя мы \point{не полагаемся на ленивость Haskell}, поэтому эта техника применима и в энергичных языках:
+\begin{minted}{haskell}
+    nats :: Box (ListF Integer)
+    nats = Box 0 \curr -> Cons curr (curr + 1)
+\end{minted}
+Первое наблюдение даёт элемент \texttt{0} и упаковку состояния \texttt{1}, следующее --- элемент \texttt{1} и упаковку состояния \texttt{2}:
+\begin{minted}{text}
+    step nats ?$\rightsquigarrow$? Cons 0 <Box с состоянием 1>
+    step <Box с состоянием 1> ?$\rightsquigarrow$? Cons 1 <Box с состоянием 2>
+\end{minted}
+Каждый вызов строит только один слой.
+Повторяя эту операцию, можно восстановить обычную рекурсивную структуру:
+\begin{minted}{haskell}
+    ana' :: Functor f => Box f -> Fix f
+    ana' = In . fmap ana' . step
+\end{minted}
+Преобразование \mintinline{haskell}{ana' nats} в бесконечный \texttt{Fix} уже использует ленивость Haskell: в энергичном языке потребовалась бы явная задержка рекурсивного построения.
 
 В обратную сторону любую готовую структуру можно упаковать, взяв её саму в качестве состояния, а \texttt{out} --- в качестве коалгебры:
 \begin{minted}{haskell}
@@ -1044,22 +1083,8 @@
 Композиция \mintinline{haskell}{from (to x)} разворачивает \texttt{x} с помощью \texttt{out} и восстанавливает ту же структуру.
 Композиция \mintinline{haskell}{to (from b)} может изменить внутреннее представление: вместо исходного состояния, например числа, теперь хранится рекурсивная структура.
 Однако последовательные наблюдения с помощью \texttt{step} дают те же слои.
-В этом смысле имеем изоморфизм \mintinline{haskell}|Fix f ?$\simeq$? Box f|: равенство упаковок понимается как равенство наблюдаемого поведения\footnote{Для потенциально бесконечных структур математическая модель использует наибольшую неподвижную точку функтора. Ленивый Haskell позволяет представлять их через \texttt{Fix}; для частичных значений и операций вроде \texttt{seq} законы требуют оговорок. Сравнение абстрактных представлений через их наблюдения обсуждается в~\cite{gibbons2008unfolding}.}.
+В этом смысле имеем изоморфизм \mintinline{haskell}|Fix f ?$\simeq$? Box f|: равенство упаковок понимается как равенство наблюдаемого поведения\footnote{Для потенциально бесконечных структур математическая модель использует наибольшую неподвижную точку функтора. Сравнение абстрактных представлений через их наблюдения обсуждается в~\cite{gibbons2008unfolding}.}.
 Иногда такое представление называют \vocab{co-Church encoding}~\cite{gibbons2008unfolding}.
-
-Например, бесконечный ленивый список натуральных чисел может быть задан следующим образом.
-Для хранения описания и запроса отдельного слоя мы \point{не полагаемся на ленивость Haskell}, поэтому эта техника применима и в энергичных языках.
-\begin{minted}{haskell}
-    nats :: Box (ListF Integer)
-    nats = Box 0 \curr -> Cons curr (curr + 1)
-\end{minted}
-Первое наблюдение даёт элемент \texttt{0} и упаковку состояния \texttt{1}, следующее --- элемент \texttt{1} и упаковку состояния \texttt{2}:
-\begin{minted}{text}
-    step nats ?$\rightsquigarrow$? Cons 0 <Box с состоянием 1>
-    step <Box с состоянием 1> ?$\rightsquigarrow$? Cons 1 <Box с состоянием 2>
-\end{minted}
-Каждый вызов строит только один слой.
-А вот преобразование \mintinline{haskell}{from nats} в бесконечный \texttt{Fix} уже использует ленивость Haskell: в энергичном языке потребовалась бы явная задержка рекурсивного построения.
 
 \begin{task}
     Реализуйте функцию \mintinline{haskell}{take :: Int -> Box (ListF a) -> Box (ListF a)}, которая описывает первые $n$ элементов, не разворачивая их заранее.
@@ -1075,65 +1100,84 @@
     \text{\texttt{s -> f s}} \iso \left( \prod_{i}(t_i\ap s) \right)^{\displaystyle s} \iso \prod_i(s\to t_i\ap s)
 \]
 То есть коалгебра эквивалентна кортежу функций.
-Вместе со скрытым состоянием получаем представление \point{абстрактного типа данных (abstract data type, ADT)}: пользователь работает с состоянием через заданные операции~\cite{gibbons2008unfolding}.
+Вместе со скрытым состоянием получаем представление \point{абстрактного типа данных (abstract data type, ADT)}: пользователь работает с состоянием через заданные операции~\cite{gibbons2008unfolding}\footnote{В этой модели операция имеет непосредственный доступ к одному скрытому состоянию. Например, для объединения множеств метод может иметь тип \texttt{s -> Set -> s}: второе множество передаётся в упаковке \texttt{Set} и используется через публичный интерфейс. У двух независимо открытых упаковок типы состояний могут различаться, поэтому метод \texttt{s -> s -> s} нельзя напрямую применить к обоим состояниям. Если нужен доступ к представлениям обоих аргументов, можно скрыть общий тип \texttt{s} на уровне модуля, внутри которого создаются и объединяются значения этого типа; см.~\cite[разделы 2.1--2.3]{gibbons2008unfolding}.}.
 Здесь ADT означает абстрактный тип данных; выше то же сокращение использовалось для алгебраических типов данных (algebraic data types).
 Например, у счётчика есть операция наблюдения текущего числа и операция перехода к следующему состоянию:
 \begin{minted}{haskell}
     data CounterF s = CounterF Integer s
-    instance Functor CounterF where
-      fmap f (CounterF value s) = CounterF value (f s)
-
     type Counter = Box CounterF
 
     counter :: Counter
     counter = Box (0 :: Integer) (\n -> CounterF n (n + 1))
 
-    counterFromInterval :: Counter
-    counterFromInterval = Box (100 :: Integer, 100 :: Integer)
-      (\(lo, hi) -> CounterF (hi - lo) (lo, hi + 2))
+    counterBy :: Integer -> Counter
+    counterBy delta = Box (0 :: Integer, delta)
+      (\(n, d) -> CounterF n (n + d, d))
 \end{minted}
-Первая реализация хранит число, вторая --- границы интервала и показывает их разность.
-При переходе к следующему состоянию первая увеличивает число на один, а вторая расширяет интервал на два.
+Первая реализация хранит текущее число и увеличивает его на один.
+Вторая хранит пару из текущего числа и выбранного шага: \mintinline{haskell}{counterBy 2} проходит значения \texttt{0, 2, 4, ...}.
 Коалгебра типа \mintinline{haskell}{s -> CounterF s} объединяет две операции над скрытым состоянием: \mintinline{haskell}{s -> Integer} и \mintinline{haskell}{s -> s}.
-Чтобы ими мог пользоваться клиент, определим операции над самим \texttt{Counter}:
+Чтобы воспользоваться общей функцией \texttt{step}, нужен инстанс \mintinline{haskell}{Functor CounterF}:
+\begin{minted}{haskell}
+    instance Functor CounterF where
+      fmap f (CounterF current s) = CounterF current (f s)
+\end{minted}
+Здесь \texttt{fmap} сохраняет наблюдаемое число и преобразует только поле состояния.
+Внутри \texttt{step} ему передаётся функция \mintinline{haskell}{\s' -> Box s' psi}: она превращает новое скрытое состояние в готовый \texttt{Counter}.
+Само следующее состояние вычисляет коалгебра; инстанс нужен для его упаковки.
+Теперь определим операции клиентского интерфейса:
 \begin{minted}{haskell}
     value :: Counter -> Integer
     value c = current
       where CounterF current _ = step c
 
-    increment :: Counter -> Counter
-    increment c = next
+    advance :: Counter -> Counter
+    advance c = next
       where CounterF _ next = step c
 \end{minted}
-Вызов \texttt{step c} имеет тип \mintinline{haskell}{CounterF Counter}: новое состояние уже упаковано вместе с коалгеброй, поэтому \texttt{increment} возвращает готовый счётчик, не раскрывая тип \texttt{s}.
-Операция \texttt{value} наблюдает текущее число, а \texttt{increment} возвращает новый счётчик; исходный счётчик при этом не меняется.
+Вызов \texttt{step c} имеет тип \mintinline{haskell}{CounterF Counter}: новое состояние уже упаковано вместе с коалгеброй, поэтому \texttt{advance} возвращает готовый счётчик, не раскрывая тип \texttt{s}.
+Операция \texttt{value} наблюдает текущее число, а \texttt{advance} возвращает счётчик после одного шага; исходный счётчик при этом не меняется.
 Теперь можно написать клиентский код, используя только эти операции:
 \begin{minted}{haskell}
     sample :: Counter -> [Integer]
     sample c0 =
-      let c1 = increment c0
-          c2 = increment c1
-      in [value c0, value c1, value c2]
+      let c1 = advance c0 in
+      let c2 = advance c1 in
+      [value c0, value c1, value c2]
 
-    -- sample counter             == [0, 1, 2]
-    -- sample counterFromInterval == [0, 2, 4]
-    -- value counter              == 0
+    -- sample counter       == [0, 1, 2]
+    -- sample (counterBy 2) == [0, 2, 4]
+    -- value counter        == 0
 \end{minted}
 Один и тот же клиентский код работает с обеими реализациями и получает разные результаты: поведение операций задаёт упакованная коалгебра.
-При этом клиенту не нужно знать, хранится ли внутри число или пара границ.
-В модуле счётчика достаточно экспортировать тип \texttt{Counter}, начальные значения и функции \texttt{value} и \texttt{increment}; вспомогательные \texttt{Box}, \texttt{CounterF} и \texttt{step} клиенту не нужны.
+Общий тип интерфейса задаёт доступные операции, но сам по себе не требует одинакового поведения реализаций: например, сигнатура \texttt{advance} не предписывает увеличение на единицу.
+При этом клиенту не нужно знать, хранится ли внутри одно число или число вместе с шагом.
+В модуле счётчика достаточно экспортировать тип \texttt{Counter}, \texttt{counter}, \texttt{counterBy} и функции \texttt{value} и \texttt{advance}; вспомогательные \texttt{Box}, \texttt{CounterF} и \texttt{step} клиенту не нужны.
 На самом деле мы уже встречали такую конструкцию ранее, когда говорили про экзистенциальные типы~\ref{subsubsec:existentials} (там мы использовали инстансы классов типов в качестве кортежей функций).
 
 ООП объекты тоже можно рассматривать через коалгебры.
 Подробнее про соотношение объектов и абстрактных типов данных можно почитать в~\cite{cook2009understanding}.
 
+\begingroup
+% Сохраняем отступ minted внутри неразрывного блока и интервалы снаружи.
+\newenvironment{streamlisting}{%
+    \par\nopagebreak\addvspace{\topsep}%
+    \edef\streamlistingindent{\the\parindent}%
+    \noindent\begin{minipage}{\linewidth}%
+    \setlength{\parindent}{\streamlistingindent}%
+}{%
+    \end{minipage}\par\addvspace{\topsep}%
+}
+\begin{samepage}
 \subsubsection{Stream fusion} \label{subsubsec:stream-fusion}
 
 Ранее мы рассматривали foldr/build list fusion оптимизацию, элиминирующую промежуточные списки (см.~\ref{subsubsec:deforestation-fusion}).
 Для некоторых сочетаний функций эффективно объединить вычисления таким способом сложнее: например, \texttt{zip} должен согласовать продвижение двух источников.
-Явное состояние развёртки позволяет хранить состояния обоих источников вместе и управлять их шагами\footnote{Досрочная остановка сама по себе не мешает foldr/build: например, для \texttt{take} в GHC есть соответствующие правила переписывания. Ленивый \texttt{foldr} не обязан вычислять результат для всего хвоста.}.
+Явное состояние развёртки позволяет хранить состояния обоих источников вместе и управлять их шагами.
+\par\end{samepage}
 
 Позднее была предложена техника использования ко-структуры списка --- развёртки или \mintinline{haskell}{Stream}\footnote{\url{https://markkarpov.com/tutorial/ghc-optimization-and-fusion.html}}~\cite{coutts2007stream}:
+\begin{streamlisting}
 \begin{minted}{haskell}
     data ListF a r = Nil | Cons a r
     type MyStream a = Box (ListF a) -- ?$\exists$?s . (s -> ListF a s, s)
@@ -1144,21 +1188,19 @@
 
     stream :: [a] -> Stream a
     stream xs = Stream (\case [] -> Done; x:xs -> Yield x xs) xs
-\end{minted}
 
-\par\noindent\begin{minipage}{\linewidth}
-\begin{minted}{haskell}
     unstream :: Stream a -> [a]
     unstream (Stream next s) = case next s of
       Done -> []
       Yield a s' -> a : unstream (Stream next s')
 \end{minted}
-\end{minipage}\par
+\end{streamlisting}
 
 Идея в том, что \point{преобразования потоков можно описывать нерекурсивными функциями одного шага}.
 Вместо рекурсивного вызова шаг возвращает состояние следующей итерации.
 Повторение шагов выполняет потребитель, например \texttt{unstream}; его определение по-прежнему рекурсивно.
 Так тела преобразований становятся доступны обычному инлайнингу и устранению конструктора непосредственно перед его разбором.
+\begin{streamlisting}
 \begin{minted}{haskell}
     mapS :: (a -> b) -> Stream a -> Stream b
     mapS f (Stream next s) = Stream next' s
@@ -1167,22 +1209,28 @@
           Done -> Done
           Yield x s' -> Yield (f x) s'
 \end{minted}
+\end{streamlisting}
 
+\begin{samepage}
 Общий пайплайн выглядит следующим образом:
 \begin{enumerate}
     \item Мы пишем все функции работы со списками через стримы:
+    \begin{streamlisting}
     \begin{minted}{haskell}
         map :: (a -> b) -> [a] -> [b]
         map f = unstream . mapS f . stream
     \end{minted}
-    \item С помощью RULES (см.~\ref{subsubsec:rules}) устраняем соседние преобразования \texttt{stream . unstream}. Полученный поток представляет ту же последовательность элементов, хотя его скрытое состояние может отличаться\footnote{Как и для \texttt{Box}, сравниваем поведение корректных упаковок, а не их внутреннее представление. В частности, на произвольном \texttt{undefined :: Stream a} буквальное равенство с \texttt{id} не выполняется.}.
-    \item Далее помогают обычные компиляторные оптимизации.\footnote{Можно гарантировать полную дефорестацию с помощью staging (см. далее~\ref{sec:datatype-generic})~\cite{kiselyov2017stream}.}
+    \end{streamlisting}
+    \item С помощью RULES (см.~\ref{subsubsec:rules}) устраняем соседние преобразования \texttt{stream . unstream}. Полученный поток представляет ту же последовательность элементов, хотя его скрытое состояние может отличаться.
+    \item На предыдущем шаге исчезают промежуточные списки. Затем инлайнинг и упрощение устраняют упаковки \texttt{Stream} и промежуточные значения \texttt{Step}, связывая функции шага непосредственно с циклом потребителя.\footnote{Можно гарантировать полную дефорестацию с помощью staging (см. далее~\ref{sec:datatype-generic})~\cite{kiselyov2017stream}.}
 \end{enumerate}
+\par\end{samepage}
 
 Попробуем описать шаг фильтрации.
 Если исходный шаг вернул элемент, не удовлетворяющий предикату, ни \texttt{Done}, ни \texttt{Yield} не подходят: поток ещё не закончился, но элемента для потребителя пока нет.
 Без дополнительного варианта пришлось бы рекурсивно искать следующий подходящий элемент прямо внутри функции шага.
 Поэтому добавим \texttt{Skip}: состояние изменилось, но элемент не появился.
+\begin{streamlisting}
 \begin{minted}{haskell}
     data Step a s = Done | Skip s | Yield a s
 
@@ -1194,6 +1242,7 @@
           Skip s' -> Skip s'
           Yield a s' -> if p a then Yield a s' else Skip s'
 \end{minted}
+\end{streamlisting}
 
 Например, последовательные шаги \mintinline{haskell}{filterS even (stream [1,2,3,4])} таковы:
 \begin{center}
@@ -1208,8 +1257,8 @@
 \end{center}
 Для пользователя это по-прежнему список \texttt{[2,4]}.
 
-\par\noindent\begin{minipage}{\linewidth}
 При добавлении \mintinline{haskell}|Skip| нужно также дополнить разбор шагов в \mintinline{haskell}|unstream| и \mintinline{haskell}|mapS|:
+\begin{streamlisting}
 \begin{minted}{haskell}
     unstream (Stream next s) = case next s of
       Done -> []
@@ -1223,13 +1272,59 @@
           Skip s' -> Skip s'
           Yield x s' -> Yield (f x) s'
 \end{minted}
+\end{streamlisting}
 
-\end{minipage}\par
 Теперь правило устранения \texttt{stream . unstream} понимается с точностью до внутренних \texttt{Skip}: преобразование в список стирает их.
 Число пропусков не входит в наблюдаемый результат списочного интерфейса; код, который сам считает шаги \texttt{Skip}, уже может различить эти представления~\cite{gibbons2008unfolding}.
 
+Теперь вернёмся к \texttt{zip}, который должен согласовать два источника.
+Пусть их скрытые состояния имеют типы \texttt{s} и \texttt{t}, а тип элемента первого потока --- \texttt{a}.
+В состоянии объединённого потока сохраним оба состояния и, при необходимости, уже полученный элемент первого потока:
+\begin{streamlisting}
+\begin{minted}{haskell}
+    type ZipState s t a = (s, t, Maybe a)
+\end{minted}
+\end{streamlisting}
+\texttt{Nothing} означает, что нужно запросить первый поток; \texttt{Just x} --- что элемент \texttt{x} уже есть и нужно дождаться второго.
+При \texttt{Yield x s'} первого потока сохраняем \texttt{x} и возвращаем \texttt{Skip}; при \texttt{Yield y t'} второго получаем пару \texttt{(x, y)} и освобождаем сохранённое место.
+Если запрошенный поток возвращает \texttt{Skip}, обновляем только его состояние, сохраняя ожидающий элемент; если \texttt{Done} --- завершаем объединённый поток.
+\begin{streamlisting}
+\begin{minted}{haskell}
+    zipStep :: (s -> Step a s) -> (t -> Step b t)
+            -> ZipState s t a -> Step (a, b) (ZipState s t a)
+    zipStep nextA nextB (s, t, pending) = case pending of
+      Nothing -> case nextA s of
+        Done -> Done
+        Skip s' -> Skip (s', t, Nothing)
+        Yield x s' -> Skip (s', t, Just x)
+      Just x -> case nextB t of
+        Done -> Done
+        Skip t' -> Skip (s, t', Just x)
+        Yield y t' -> Yield (x, y) (s, t', Nothing)
+
+    zipS :: Stream a -> Stream b -> Stream (a, b)
+    zipS (Stream nextA s0) (Stream nextB t0) =
+      Stream (zipStep nextA nextB) (s0, t0, Nothing)
+\end{minted}
+\end{streamlisting}
+
+Например, соединим \mintinline{haskell}{stream [10]} и \mintinline{haskell}{filterS even (stream [1,2])}:
+\begin{center}
+    \begin{tabular}{lll}
+        Запрос & Сохранённый элемент после шага & Результат \texttt{zip} \\
+        первый: \texttt{Yield 10} & \texttt{Just 10} & \texttt{Skip} \\
+        второй: \texttt{Skip} & \texttt{Just 10} & \texttt{Skip} \\
+        второй: \texttt{Yield 2} & \texttt{Nothing} & \texttt{Yield (10, 2)} \\
+        первый: \texttt{Done} & --- & \texttt{Done}
+    \end{tabular}
+\end{center}
+Каждый шаг объединённого потока запрашивает только один исходный шаг.
+Элемент \texttt{10} не теряется, пока второй поток пропускает \texttt{1}; ожидание выражено состоянием, поэтому рекурсивный поиск пары внутри функции шага не нужен.
+
+\begin{samepage}
 Доведём до результата пример \mintinline{haskell}{sum (map (+1) (filter even xs))} для конечного списка целых чисел.
 Потребителю суммы нужен цикл с аккумулятором:
+\begin{streamlisting}
 \begin{minted}{haskell}
     foldlS :: (b -> a -> b) -> b -> Stream a -> b
     foldlS f initial (Stream next s0) = go initial s0
@@ -1239,24 +1334,33 @@
           Skip s' -> go acc s'
           Yield x s' -> (go $! f acc x) s'
 \end{minted}
+\end{streamlisting}
+\par\end{samepage}
 Это строгая левая свёртка: перед следующим шагом вычисляется новый аккумулятор.
 Если записать \texttt{filter}, \texttt{map} и суммирование через потоки, получим цепочку преобразований:
+\begin{streamlisting}
 \begin{minted}{text}
       foldlS (+) 0 (stream
         (unstream (mapS (+1) (stream
           (unstream (filterS even (stream xs)))))))
     = foldlS (+) 0 (mapS (+1) (filterS even (stream xs)))
 \end{minted}
+\end{streamlisting}
 В первой строке дважды встречается \texttt{stream (unstream ...)}; после устранения этих пар промежуточные списки исчезают.
+Это первый результат оптимизации: пока ещё остаются описания потоков \texttt{Stream} и результаты их шагов \texttt{Step}.
 Инлайнинг \texttt{mapS}, \texttt{filterS} и \texttt{stream} объединяет их функции шага:
+\begin{streamlisting}
 \begin{minted}{haskell}
     nextCombined :: [Int] -> Step Int [Int]
     nextCombined = \case
       [] -> Done
       x:xs -> if even x then Yield (x + 1) xs else Skip xs
 \end{minted}
+\end{streamlisting}
+\begin{samepage}
 Осталось подставить этот шаг в цикл потребителя.
 Каждый \texttt{Done}, \texttt{Skip} или \texttt{Yield} сразу разбирается в \texttt{go}, поэтому конструирование и разбор можно сократить:
+\begin{streamlisting}
 \begin{minted}{haskell}
     sumFused :: [Int] -> Int
     sumFused = go 0
@@ -1267,19 +1371,23 @@
             then (go $! acc + (x + 1)) xs
             else go acc xs
 \end{minted}
+\end{streamlisting}
+\par\end{samepage}
 Например, для \texttt{[1,2,3,4]} остаются слагаемые \texttt{3} и \texttt{5}, результат --- \texttt{8}.
 Рекурсивный обход сохранился в одном цикле; промежуточные списки и значения \texttt{Step} в нём больше не создаются.
+Это второй результат оптимизации: после устранения упаковок потоков и результатов отдельных шагов остался непосредственный обход исходного списка.
 Это результат показанных преобразований; срабатывание всех оптимизаций в конкретной программе зависит от инлайнинга и правил компилятора.
 
 В стандартной библиотеке Haskell всё-таки используется foldr/build fusion, однако существует множество промышленных библиотек стримов~\cite[глава 14]{bragilevsky-haskell}.
 
 Больше про стримы можно почитать у Олега Киселёва\footnote{\url{https://okmij.org/ftp/Streams.html}}.
+\par\endgroup
 
 \subsection{Вездесущий дуализм} \label{subsec:data-duality}
 
 Мы рассмотрели три формы рекурсивных данных:
 \begin{itemize}
-    \item \mintinline{haskell}{Fix f} --- обычные рекурсивные типы данных, конечные в энергичных языках;
+    \item \mintinline{haskell}{Fix f} --- явное рекурсивное представление через слои формы \texttt{f};
     \item \mintinline{haskell}{?$\forall$?a . (f a -> a) -> a} --- Church encoding, конечные структуры заданные свёртками;
     \item \mintinline{haskell}{?$\exists$?s . (s -> f s, s)} --- co-Church encoding, потенциально бесконечные структуры данных, абстракции по данным (работаем через интерфейс над сокрытым представлением).
 \end{itemize}
@@ -1288,37 +1396,96 @@
 
 \subsubsection{Push vs pull streaming} \label{subsubsec:push-pull}
 
-Рассмотрим различные представления списков или, как их иногда называют, потоков событий.
-Подробнее сравнение можно посмотреть тут~\cite[параграф 3]{kiselyov2017stream}.
+Производитель потока (списка некоторых элементов) вычисляет очередные элементы, а потребитель их обрабатывает.
+Вопрос в том, \point{кто управляет продвижением по потоку}: производитель вызывает обработчик потребителя или потребитель запрашивает следующий элемент у производителя?
+Эти два способа взаимодействия называют \vocab{push} и \vocab{pull}~\cite[параграф 3]{kiselyov2017stream}.
 
-Church encoding для списков даёт \vocab{push stream}, или \vocab{internal iteration}, или \vocab{Observer pattern}\footnote{\url{https://learn.microsoft.com/en-us/dotnet/api/system.iobserver-1?view=net-9.0}} (в некотором смысле частный случай Visitor pattern~\ref{subsubsec:visitor}), когда мы регистрируем обработчика событий, а коллекция вызывает (push) на нём методы.
-Примерами push потоков являются Java Stream API\footnote{\url{https://docs.oracle.com/javase/8/docs/api/java/util/stream/Stream.html}}, Closure Transducers\footnote{\url{https://clojure.org/reference/transducers}}.
+В модели push потребитель передаёт обработчик, а производитель сам организует обход и вызывает его для очередных элементов.
+Такой обход называют \vocab{internal iteration}, или внутренней итерацией.
+Представление через свёртку, в частности Church encoding списка, устроено именно так: потребитель передаёт алгебру, а представление списка вызывает её.
+Например, просуммируем три числа в Kotlin.
+В варианте с внутренним обходом мы описываем только обработку очередного элемента:
 \begin{minted}{kotlin}
-    events.observe(object : Observer<Event> {
-        override fun onComplete() { .. }
-        override fun onNext(elem: Event) { .. }
-    })
+    val values = listOf(1, 2, 3)
+
+    var sumPush = 0
+    values.forEach { x -> sumPush += x }
+    println(sumPush) // 6
 \end{minted}
 
-co-Church encoding для списков даёт \vocab{pull stream}, или \vocab{external iteration}, или \vocab{Iterator pattern}.
-Чтобы получить следующий элемент, его нужно явно запросить (pull) потребляющему коду.
-Это представление часто гораздо удобнее с точки зрения использования (см.~\ref{subsubsec:stream-fusion})\footnote{\url{https://github.com/pulldown-cmark/pulldown-cmark/?tab=readme-ov-file\#why-a-pull-parser}}, однако сложнее на стороне имплементации, потому что нужно выделить и поддерживать экзистенциальное состояние в коалгебре.
-Генераторы призваны автоматизировать выделение этого состояния, так как можно заметить, что это continuation вычисления (см. далее~\ref{subsubsec:generators-coroutines}).
+В модели pull потребитель сам запрашивает очередной элемент и решает, когда перейти к следующему.
+Это \vocab{external iteration}, или внешняя итерация; привычный пример --- \vocab{Iterator pattern}.
+В представлении через развёртку, или co-Church encoding, запрос соответствует вызову коалгебры для текущего скрытого состояния.
+Для той же коллекции явно запишем цикл в коде потребителя:
+\begin{minted}{kotlin}
+    val cursor = values.iterator()
 
-% todo про коммуникацию двух кусков кода и инициацию этой коммуникации
+    var sumPull = 0
+    while (cursor.hasNext()) {
+        val x = cursor.next()
+        sumPull += x
+    }
+    println(sumPull) // 6
+\end{minted}
 
-Нередко работу с потоками называют \vocab{реактивным программированием}\footnote{\href{https://youtu.be/sTSQlYX5DU0?si=Xhfi62ScXHBBjdBx}{(youtube) React 2014 : Erik Meijer - What does it mean to be Reactive?}}.
-%Чистой версией является \vocab{functional reactive programming (FRP)}, представляющее потоки как функции от времени\footnote{\href{https://youtu.be/rfmkzp76M4M?si=TRBq8wWbcDOhSbIO}{(youtube) Conal Elliott - The Essence \& Origins of Functional Reactive Programming}}~\cite{elliott1997functional}.
+В первом примере цикл скрыт внутри \texttt{forEach}, который вызывает нашу функцию; во втором наш цикл вызывает \texttt{next}.
+Числа и результат одинаковы, но управление обходом находится на разных сторонах интерфейса.
+
+Различие особенно существенно при объединении нескольких источников.
+В \texttt{zipS} из раздела~\ref{subsubsec:stream-fusion} объединяющий код сам решает, какой поток продвинуть: сначала получает элемент первого, затем запрашивает второй, сохраняя первый элемент на время шагов \texttt{Skip}.
+Pull-интерфейс позволяет чередовать такие запросы.
+Если же два источника независимо вызывают обработчики в стиле push, для их согласования нужно организовать буферизацию элементов или возможность приостанавливать источники.
+
+Внутренний обход встречается в Java Stream API: например, терминальная операция \texttt{forEach} запускает обработку и передаёт элементы заданному обработчику\footnote{\url{https://docs.oracle.com/javase/8/docs/api/java/util/stream/package-summary.html}}.
+Родственная идея лежит в основе Clojure transducers: преобразование коллекции описывается как преобразование функции, обрабатывающей элементы при свёртке; такие преобразования можно применять к коллекциям, потокам и другим источникам\footnote{\url{https://clojure.org/reference/transducers}}.
+При работе с событиями push-взаимодействие часто оформляют через \vocab{Observer pattern}: потребитель регистрирует обработчик, а источник вызывает его при наступлении события\footnote{\url{https://learn.microsoft.com/en-us/dotnet/api/system.iobserver-1?view=net-9.0}}.
+
+Pull-интерфейс требует от производителя сохранять состояние между запросами.
+В наших развёртках мы выделяли это состояние явно.
+Генераторы автоматизируют такую работу: точка продолжения выполнения и нужные локальные переменные сохраняются между запросами очередного элемента.
+Связь этого состояния с continuation вычисления рассмотрим в разделе~\ref{subsubsec:generators-coroutines}.
 
 \subsubsection{Data vs codata} \label{subsubsec:data-codata}
 
-Вспомним функтор-формы для списка:
+Тип можно описать через способы построения значений или через доступные наблюдения над ними.
+Сначала сравним два способа задать \texttt{Fix f}.
+Объявление через \texttt{data} даёт конструктор \texttt{In}, а функцию \texttt{out} можно определить с помощью паттерн-матчинга:
+\begin{minted}{haskell}
+    data Fix f where
+      In :: f (Fix f) -> Fix f
+
+    out :: Fix f -> f (Fix f)
+    out (In layer) = layer
+\end{minted}
+В дуальном варианте объявляем операцию \texttt{out}, а функцию построения \texttt{In} определяем через ответ на запрос \texttt{out}.
+Для этого используем воображаемый язык с ключевым словом \texttt{codata} и следующей формой определения:
+\begin{minted}{haskell}
+    codata Fix f where
+      out :: Fix f -> f (Fix f)
+
+    In :: f (Fix f) -> Fix f
+    out (In layer) = layer
+\end{minted}
+Строка \mintinline{haskell}{out (In layer) = layer} выглядит одинаково, но определяет разные операции.
+В первом случае определяем \texttt{out}, разбирая аргумент, построенный конструктором \texttt{In}.
+Во втором определяем \texttt{In}, задавая результат применения \texttt{out} к создаваемому значению.
+Такой способ определения называется \vocab{co-pattern-matching}: левая часть указывает, какую операцию применяем к создаваемому значению, а правая --- её результат\footnote{\url{https://agda.readthedocs.io/en/latest/language/copatterns.html}}.
+
+Операции \texttt{In} и \texttt{out} работают с одним слоем.
+Уравнение $X\iso f\ap X$ описывает соответствие между структурой и её слоем, но само по себе не определяет, должна ли структура быть конечной.
+В дальнейшем \texttt{data} будем рассматривать в индуктивной трактовке: значения строятся конечным числом применений конструкторов.
+В коиндуктивной трактовке \texttt{codata} достаточно уметь открывать очередной слой; продолжение может быть бесконечным.
+Для рассматриваемых функторов формы этим трактовкам соответствуют наименьшая неподвижная точка $\mu f$ и наибольшая $\nu f$.
+Обе удовлетворяют уравнению неподвижной точки.
+Ранее запись \texttt{Fix f} оставляла это различие неявным: в разделе о представлении через свёртку мы рассматривали индуктивные структуры, а в разделе о развёртке допускали потенциально бесконечные.
+
+Теперь рассмотрим эти подходы на примере списка с уже знакомым функтором формы:
 \begin{minted}{haskell}
     data ListF a r = Nil | Cons a r
 \end{minted}
 
-С помощью ключевого слова \mintinline{haskell}{data} мы определяем новый алгебраический тип данных через способы его сконструировать.
-Далее, с помощью pattern-matching мы можем деконструировать значения алгебраического типа данных и воспользоваться хранящейся в нём информацией.
+Подставив эту форму в определение через \texttt{data}, получаем тип конечных списков.
+Его свёртка разбирает очередной слой и рекурсивно обрабатывает хвост:
 \begin{minted}{haskell}
     data List a where
       List :: ListF a (List a) -> List a
@@ -1329,29 +1496,144 @@ co-Church encoding для списков даёт \vocab{pull stream}, или \v
       List (Cons y ys) -> alg (Cons y (fold alg ys))
 \end{minted}
 
-Однако, также можно определять тип данных через способы его деконструировать с помощью ключевого слова \mintinline{haskell}{codata} (в воображаемом языке).
-Так, у ко-списка можно потребовать показать следующий слой структуры.
-Сконструировать такой тип данных можно с помощью co-pattern-matching'а, описав как деконструирующая функция должна вести себя на конструирующем терме (\texttt{unfold coalg s})\footnote{\href{https://youtu.be/ZCdYIEwcna0?si=XEQSBFhnehQFZPxy}{(youtube) CS410 2017 Lecture 15 Coinduction and Coalgebras}}.
+Тип \texttt{List a} имеет ту же структуру, что и \mintinline{haskell}{Fix (ListF a)}: конструктор \texttt{List} играет роль \texttt{In}, а \texttt{fold} --- роль \texttt{cata}.
+Такой список можно представить через функцию, выполняющую свёртку с любой алгеброй --- Church encoding из раздела~\ref{subsec:all-folds}:
+\begin{minted}{haskell}
+    forall r . (f r -> r) -> r
+\end{minted}
+Для списка здесь \mintinline{haskell}{f = ListF a}.
+Потребитель выбирает тип результата \texttt{r} и алгебру, а представление списка вычисляет результат свёртки.
+Если исходный список --- \texttt{xs}, его Church-представление задаётся функцией \mintinline{haskell}{\alg -> fold alg xs}.
+Мы фиксируем структуру и получаем функцию, описывающую её потребление с любой выбранной алгеброй.
+
+\par\addvspace{\topsep}
+\edef\codataindent{\the\parindent}
+\noindent\begin{minipage}{\linewidth}
+\setlength{\parindent}{\codataindent}
+Теперь подставим ту же форму в определение через \texttt{codata}.
+Получим ко-список с операцией \texttt{force}, играющей роль \texttt{out}:
 \begin{minted}{haskell}
     codata CoList a where
       force :: CoList a -> ListF a (CoList a)
+\end{minted}
+\end{minipage}\par\addvspace{\topsep}
 
+Результат \texttt{force} либо сообщает о конце списка через \texttt{Nil}, либо содержит элемент и продолжение в \texttt{Cons}.
+Таким образом, \texttt{List a} соответствует $\mu(\texttt{ListF}\ap a)$ и описывает конечные списки, а \texttt{CoList a} соответствует $\nu(\texttt{ListF}\ap a)$ и допускает также бесконечные.
+Например, зададим ко-паттерн-матчингом поток натуральных чисел, начинающийся с заданного числа:
+\begin{minted}{haskell}
+    natsFrom :: Integer -> CoList Integer
+    force (natsFrom n) = Cons n (natsFrom (n + 1))
+\end{minted}
+Как и при определении \texttt{In} выше, здесь задаём ответ на запрос к создаваемому значению: теперь это \texttt{force} для \texttt{natsFrom n}.
+При \texttt{force (natsFrom 0)} получим \texttt{Cons 0 (natsFrom 1)}; запрос к этому продолжению даст \texttt{Cons 1 (natsFrom 2)}.
+Чтобы увидеть очередное число, достаточно открыть один слой.
+
+Обобщим этот способ построения до развёртки с произвольной коалгеброй:
+\begin{minted}{haskell}
     unfold :: (s -> ListF a s) -> s -> CoList a
     force (unfold coalg s) = case coalg s of
       Nil -> Nil
       Cons x s' -> Cons x (unfold coalg s')
 \end{minted}
 
-По сути, \mintinline{haskell}{codata} представляет собой словарь функций, которые захватывают некоторое состояние, необходимое для генерации следующих слоёв структуры.
-Так, \mintinline{haskell}{codata} можно сравнить с ООП интерфейсами, а co-pattern-matching с анонимной реализацией интерфейса.
-Предыдущие два примера можно записать, например, в Kotlin следующим образом (форма списка кодируется как \mintinline[escapeinside=**]{kotlin}|Pair<a, r>?|, убедитесь самостоятельно, что этот тип изоморфен \mintinline{haskell}{ListF}).
+Каждый запрос вызывает \texttt{coalg} для текущего состояния.
+Если получен \texttt{Cons}, продолжение задаётся через \texttt{unfold} с новым состоянием; следующий шаг коалгебры понадобится при следующем запросе \texttt{force}.
+
+Аргументы \texttt{unfold} подсказывают, как реализовать ко-список: достаточно хранить текущее состояние и коалгебру, вычисляющую очередной слой.
+Упаковка состояния и коалгебры с сокрытием типа состояния --- это co-Church encoding из раздела~\ref{subsec:all-unfolds}.
+Мы уже записали его как \texttt{Box f}, то есть \mintinline{text}{exists s . (s, s -> f s)}.
+Здесь представление описывает порождение структуры: мы сохраняем аргументы развёртки, по которым она восстанавливает ко-список.
+Использовать такое представление можно непосредственно, выполняя по одному шагу.
+Для этого функция \texttt{step} реализует операцию открытия слоя:
+\begin{minted}{haskell}
+    step :: Functor f => Box f -> f (Box f)
+    step (Box s next) = fmap (\s' -> Box s' next) (next s)
+\end{minted}
+Каждое состояние продолжения снова упаковывается вместе с той же функцией шага.
+При \mintinline{haskell}{f = ListF a} тип \texttt{Box f} тем самым реализует интерфейс \texttt{CoList a}, а \texttt{step} играет роль \texttt{force}.
+Например, поведение \texttt{natsFrom n} можно представить так:
+\begin{minted}{haskell}
+    natsBox :: Integer -> Box (ListF Integer)
+    natsBox n = Box n (\s -> Cons s (s + 1))
+\end{minted}
+\par\addvspace{\topsep}
+\edef\codataindent{\the\parindent}
+\noindent\begin{minipage}{\linewidth}
+\setlength{\parindent}{\codataindent}
+Здесь скрытый тип состояния --- \texttt{Integer}, текущее состояние --- \texttt{n}.
+Условно, с явным указанием скрытого типа, содержимое упаковки можно записать как тройку:
+\begin{minted}{text}
+    (Integer, n, \s -> Cons s (s + 1))
+\end{minted}
+\end{minipage}\par\addvspace{\topsep}
+Коалгебра имеет тип \mintinline{haskell}{Integer -> ListF Integer Integer}.
+Она возвращает слой \texttt{Cons}, содержащий очередной элемент \texttt{s} и состояние продолжения \mbox{\texttt{s + 1}}.
+
+Поэтому \mintinline{haskell}{step (natsBox n)} даёт \mintinline{haskell}{Cons n (natsBox (n + 1))}.
+\texttt{natsFrom n} задаёт поведение ко-списка, а \texttt{natsBox n} реализует его через скрытое состояние.
+Сама упаковка конечна; бесконечный ко-список представлен возможностью получать очередной слой и продолжение при каждом запросе.
+
+Разные упаковки могут представлять один и тот же ко-список: для этого последовательные запросы должны давать одинаковые элементы и одинаково завершаться~\cite{gibbons2008unfolding}.
+
+Теперь уточним, в чём состоит дуальность этих кодирований.
+Свёртка позволяет использовать индуктивную структуру, а развёртка --- построить коиндуктивную.
+Их общие типы, с явным различением $\mu f$ и $\nu f$, имеют вид:
+\[
+    \begin{aligned}
+        \texttt{fold} &:\ \forall r\ldotp (f\ap r\to r)\to\mu f\to r,\\
+        \texttt{unfold} &:\ \forall s\ldotp (s\to f\ap s)\to s\to\nu f.
+    \end{aligned}
+\]
+В первом случае фиксируем значение типа $\mu f$ и получаем его Church-представление: функцию, принимающую произвольную алгебру.
+Во втором упаковываем состояние и коалгебру в \texttt{Box f}; развёртка превращает эту упаковку в значение типа $\nu f$.
+Таким образом, свёртка даёт преобразование из структуры в представление её потребления, а развёртка --- из представления её порождения в структуру.
+Именно эта смена направления объясняет, почему Church encoding описывается через потребителя, а co-Church encoding --- через производителя:
+\begin{center}
+    \begin{tabular}{lll}
+        & \texttt{data}: $\mu f$ & \texttt{codata}: $\nu f$ \\
+        Построение & конструктор \texttt{In} & развёртка \\
+        Использование & свёртка & операция \texttt{out} \\
+        Кодирование & Church & co-Church \\
+        Что оно описывает & потребление структуры & порождение структуры
+    \end{tabular}
+\end{center}
+Обратные преобразования тоже симметричны.
+Из Church-представления восстанавливаем структуру, передав собственный конструктор \texttt{In} в качестве алгебры.
+Из коиндуктивного значения \texttt{x} получаем описание развёртки \mintinline{haskell}{Box x out}: само значение становится состоянием, а собственная операция \texttt{out} --- коалгеброй.
+При работе непосредственно с \texttt{Box} роль \texttt{out} выполняет уже определённая функция \texttt{step}.
+
+Для реализации этих подходов не обязательно иметь в языке оба ключевых слова.
+Покажем это в Kotlin: обычный список представим классом с полем, а ко-список --- интерфейсом с методом \texttt{force}.
+Форму списка закодируем типом \mintinline[escapeinside=**]{kotlin}|Pair<a, r>?|: \texttt{null} соответствует \texttt{Nil}, а пара --- \texttt{Cons}.
+Обычный список хранит готовый слой в поле:
 \begin{minted}[escapeinside=**]{kotlin}
     class List<a>(val layer: Pair<a, List<a>>?)
 
     fun <a, r> fold(alg: (Pair<a, r>?) -> r, xs: List<a>): r =
         if (xs.layer == null) alg(null)
         else alg(Pair(xs.layer.first, fold(alg, xs.layer.second)))
+\end{minted}
+\par\addvspace{\topsep}
+\edef\codataindent{\the\parindent}
+\noindent\begin{minipage}{\linewidth}
+\setlength{\parindent}{\codataindent}
+Построим список из двух элементов и свернём его в сумму:
+\begin{minted}[escapeinside=**]{kotlin}
+    val xs = List(1 to List(2 to List<Int>(null)))
+    val sum = fold<Int, Int>({ layer ->
+        if (layer == null) 0 else layer.first + layer.second
+    }, xs)
+    println(sum) // 3
+\end{minted}
+\end{minipage}\par\addvspace{\topsep}
 
+\par\addvspace{\topsep}
+\edef\codataindent{\the\parindent}
+\noindent\begin{minipage}{\linewidth}
+\setlength{\parindent}{\codataindent}
+Ко-список предоставляет метод \texttt{force}; развёртка создаёт реализацию этого интерфейса, которая запоминает коалгебру и текущее состояние:
+\begin{minted}[escapeinside=**]{kotlin}
     interface CoList<a> { fun force(): Pair<a, CoList<a>>? }
 
     fun <a, s> unfold(coalg: (s) -> Pair<a, s>?, ini: s): CoList<a> =
@@ -1363,18 +1645,47 @@ co-Church encoding для списков даёт \vocab{pull stream}, или \v
             }
         }
 \end{minted}
+\end{minipage}\par\addvspace{\topsep}
 
-Функциональный стиль программирование в основном оперирует напрямую наблюдаемыми данными \mintinline{haskell}{data}, а ООП --- скрывает данные за интерфейсами \mintinline{haskell}{codata}.
-Однако, обе конструкции имеют свои понятные области применения и ими не стоит пренебрегать вне зависимости от предпочитаемого стиля~\cite{downen2019codata}\footnote{\url{https://reasonablypolymorphic.com/blog/review-codata/}}.
+\par\addvspace{\topsep}
+\edef\codataindent{\the\parindent}
+\noindent\begin{minipage}{\linewidth}
+\setlength{\parindent}{\codataindent}
+Создадим поток натуральных чисел и откроем два слоя.
+Для этой коалгебры результат всегда является парой, поэтому здесь можно извлечь его с помощью \texttt{!!}:
+\begin{minted}[escapeinside=**]{kotlin}
+    val naturals = unfold<Int, Int>({ n -> Pair(n, n + 1) }, 0)
+    val (x, tail) = naturals.force()!!
+    val (y, _) = tail.force()!!
+    println(Pair(x, y)) // (0, 1)
+    println(naturals.force()!!.first) // 0
+\end{minted}
+\end{minipage}\par\addvspace{\topsep}
+Вызов \texttt{force} открывает слой, а продолжение возвращается отдельным значением.
+Исходный ко-список при этом не изменяется: повторный запрос к \texttt{naturals} снова показывает нулевой элемент.
 
-В языках с проверкой тотальности функций разделяют индуктивные и коиндуктивные определения.
-Для них используются паттерн-матчинг и ко-паттерн-матчинг, принцип индукции (катаморфизм) и принцип коиндукции (анаморфизм).
-Индуктивные определения задают конечные структуры данных, проверка тотальности проверяет, что рекурсивные вызовы делаются на структурно меньших подтермах.
-Коиндуктивные определения задают потенициально бесконечные структуры данных, для них проверяется продуктивность --- порождающая функция всегда после рекурсивного вызова породит новый конструктор~\footnote{\url{https://rocq-prover.org/doc/V8.18.0/refman/language/core/coinductive.html}}.
+В этих реализациях видна связь \texttt{data} с конструкторами и разбором случаев, а \texttt{codata} --- с интерфейсами и реализацией их методов~\cite{downen2019codata}.
+У списка можно непосредственно разобрать поле \texttt{layer}, а у ко-списка доступен только запрос \texttt{force}; способ вычисления слоя скрыт в реализации интерфейса.
+Оба подхода применимы и в функциональном, и в объектно-ориентированном коде.
+
+Остаётся уточнить, какие требования предъявляются к рекурсивным определениям в двух случаях.
+В языках с проверкой тотальности функций для индуктивных структур проверяют завершение вычисления, а для коиндуктивных --- возможность получить очередной слой.
+Завершение структурной рекурсии обеспечивается переходом к меньшим подструктурам: в \texttt{fold} рекурсивный вызов обрабатывает хвост.
+Коиндуктивные определения допускают потенциально бесконечные структуры; для них проверяют \vocab{продуктивность}: каждый следующий наблюдаемый слой должен получаться за конечное число шагов\footnote{\url{https://rocq-prover.org/doc/V8.18.0/refman/language/core/coinductive.html}}.
+В \texttt{natsFrom} сразу доступен слой \texttt{Cons n ...}, а продолжение описывает, как получить следующие слои.
+
+С этими способами работы связаны принципы доказательства.
+Индукция позволяет доказывать свойство структуры, опираясь на это свойство для её подструктур.
+Для коиндуктивного доказательства равенства ко-списков выбирают отношение, связывающее сравниваемые значения.
+Проверяют, что связанные значения либо оба дают \texttt{Nil}, либо оба дают \texttt{Cons} с равными элементами и продолжениями, снова связанными этим отношением.
+Катаморфизм задаёт схему вычисления по индуктивной структуре, а анаморфизм --- схему коиндуктивного построения; сами принципы индукции и коиндукции используются для рассуждения о таких программах.
+Категорную формулировку универсальных свойств свёртки и развёртки рассмотрим в приложении~\ref{subsec:cats}.
 
 % todo \vocab{полярности}\footnote{\url{https://existentialtype.wordpress.com/2012/08/25/polarity-in-type-theory/}}\footnote{\url{https://ncatlab.org/nlab/show/polarity+in+type+theory}}
 
 \subsection{Приложение: категория алгебр} \label{subsec:cats}
+
+% todo Jacobs и Rutten, A Tutorial on (Co)Algebras and (Co)Induction.
 
 Это факультативный раздел, не являющийся необходимым для понимания курса в дальнейшем.
 Однако, полезен для понимания часто употребимой терминологии.
