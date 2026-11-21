@@ -80,6 +80,7 @@
 % Для листинга длиннее страницы используем окружение longlisting снаружи minted.
 \newif\iflonglisting
 \newenvironment{longlisting}{\longlistingtrue}{}
+\makeatletter
 \AddToHook{env/minted/before}{%
     \iflonglisting\else
         \par\addvspace{\topsep}%
@@ -91,8 +92,11 @@
 \AddToHook{env/minted/after}{%
     \iflonglisting\else
         \end{minipage}\par\addvspace{\topsep}%
+        % Как после обычного minted: пустая строка начинает новый абзац.
+        \@doendpe
     \fi
 }
+\makeatother
 \usepackage{listings}
 % ------------------------------------------------
 
