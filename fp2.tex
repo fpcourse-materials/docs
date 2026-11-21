@@ -76,6 +76,23 @@
 % Colored, requires --shell-escape compiling option
 \usepackage{minted}
 \setminted{xleftmargin=\parindent, autogobble, escapeinside=??, linenos, numberblanklines=false}
+% Все листинги по умолчанию неразрывны и сохраняют обычный отступ.
+% Для листинга длиннее страницы используем окружение longlisting снаружи minted.
+\newif\iflonglisting
+\newenvironment{longlisting}{\longlistingtrue}{}
+\AddToHook{env/minted/before}{%
+    \iflonglisting\else
+        \par\addvspace{\topsep}%
+        \edef\mintedblockindent{\the\parindent}%
+        \noindent\begin{minipage}{\linewidth}%
+        \setlength{\parindent}{\mintedblockindent}%
+    \fi
+}
+\AddToHook{env/minted/after}{%
+    \iflonglisting\else
+        \end{minipage}\par\addvspace{\topsep}%
+    \fi
+}
 \usepackage{listings}
 % ------------------------------------------------
 
