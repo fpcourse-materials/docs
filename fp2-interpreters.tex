@@ -1240,27 +1240,29 @@
 
 Это представление через скрытое состояние и коалгебру, рассмотренное в главе «Всё через развёртку» (раздел~\ref{subsubsec:abstract-data-types}):
 \begin{minted}{haskell}
-    data LangF s = LangF Int String deriving Functor
-    type Lang = Box LangF
+    data LangOps s = LangOps Int String deriving Functor
+    type Lang = Box LangOps
 
     eval :: Lang -> Int
     eval lang = result
-      where LangF result _ = step lang
+      where LangOps result _ = step lang
 
     pretty :: Lang -> String
     pretty lang = text
-      where LangF _ text = step lang
+      where LangOps _ text = step lang
 
     cnst :: Int -> Lang
-    cnst n = Box n \x -> LangF x (show x)
+    cnst n = Box n \x -> LangOps x (show x)
 
     plus :: Lang -> Lang -> Lang
     plus l r = Box (l, r) \(x, y) ->
-      LangF (eval x + eval y)
-            (pretty x ++ " + " ++ pretty y)
+      LangOps (eval x + eval y) (pretty x ++ " + " ++ pretty y)
 
     program :: Lang
-    program = plusLang (constLang 1) (constLang 41)
+    program = plus (cnst 1) (cnst 41)
+
+    ghci> (eval program, pretty program)
+    (42, "1 + 41")
 \end{minted}
 
 Оказывается, можно организовать код так, чтобы расширять язык по обоим измерениям.
@@ -1409,6 +1411,6 @@
     "1 + input"
 \end{minted}
 
-Однако само финальное представление ещё не объясняет, как сохранять определения интерпретаций при изменении вычислительного контекста.
-Домен \mintinline{haskell}|Int -> Int| уже учитывает окружение, поэтому переход от \texttt{algBasic} к \texttt{algBasic'} не возник явно.
-Вопрос, как при добавлении окружения или других возможностей переиспользовать прежнюю интерпретацию арифметики, остаётся и для этого представления.
+Таким образом, мы можем добавлять фрагменты языка и новые интерпретации, сохраняя существующие интерфейсы и программы.
+Отдельная задача --- переиспользовать реализацию интерпретации при добавлении новых возможностей вычисления, например окружения.
+Здесь домен \mintinline{haskell}|Int -> Int| уже учитывает окружение; как получить такую интерпретацию из прежней интерпретации арифметики, рассмотрим в главе об эффектах~(\ref{sec:effects}).
